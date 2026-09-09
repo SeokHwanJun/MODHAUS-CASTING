@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>캐스팅 보드</title>
+<meta name="theme-color" content="#FFC86B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="캐스팅">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Silkscreen&display=swap">
+<style>
+:root{
+  /* 스티커시트 팔레트 */
+  --ground:#C6B9FF; --surface:#FFFFFF; --surface-2:#F5F3FB; --surface-3:#EBEBEB;
+  --ink:#000000; --ink-2:#3B3548; --ink-3:#7A7390;
+  --line:#E4E0F0; --line-2:#CFCFCF; --edge:#000000;
+  --accent:#FF5B64; --accent-soft:#FFE1E3; --accent-line:#FF9AA0; --on-accent:#000000;
+  --ok:#3E6B2E; --ok-soft:#D9E6CC;
+  --warn:#8A4B00; --warn-soft:#FFE7C0;
+  --mute:#5E5870; --mute-soft:#EBEBEB;
+  --mint:#B2C7A3; --lav:#C6B9FF; --sun:#FFC86B; --sky:#C6B9FF; --pumpkin:#FF7717; --rose:#C0295C;
+  --lcd:#B2C7A3; --lcd-ink:#000000;
+  --pop:3px 3px 0 #000000; --pop-sm:2px 2px 0 #000000;
+  --pop-o:3px 3px 0 var(--pumpkin); --pop-o-sm:2px 2px 0 var(--pumpkin);
+  --bar:#FFC86B;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0; padding:0; color-scheme:light}
+body{background:var(--ground); color:var(--ink); font-size:15px; line-height:1.55;
+  font-family:"IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+  background-image:radial-gradient(rgba(0,0,0,.07) 1.2px, transparent 1.2px); background-size:16px 16px}
+.mono,.pix{font-family:"Silkscreen","IBM Plex Mono","SFMono-Regular",Menlo,monospace; font-variant-numeric:tabular-nums}
+
+/* ── 상단 기기 바 ── */
+.hd{position:sticky; top:0; z-index:20}
+.top{background:var(--bar); border-bottom:2px solid var(--edge);
+  padding:9px 15px; display:flex; align-items:center; gap:10px}
+.top h1{margin:0; font-size:16px; font-weight:700; letter-spacing:-.01em; display:flex; align-items:center; gap:9px; min-width:0}
+.top h1 .t{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.top h1 .scr{width:34px; height:30px; flex:0 0 auto; background:var(--lcd); border:2px solid var(--edge); border-radius:7px;
+  display:flex; align-items:center; justify-content:center; box-shadow:inset 0 2px 0 rgba(0,0,0,.12)}
+.top h1 .egg{width:16px; height:18px; image-rendering:pixelated}
+.top h1:hover .egg{animation:wig .5s ease-in-out}
+.top h1 .t{color:#000}
+@keyframes wig{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+.top h1 small{font-family:"Silkscreen",monospace; font-size:9px; letter-spacing:.12em; color:#fff;
+  background:var(--rose); border:2px solid var(--edge); border-radius:999px; padding:2px 8px}
+.top .sp{margin-left:auto; display:flex; align-items:center; gap:7px}
+.top .sp small{font-size:11px; color:var(--ink-3)}
+@media (max-width:759px){ .top h1 small,.top .sp small{display:none} .top h1{font-size:15px} }
+.pill{border:2px solid var(--edge); background:#fff; color:#000; white-space:nowrap;
+  border-radius:999px; padding:5px 11px; font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+  box-shadow:var(--pop-o-sm)}
+.pill:hover{background:var(--sun)}
+.pill:active{transform:translate(2px,2px); box-shadow:none}
+.pill.sfx{font-family:"Silkscreen",monospace; font-size:9.5px; letter-spacing:.06em; padding:7px 10px}
+.pill.sfx.off{background:var(--surface-3); color:var(--ink-3)}
+
+/* ── 탭 (기기 버튼) ── */
+.tabs{display:flex; gap:8px; padding:9px 15px;
+  background:var(--bar); border-bottom:2px solid var(--edge)}
+.tabs button{flex:1; border:2px solid var(--edge); background:#fff; color:#000;
+  font:inherit; font-size:13.5px; font-weight:700; padding:9px 8px; border-radius:999px; cursor:pointer;
+  box-shadow:var(--pop-o-sm)}
+.tabs button[aria-selected="true"]{background:var(--lcd); color:#000; transform:translate(2px,2px); box-shadow:none}
+.tabs button .n{opacity:.75; margin-left:6px; font-family:"Silkscreen",monospace; font-size:10px; font-weight:400}
+
+/* ── LCD 스탯 ── */
+.stats{display:flex; gap:0; margin:12px 15px 0; max-width:1240px; border:2px solid var(--edge);
+  border-radius:12px; background:var(--lcd); overflow:hidden; box-shadow:inset 0 2px 0 rgba(0,0,0,.08)}
+.stat{flex:1; padding:8px 12px; border-right:2px dashed rgba(0,0,0,.25); text-align:center}
+.stat:last-child{border-right:none}
+.stat b{font-family:"Silkscreen",monospace; font-size:18px; font-weight:400; display:block; line-height:1.15; color:var(--lcd-ink)}
+.stat span{font-size:10.5px; color:var(--lcd-ink); opacity:.75; letter-spacing:.04em}
+.stat.on b::before{content:"\25B6 "; font-size:11px}
+
+main{max-width:1240px; margin:0 auto; padding:14px 15px 60px}
+section[hidden]{display:none}
+
+/* ── 카드 ── */
+.card{background:var(--surface); border:2px solid var(--edge); border-radius:18px;
+  padding:15px; box-shadow:var(--pop); margin-bottom:14px}
+.card h3{margin:0 0 12px; font-size:12px; font-weight:700; letter-spacing:.06em;
+  color:var(--ink-2); display:flex; align-items:center; gap:7px}
+.card h3::before{content:""; width:9px; height:9px; background:var(--accent); border:1.5px solid var(--edge); border-radius:50%}
+.card h3.editing::before{background:var(--sun)}
+.sec{font-size:10.5px; font-weight:700; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--ink-3); margin:4px 0 11px; padding-top:12px; border-top:2px dashed var(--line-2)}
+
+.f{display:flex; flex-direction:column; gap:6px; margin-bottom:13px}
+.f > label{font-size:12px; font-weight:600; color:var(--ink-2)}
+.hint{font-size:11.5px; color:var(--ink-3); margin:-2px 0 0}
+.two{display:grid; grid-template-columns:1fr 1fr; gap:0 12px}
+@media (max-width:520px){ .two{grid-template-columns:1fr} }
+
+input[type=text],input[type=date],textarea{
+  width:100%; padding:11px 12px; background:var(--surface-2); border:2px solid var(--line-2);
+  border-radius:12px; color:var(--ink); font:inherit; font-size:15px; -webkit-appearance:none}
+input[type=date]{font-family:"IBM Plex Mono",monospace}
+textarea{resize:vertical; min-height:76px; line-height:1.5}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px}
+input[type=text]:focus,input[type=date]:focus,textarea:focus{border-color:var(--edge); outline:none; box-shadow:var(--pop-sm)}
+::placeholder{color:var(--ink-3)}
+
+.choices{display:flex; flex-wrap:wrap; gap:7px}
+.choice{padding:8px 14px; border-radius:999px; border:2px solid var(--line-2);
+  background:var(--surface); color:var(--ink-2); font:inherit; font-size:14px;
+  font-weight:600; cursor:pointer}
+.choice:hover{border-color:var(--edge)}
+.choice[aria-pressed="true"]{background:var(--sun); border-color:var(--edge);
+  color:#000; box-shadow:var(--pop-o-sm)}
+
+.btn{width:100%; padding:13px 20px; border-radius:999px; border:2px solid var(--edge);
+  background:var(--accent); color:#fff; font:inherit; font-size:15px;
+  font-weight:700; cursor:pointer; box-shadow:var(--pop-o)}
+.btn:hover{filter:brightness(1.05)}
+.btn:active{transform:translate(3px,3px); box-shadow:none}
+.btn:disabled{opacity:.5; filter:none; transform:none; box-shadow:var(--pop-o)}
+.btn.ghost{background:#fff; color:#000}
+.btn.ghost:hover{background:var(--sun); color:var(--ink); filter:none}
+.btn.sm{width:auto; padding:10px 18px; font-size:14px}
+.row-btns{display:flex; gap:11px}
+.msg{font-size:12.5px; color:var(--ink-3); min-height:18px; margin-top:9px}
+
+.drop{position:relative; min-height:96px; border:2px dashed var(--line-2); border-radius:14px;
+  background:var(--surface-2); display:flex; align-items:center; justify-content:center;
+  text-align:center; cursor:pointer; overflow:hidden; padding:10px}
+.drop:hover{border-color:var(--edge); background:var(--accent-soft)}
+.drop.over{border-color:var(--accent); background:var(--accent-soft)}
+.drop.has{border-style:solid; border-color:var(--edge); padding:0}
+.drop-t{font-size:12px; color:var(--ink-3); display:flex; flex-direction:column; gap:3px}
+.drop-t small{font-size:11px; opacity:.85}
+.drop img{width:100%; height:150px; object-fit:cover; display:block}
+.drop-x{position:absolute; top:7px; right:7px; width:28px; height:28px; border-radius:50%;
+  border:2px solid var(--edge); background:#fff; color:#000; font-size:16px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; box-shadow:var(--pop-o-sm)}
+
+/* ── 필터 칩 ── */
+.filters{display:flex; gap:7px; overflow-x:auto; margin:0 -15px 9px; padding:2px 15px 8px;
+  -webkit-overflow-scrolling:touch}
+.chip{flex:0 0 auto; padding:6px 12px; border-radius:10px; border:2px solid var(--line-2);
+  background:var(--surface); color:var(--ink-2); font:inherit; font-size:13px;
+  font-weight:600; cursor:pointer; white-space:nowrap}
+.chip:hover{border-color:var(--edge)}
+.chip[aria-pressed="true"]{background:#000; color:#fff; border-color:#000; box-shadow:var(--pop-o-sm)}
+.chip .n{opacity:.65; margin-left:5px; font-family:"Silkscreen",monospace; font-size:9.5px}
+.sortbar{display:flex; align-items:center; gap:7px; margin-bottom:10px; flex-wrap:wrap}
+.sortbar > span{font-size:10.5px; text-transform:uppercase; letter-spacing:.09em;
+  color:var(--ink-3); font-weight:700}
+
+/* ── 목록 카드 ── */
+.item{position:relative; display:flex; gap:12px; background:var(--surface); border:2px solid var(--edge);
+  border-radius:16px; padding:13px 12px 12px; margin-bottom:11px; align-items:flex-start;
+  box-shadow:var(--pop); --tone:var(--mute)}
+.item::before{content:""; position:absolute; top:-7px; left:16px; width:11px; height:11px; border-radius:50%;
+  background:var(--tone); border:2px solid var(--edge)}
+.item.t-warn{--tone:var(--sun)}
+.item.t-accent{--tone:var(--accent)}
+.item.t-ok{--tone:var(--mint)}
+.item.t-off{opacity:.6}
+.item.focus{outline:3px solid var(--pumpkin); outline-offset:3px}
+.thumb{width:60px; height:60px; border-radius:12px; overflow:hidden; background:var(--surface-3);
+  border:2px solid var(--edge); flex:0 0 auto; display:flex; align-items:center; justify-content:center}
+.thumb img{width:100%; height:100%; object-fit:cover; display:block}
+.thumb .ph{font-size:11px; color:var(--ink-3)}
+.thumb.clickable{cursor:zoom-in}
+.thumb.clickable:hover{box-shadow:var(--pop-sm); transform:translate(-1px,-1px)}
+.body{flex:1; min-width:0; display:flex; flex-direction:column; gap:4px}
+.line1{display:flex; align-items:center; gap:7px; flex-wrap:wrap}
+.line1 b{font-size:15.5px; font-weight:700; letter-spacing:-.01em}
+.line1 b.noname{color:var(--ink-3); font-weight:500; font-style:italic}
+.line1 .d{font-size:10.5px; color:var(--ink-3); font-family:"Silkscreen",monospace}
+.note{font-size:13.5px; color:var(--ink-2); overflow-wrap:anywhere; white-space:pre-wrap}
+.sub2{font-size:12px; color:var(--ink-3); overflow-wrap:anywhere}
+.spec{display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; color:var(--ink-2);
+  font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.spec i{font-style:normal; color:var(--ink-3); font-size:10.5px; letter-spacing:.04em; margin-right:3px}
+.link{color:var(--accent); font-family:"IBM Plex Mono",monospace; font-size:12px;
+  text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block}
+.link:hover{text-decoration:underline}
+.tag{display:inline-block; font-size:11px; font-weight:700; padding:1px 8px; border-radius:7px;
+  background:var(--mute-soft); color:var(--mute); border:1.5px solid transparent}
+.tag.who{background:var(--surface); color:var(--ink-3); border-color:var(--line-2); font-weight:600}
+.tag.t-warn{background:var(--warn-soft); color:var(--warn)}
+.score{display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:24px;
+  padding:0 7px; border-radius:8px; font-size:11px; border:2px solid var(--edge);
+  background:var(--mute-soft); color:var(--mute); font-family:"Silkscreen",monospace}
+.score.s5,.score.s4{background:var(--mint); color:#000}
+.score.s3{background:var(--sun); color:#000}
+.score.s2,.score.s1{background:var(--warn-soft); color:var(--warn)}
+.side{display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex:0 0 auto}
+select.status{padding:6px 10px; border-radius:999px; border:2px solid var(--edge);
+  background:var(--mute-soft); color:#000; font:inherit; font-size:12.5px;
+  font-weight:700; cursor:pointer; -webkit-appearance:none; text-align:center; box-shadow:var(--pop-sm)}
+select.status.t-warn{background:var(--sun); color:#000}
+select.status.t-accent{background:var(--accent); color:#fff}
+select.status.t-ok{background:var(--mint); color:#000}
+.mini{border:2px solid var(--edge); background:#fff; color:#000;
+  border-radius:999px; padding:4px 10px; font:inherit; font-size:11.5px; font-weight:700; cursor:pointer;
+  white-space:nowrap; box-shadow:var(--pop-o-sm)}
+.mini:hover{background:var(--sun)}
+.mini:active{transform:translate(2px,2px); box-shadow:none}
+.mini.done{background:var(--mint)}
+.minis{display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end}
+.del{border:none; background:none; color:var(--ink-3); font-size:19px; line-height:1;
+  cursor:pointer; padding:2px 5px; border-radius:6px}
+.del:hover{background:var(--accent-soft); color:var(--accent)}
+
+.empty{padding:34px 16px; text-align:center; color:var(--ink-3); font-size:13.5px;
+  border:2px dashed var(--line-2); border-radius:16px}
+.banner{padding:11px 14px; border-radius:12px; background:var(--warn-soft); color:var(--warn);
+  border:2px solid var(--edge); font-size:13px; margin-bottom:12px; font-weight:600}
+
+@media (min-width:760px){
+  body{font-size:14px}
+  main{padding:16px 22px 60px}
+  .tabs{padding:9px 22px; gap:8px}
+  .tabs button{flex:0 0 auto; padding:8px 22px}
+  .stats{margin:14px 22px 0}
+  .stat{flex:0 0 auto; min-width:120px}
+  .btn{width:auto; padding:11px 22px; font-size:14px}
+  .choice{padding:6px 13px; font-size:13px}
+  input[type=text],input[type=date],textarea{font-size:14px; padding:9px 11px}
+  .filters{margin:0 0 10px; padding:2px 0 8px; overflow-x:visible; flex-wrap:wrap}
+}
+@media (min-width:1040px){
+  .split{display:grid; grid-template-columns:400px minmax(0,1fr); gap:20px; align-items:start}
+  .split .form-col{position:sticky; top:130px}
+  .split .form-col .card{margin-bottom:0}
+  .split .drop img{height:120px}
+  .stats{margin-left:auto; margin-right:auto}
+}
+
+/* ── 크게 보기 ── */
+.lb{position:fixed; inset:0; background:rgba(0,0,0,.82); display:none;
+  align-items:center; justify-content:center; padding:20px; z-index:60}
+.lb.open{display:flex}
+.lb-box{max-width:min(880px,94vw); max-height:88vh; display:flex; flex-direction:column; gap:11px;
+  background:var(--surface); border:2px solid var(--edge); border-radius:18px; padding:13px; overflow:auto; box-shadow:var(--pop)}
+.lb-box img{max-width:100%; max-height:60vh; object-fit:contain; border-radius:12px;
+  display:block; margin:0 auto; background:var(--surface-3)}
+.lb-load{padding:56px 20px; text-align:center; color:var(--ink-3); font-size:13px}
+.lb-x{position:fixed; top:16px; right:18px; width:40px; height:40px; border-radius:50%;
+  border:2px solid #000; background:#fff; color:#000; font-size:21px; cursor:pointer; box-shadow:var(--pop-o-sm)}
+/* ── 리그 · 도감 ── */
+.lg{display:flex; flex-direction:column; gap:8px}
+.lgrow{display:grid; grid-template-columns:34px 30px 1fr auto; gap:10px; align-items:center;
+  border:2px solid var(--edge); border-radius:12px; padding:8px 12px; background:var(--surface-2)}
+.lgrow.top{background:var(--sun); box-shadow:var(--pop-o-sm)}
+.lgrow.me{outline:2px dashed var(--pumpkin); outline-offset:2px}
+.lgrow .rk{font-family:"Silkscreen",monospace; font-size:13px; text-align:center}
+.lgrow .tsp{width:22px; height:25px}
+.lgrow .nm{font-weight:700; font-size:14px}
+.lgrow .nm small{display:block; font-size:11px; color:var(--ink-3); font-weight:500}
+.lgrow .pt{font-family:"Silkscreen",monospace; font-size:14px; white-space:nowrap}
+.rate{display:grid; grid-template-columns:64px 1fr 52px; gap:10px; align-items:center; padding:6px 0; font-size:13px}
+.rate .bar{height:14px; border:2px solid var(--edge); border-radius:6px; background:var(--surface-3); overflow:hidden}
+.rate .bar i{display:block; height:100%; background:repeating-linear-gradient(90deg,var(--mint) 0 6px,transparent 6px 8px)}
+.rate .pc{font-family:"Silkscreen",monospace; font-size:11px; text-align:right}
+.rate small{color:var(--ink-3); font-size:11px}
+.stale{display:flex; align-items:center; gap:10px; border:2px solid var(--edge); border-radius:12px; padding:8px 10px;
+  margin-bottom:8px; background:var(--surface-2)}
+.stale .tsp{width:22px; height:25px}
+.stale b{font-size:14px}
+.stale small{color:var(--ink-3); font-size:12px; display:block}
+.stale .sp{flex:1; min-width:0}
+.hungry{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#000;
+  background:var(--warn-soft); border:2px solid var(--edge); border-radius:8px; padding:2px 8px}
+.hungry .tsp{width:12px; height:13px}
+.dex{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px}
+.dexc{border:2px solid var(--edge); border-radius:14px; background:var(--lcd); padding:10px; text-align:center; box-shadow:var(--pop)}
+.dexc .ph{width:84px; height:84px; margin:0 auto 8px; border-radius:50%; border:3px solid var(--edge); overflow:hidden; background:#fff;
+  display:flex; align-items:center; justify-content:center; cursor:zoom-in}
+.dexc .ph img{width:100%; height:100%; object-fit:cover}
+.dexc .ph .tsp{width:40px; height:44px}
+.dexc b{display:block; font-size:14px}
+.dexc small{display:block; font-family:"Silkscreen",monospace; font-size:8.5px; color:var(--ink-2); margin-top:3px}
+.dexc .no{font-family:"Silkscreen",monospace; font-size:9px; color:var(--ink-2)}
+.badges{display:flex; flex-direction:column; gap:10px}
+.brow{display:flex; gap:10px; align-items:flex-start; border-top:2px dashed var(--line-2); padding-top:10px}
+.brow:first-child{border-top:none; padding-top:0}
+.brow .who{flex:0 0 74px; font-weight:700; font-size:14px}
+.brow .who small{display:block; font-family:"Silkscreen",monospace; font-size:8.5px; color:var(--ink-3)}
+.bl{display:flex; flex-wrap:wrap; gap:6px}
+.badge{display:inline-flex; align-items:center; gap:6px; border:2px solid var(--edge); border-radius:999px; padding:3px 10px 3px 6px;
+  font-size:12px; font-weight:700; background:#fff; box-shadow:var(--pop-o-sm)}
+.badge i{width:14px; height:14px; border-radius:50%; border:2px solid var(--edge); flex:0 0 auto}
+.badge.lock{opacity:.4; box-shadow:none; background:var(--surface-3)}
+.badge small{font-weight:500; color:var(--ink-3)}
+.stat.alert b{color:var(--rose)}
+@media (max-width:759px){
+  .tabs{overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none} .tabs::-webkit-scrollbar{display:none}
+  .tabs button{flex:0 0 auto; padding:8px 13px; font-size:13px}
+  .stats{overflow-x:auto; scrollbar-width:none} .stats::-webkit-scrollbar{display:none} .stat{flex:0 0 auto; min-width:88px}
+  .item{flex-wrap:wrap; gap:10px}
+  .item .thumb{width:56px; height:56px}
+  .item .body{flex:1 1 0; min-width:0}
+  .item .side{flex:1 1 100%; flex-direction:row; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:6px;
+    padding-top:9px; border-top:2px dashed var(--line-2)}
+  .item .side select.status{margin-right:auto}
+  .item .side .minis{justify-content:flex-end; gap:5px}
+  .item .side .mini{padding:4px 8px; font-size:11px}
+  .item .side .del{padding:0 2px}
+  .line1 b{font-size:15px}
+  .link{white-space:normal; overflow-wrap:anywhere}
+}
+.note a,.sub2 a{color:var(--accent); text-decoration:none; overflow-wrap:anywhere; border-bottom:1.5px solid var(--accent-line)}
+.note a:hover,.sub2 a:hover{background:var(--accent-soft)}
+
+/* ── 설치 안내 · 오프라인 ── */
+.install{display:none; align-items:center; gap:10px; margin:12px 15px 0; padding:10px 12px; border:2px solid var(--edge);
+  border-radius:12px; background:#fff; box-shadow:var(--pop); font-size:13px}
+.install.show{display:flex}
+.install .tsp{width:22px; height:25px; flex:0 0 auto}
+.install b{display:block; font-size:13px}
+.install span{color:var(--ink-2); font-size:12px}
+.install .sp{flex:1}
+.install .mini{flex:0 0 auto}
+.offline{position:fixed; top:8px; left:50%; transform:translateX(-50%); z-index:80; background:#000; color:#fff;
+  font-family:"Silkscreen",monospace; font-size:9px; letter-spacing:.1em; padding:4px 10px; border-radius:999px; display:none}
+.offline.show{display:block}
+@media (min-width:760px){ .install{margin:14px 22px 0} }
+@media (min-width:1040px){ .install{max-width:1240px; margin-left:auto; margin-right:auto} }
+
+/* ── 펫 토스트 ── */
+.toast{position:fixed; left:50%; bottom:22px; transform:translate(-50%,24px); opacity:0; z-index:70;
+  display:flex; align-items:center; gap:12px; background:var(--lcd); border:3px solid #000; border-radius:14px;
+  padding:10px 18px 10px 12px; box-shadow:var(--pop-o); pointer-events:none; max-width:min(92vw,440px);
+  transition:transform .18s ease-out, opacity .18s}
+.toast.show{transform:translate(-50%,0); opacity:1}
+.tsp{width:36px; height:40px; flex:0 0 auto}
+.tsp svg{width:100%; height:100%}
+.toast.show .tsp{animation:bob .46s steps(2) infinite}
+@keyframes bob{0%{transform:translateY(0)}100%{transform:translateY(-3px)}}
+.toast b{display:block; font-family:"Silkscreen",monospace; font-size:11px; letter-spacing:.08em; color:#000}
+.toast span{font-size:13px; color:#000; font-weight:600}
+.stat.lv{display:flex; align-items:center; gap:9px; text-align:left; flex:0 0 auto}
+.stat.lv .tsp{width:26px; height:29px}
+.stat.lv span{font-family:"Silkscreen",monospace; font-size:8.5px; letter-spacing:.04em; opacity:.85}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
+</style>
+</head>
+<body>
+
+<div class="hd">
+<div class="top">
+  <h1><span class="scr"><svg class="egg" viewBox="0 0 12 14" aria-hidden="true" shape-rendering="crispEdges" fill="#000">
+      <rect x="4" y="0" width="4" height="1"/><rect x="3" y="1" width="1" height="1"/><rect x="8" y="1" width="1" height="1"/>
+      <rect x="2" y="2" width="1" height="2"/><rect x="9" y="2" width="1" height="2"/>
+      <rect x="1" y="4" width="1" height="5"/><rect x="10" y="4" width="1" height="5"/>
+      <rect x="2" y="9" width="1" height="2"/><rect x="9" y="9" width="1" height="2"/>
+      <rect x="3" y="11" width="1" height="1"/><rect x="8" y="11" width="1" height="1"/><rect x="4" y="12" width="4" height="1"/>
+      <rect x="4" y="5" width="1" height="1"/><rect x="7" y="5" width="1" height="1"/>
+      <rect x="5" y="8" width="2" height="1"/>
+      <rect x="6" y="2" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="8" y="7" width="1" height="1"/><rect x="3" y="7" width="1" height="1"/>
+    </svg></span><span class="t">신인개발팀 캐스팅 보드</span><small>CASTING</small></h1>
+  <div class="sp">
+    <small>나</small>
+    <select id="me" class="pill" aria-label="내 이름"></select>
+    <button class="pill sfx" id="sfx" type="button" aria-label="효과음 켜기/끄기">SFX ON</button>
+    <button class="pill" id="reload" type="button">새로고침</button>
+  </div>
+</div>
+
+<div class="tabs" id="tabs" role="tablist"></div>
+</div>
+
+<div class="stats" id="stats"></div>
+<div class="install" id="install"><div class="tsp" id="install-sp"></div>
+  <div><b id="install-h">홈 화면에 추가하면 앱처럼 열립니다</b><span id="install-t">공유 버튼 → 「홈 화면에 추가」</span></div>
+  <div class="sp"></div><button class="mini" id="install-go" type="button" hidden>설치</button><button class="del" id="install-x" type="button">&times;</button></div>
+<div class="offline" id="offline">OFFLINE</div>
+
+<main>
+  <div id="banner" hidden class="banner"></div>
+
+  <!-- 로드캐스팅 -->
+  <section id="v-road">
+    <div class="split">
+      <div class="form-col">
+        <div class="card">
+          <h3 id="r-title">새로 추가</h3>
+          <div class="two">
+            <div class="f"><label for="r-name">이름</label>
+              <input type="text" id="r-name" placeholder="강연우 (모르면 비워두기)"></div>
+            <div class="f"><label for="r-date">일시</label><input type="date" id="r-date"></div>
+          </div>
+          <div class="f"><label for="r-place">어디서 봤는지</label>
+            <input type="text" id="r-place" placeholder="홍대 걷고싶은거리 · 인스타 릴스"></div>
+          <div class="f"><label>담당자</label><div class="choices" id="r-owner"></div></div>
+          <div class="f"><label>경로</label><div class="choices" id="r-platform"></div></div>
+          <div class="f"><label>상태</label><div class="choices" id="r-status"></div></div>
+          <div class="f"><label>성별</label><div class="choices" id="r-gender"></div></div>
+          <div class="f"><label for="r-url">URL 주소</label>
+            <input type="text" id="r-url" placeholder="https://www.instagram.com/p/..." inputmode="url"></div>
+          <div class="f"><label>사진</label>
+            <div class="drop" id="r-drop" tabindex="0" role="button" aria-label="사진 추가">
+              <img id="r-drop-img" alt="" hidden>
+              <span class="drop-t" id="r-drop-t">사진 추가<small>탭해서 촬영 · 끌어다 놓기 · 붙여넣기</small></span>
+              <button type="button" class="drop-x" id="r-drop-x" aria-label="사진 지우기" hidden>&times;</button>
+            </div>
+            <input type="file" id="r-file" accept="image/*" hidden>
+          </div>
+          <div class="f"><label for="r-note">특이사항</label>
+            <textarea id="r-note" placeholder="09년생 추정 / 여 / 친구 2명과 함께 / 명함 전달함"></textarea>
+            <p class="hint">출생연도를 맨 앞에 적어두면 나중에 거르기 쉽습니다.</p></div>
+          <div class="f"><label for="r-contact">연락처</label>
+            <input type="text" id="r-contact" placeholder="@계정 또는 학부모 연락처">
+            <p class="hint">미성년자는 본인 번호보다 학부모 연락처를. 1차 미팅 전엔 DM 계정만 적어도 충분합니다.</p></div>
+          <div class="row-btns">
+            <button class="btn" id="r-add">보드에 추가</button>
+            <button class="btn ghost sm" id="r-clear">입력 지우기</button>
+          </div>
+          <div class="msg" id="r-msg"></div>
+        </div>
+      </div>
+      <div class="list-col">
+        <div class="filters" id="r-f-gender"></div>
+        <div class="filters" id="r-f-owner"></div>
+        <div class="filters" id="r-f-status"></div>
+        <div id="r-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 개인 DB -->
+  <section id="v-db" hidden>
+    <div class="split">
+      <div class="form-col">
+        <div class="card">
+          <h3 id="d-title">개인 DB 등록</h3>
+          <div class="two">
+            <div class="f"><label for="d-name">이름</label>
+              <input type="text" id="d-name" placeholder="레인우문"></div>
+            <div class="f"><label for="d-birth">출생연도</label>
+              <input type="text" id="d-birth" placeholder="09" inputmode="numeric"></div>
+          </div>
+          <div class="two">
+            <div class="f"><label for="d-height">키 (cm)</label>
+              <input type="text" id="d-height" placeholder="160" inputmode="numeric"></div>
+            <div class="f"><label for="d-weight">체중 (kg)</label>
+              <input type="text" id="d-weight" placeholder="43" inputmode="numeric"></div>
+          </div>
+          <div class="f"><label>성별</label><div class="choices" id="d-gender"></div></div>
+          <div class="f"><label>포지션</label><div class="choices" id="d-position"></div></div>
+          <div class="two">
+            <div class="f"><label for="d-region">지역</label>
+              <input type="text" id="d-region" placeholder="서울 강남"></div>
+            <div class="f"><label for="d-academy">학원</label>
+              <input type="text" id="d-academy" placeholder="픽플래닛 잠실본점"></div>
+          </div>
+          <div class="f"><label>국적</label><div class="choices" id="d-nationality"></div></div>
+          <div class="f"><label for="d-language">가능 언어</label>
+            <input type="text" id="d-language" placeholder="한국어 · 영어 · 중국어"></div>
+          <div class="f"><label for="d-agency">타사 진행</label>
+            <input type="text" id="d-agency" placeholder="KOZ, 웨이크원 진행중">
+            <p class="hint">경쟁사에 걸려 있으면 꼭 적어주세요. 목록에서 눈에 띄게 표시됩니다.</p></div>
+          <div class="f"><label>점수 <span class="hint" style="display:inline">5점 만점</span></label>
+            <div class="choices" id="d-score"></div></div>
+
+          <div class="sec">담당 · 상태</div>
+          <div class="f"><label>담당자</label><div class="choices" id="d-owner"></div></div>
+          <div class="f"><label>상태</label><div class="choices" id="d-status"></div></div>
+
+          <div class="sec">자료</div>
+          <div class="f"><label>사진</label>
+            <div class="drop" id="d-drop" tabindex="0" role="button" aria-label="사진 추가">
+              <img id="d-drop-img" alt="" hidden>
+              <span class="drop-t" id="d-drop-t">사진 추가<small>탭해서 촬영 · 끌어다 놓기 · 붙여넣기</small></span>
+              <button type="button" class="drop-x" id="d-drop-x" aria-label="사진 지우기" hidden>&times;</button>
+            </div>
+            <input type="file" id="d-file" accept="image/*" hidden>
+          </div>
+          <div class="f"><label for="d-url">SNS 주소</label>
+            <input type="text" id="d-url" placeholder="https://www.instagram.com/..." inputmode="url"></div>
+          <div class="f"><label for="d-link">자료 링크</label>
+            <input type="text" id="d-link" placeholder="드라이브 영상·사진 링크" inputmode="url"></div>
+          <div class="f"><label for="d-note">메모</label>
+            <textarea id="d-note" placeholder="건장한 느낌의 체형&#10;네추럴한 느낌&#10;싱가폴 출신, 한국어·영어·중국어 가능"></textarea>
+            <p class="hint">줄바꿈으로 나눠 적으면 목록에서도 줄 단위로 보입니다.</p></div>
+          <div class="f"><label for="d-contact">연락처</label>
+            <input type="text" id="d-contact" placeholder="@계정 또는 학부모 연락처"></div>
+          <div class="row-btns">
+            <button class="btn" id="d-add">DB에 등록</button>
+            <button class="btn ghost sm" id="d-clear">지우기</button>
+          </div>
+          <div class="msg" id="d-msg"></div>
+        </div>
+      </div>
+      <div class="list-col">
+        <div class="filters" id="d-f-gender"></div>
+        <div class="filters" id="d-f-owner"></div>
+        <div class="filters" id="d-f-score"></div>
+        <div class="sortbar"><span>정렬</span><div class="choices" id="d-sort"></div></div>
+        <div id="d-list"></div>
+      </div>
+    </div>
+  </section>
+  <!-- 리그 -->
+  <section id="v-league" hidden>
+    <div class="card">
+      <h3 id="lg-title">이번주 리그</h3>
+      <p class="hint" style="margin:-6px 0 12px">월요일 0시에 리셋 · 등록 +1 · 회신 +3 · 1차 +5 · 2차 +8 · 최종 +15 (이번주에 그 상태가 된 건만)</p>
+      <div id="lg-board"></div>
+    </div>
+    <div class="card">
+      <h3>회신율</h3>
+      <p class="hint" style="margin:-6px 0 12px">DM 보낸 것 중 답이 온 비율 (전체 기간). 이 숫자가 오르면 DM 문구가 좋아진 겁니다.</p>
+      <div id="lg-rate"></div>
+    </div>
+    <div class="card">
+      <h3>배고픈 알</h3>
+      <p class="hint" style="margin:-6px 0 12px">DM 보내고 <b id="lg-staledays"></b>일 넘게 답이 없는 카드. 재발송하거나 보류로 정리하세요.</p>
+      <div id="lg-stale"></div>
+    </div>
+  </section>
+
+  <!-- 도감 -->
+  <section id="v-dex" hidden>
+    <div class="card">
+      <h3>도감 · 최종까지 간 인원</h3>
+      <div class="dex" id="dex-grid"></div>
+    </div>
+    <div class="card">
+      <h3>담당자 배지</h3>
+      <div id="dex-badges"></div>
+    </div>
+  </section>
+</main>
+
+
+
+<div class="toast" id="toast" aria-live="polite"><div class="tsp" id="toast-sp"></div><div><b id="toast-h"></b><span id="toast-t"></span></div></div>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="사진 크게 보기">
+  <button type="button" class="lb-x" id="lb-x" aria-label="닫기">&times;</button>
+  <div class="lb-box" id="lb-box"></div>
+</div>
+
+<script>
+var OWNERS   = ["김소연","김나희","김담희","염진경","전석환"];
+var PLATFORMS= ["로드","인스타","틱톡","기타"];
+var STATUSES = ["로드","DM발송","회신","1차","2차","최종","보류","거절"];
+var TONE = {"로드":"mute","DM발송":"warn","회신":"warn","1차":"accent","2차":"accent","최종":"ok","보류":"off","거절":"off"};
+var LIVE = {"로드":1,"DM발송":1,"회신":1,"1차":1,"2차":1};
+var SCORES = ["-","1","2","3","4","5"];
+var SORTS  = ["점수순","최신순","이름순"];
+var GENDERS = ["여","남"];
+var POSITIONS = ["보컬","댄스","랩","비주얼","연기","올라운드"];
+var NATIONS = ["한국","일본","중국","기타"];
+var GFILTER = ["전체","여","남"];
+var TABS = [["road","SNS/로드"],["db","개인DB (학원, 그외)"],["league","리그"],["dex","도감"]];
+var PTS={등록:1,회신:3,"1차":5,"2차":8,최종:15};
+var STALE_DAYS=7;
+/* ===== 설정 — 이 두 줄만 회사 것에 맞추면 됩니다 ===== */
+var API = "https://script.google.com/macros/s/AKfycbxYMA-AhEg1UUsHrqSkVygcjMIgPlKsavJHJOeJuEO9CFJHkA9ucUUarn6kWvuTBEB1YQ/exec";
+var TEAM_KEY = "modhaus-nd";          /* Code.gs 의 TEAM_KEY 와 같아야 합니다 */
+var APP_URL = location.origin + location.pathname;
+var editing = null, focusId = "", focusDone = false;
+
+var S = {road:[], db:[]};
+var tab = "road", busy = false;
+var R = {owner:OWNERS[0], platform:PLATFORMS[0], status:STATUSES[0], gender:GENDERS[0]};
+var D = {owner:OWNERS[0], status:STATUSES[0], score:SCORES[0], sort:SORTS[0], gender:GENDERS[0], position:POSITIONS[0], nationality:NATIONS[0]};
+var fR = {owner:"전체", status:"전체", gender:"전체"};
+var fD = {owner:"전체", score:"전체", gender:"전체"};
+
+function el(id){ return document.getElementById(id); }
+function toISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function today(){ return toISO(new Date()); }
+function daysAgo(n){ var d=new Date(); d.setDate(d.getDate()-n); return toISO(d); }
+function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
+function esc(s){ var d=document.createElement("div"); d.textContent=(s==null?"":String(s)); return d.innerHTML; }
+function sTone(n){ return n>=4?"s5":n===3?"s3":"s1"; }
+function linkify(t){
+  return esc(t).replace(/(https?:\/\/[^\s<]+)/g,function(u){
+    var shown=u.replace(/^https?:\/\/(www\.)?/,""); if(shown.length>48) shown=shown.slice(0,46)+"…";
+    return '<a href="'+u+'" target="_blank" rel="noopener noreferrer">'+shown+'</a>'; });
+}
+function contactHtml(c,platform){
+  var t=String(c||"").trim(); if(!t) return "";
+  var m=t.match(/^@([A-Za-z0-9._]+)$/);
+  if(m){ var h=platform==="틱톡"?"https://www.tiktok.com/@"+m[1]:"https://www.instagram.com/"+m[1]+"/";
+    return '<a href="'+h+'" target="_blank" rel="noopener noreferrer">'+esc(t)+'</a>'; }
+  return esc(t).replace(/(0\d{1,2})[\s-]?(\d{3,4})[\s-]?(\d{4})/g,function(all,a,b,d){
+    return '<a href="tel:'+a+b+d+'">'+all+'</a>'; });
+}
+
+/* ---------- 8비트 효과음 (다마고치 · RPG) ---------- */
+var SFX=(function(){
+  var ctx=null, on=store("sfx")!=="0";
+  function ac(){
+    if(!ctx){ try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
+    if(ctx.state==="suspended"){ try{ ctx.resume(); }catch(e){} }
+    return ctx;
+  }
+  function env(g,t,dur,vol,a){
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol,t+(a||0.008));
+    g.gain.setValueAtTime(vol,t+dur*0.55);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  }
+  function tone(f,t0,dur,type,vol,slide){
+    var c=ac(); if(!c||!f) return;
+    var o=c.createOscillator(), g=c.createGain(), t=c.currentTime+t0;
+    o.type=type||"square"; o.frequency.setValueAtTime(f,t);
+    if(slide) o.frequency.exponentialRampToValueAtTime(slide,t+dur);
+    env(g,t,dur,vol||0.08); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+0.05);
+  }
+  function hit(t0,dur,vol){                       /* 드럼 (노이즈) */
+    var c=ac(); if(!c) return;
+    var n=Math.floor(c.sampleRate*dur), b=c.createBuffer(1,n,c.sampleRate), d=b.getChannelData(0);
+    for(var i=0;i<n;i++) d[i]=Math.random()*2-1;
+    var src=c.createBufferSource(); src.buffer=b;
+    var f=c.createBiquadFilter(); f.type="highpass"; f.frequency.value=1500;
+    var g=c.createGain(), t=c.currentTime+t0; env(g,t,dur,vol||0.05,0.004);
+    src.connect(f); f.connect(g); g.connect(c.destination); src.start(t);
+  }
+  var NAMES={C:0,Cs:1,D:2,Ds:3,E:4,F:5,Fs:6,G:7,Gs:8,A:9,As:10,B:11};
+  function hz(n){ var m=/^([A-G])(s?)(\d)$/.exec(n||""); if(!m) return 0;
+    return 440*Math.pow(2,(NAMES[m[1]+m[2]]+(+m[3]+1)*12-69)/12); }
+  /* 멜로디: [[음, 박자], …] */
+  function mel(notes,bpm,type,vol,t0,tr){
+    var beat=60/bpm, t=t0||0;
+    notes.forEach(function(n){ var f=hz(n[0]); if(f) tone(f*Math.pow(2,(tr||0)/12),t,n[1]*beat*0.9,type,vol); t+=n[1]*beat; });
+    return t;
+  }
+  var lib={
+    /* 새 알 발견! — 위로 튀는 아르페지오 + 반짝 */
+    add:function(){
+      hit(0,0.05,0.04);
+      mel([["C5",.5],["E5",.5],["G5",.5],["C6",1.2]],300,"square",0.07);
+      mel([["C3",1.5],["C4",1.2]],300,"triangle",0.06);
+      mel([["E6",.4],["G6",.4],["C7",.8]],360,"triangle",0.045,0.42);
+    },
+    /* 레벨 업 — 단계가 올라갈수록 조가 올라감 */
+    levelUp:function(stage){
+      var tr=Math.max(0,(stage||1)-1)*2;
+      hit(0,0.06,0.05);
+      mel([["G4",.5],["C5",.5],["E5",.5],["G5",1.6]],280,"square",0.075,0,tr);
+      mel([["E4",.5],["G4",.5],["C5",.5],["E5",1.6]],280,"square",0.04,0,tr);
+      mel([["C3",1.5],["G3",1.6]],280,"triangle",0.06,0,tr);
+    },
+    /* 최종 합격 — 승리 팡파르 */
+    final:function(){
+      var lead=[["C5",.5],["C5",.5],["C5",.5],["C5",1.5],["Gs4",1.5],["As4",1.5],["C5",1],["As4",.5],["C5",2.6]];
+      var bass=[["C3",.5],["C3",.5],["C3",.5],["C3",1.5],["Gs2",1.5],["As2",1.5],["C3",1],["As2",.5],["C3",2.6]];
+      mel(lead,210,"square",0.075);
+      mel(lead,210,"square",0.035,0.012,12);
+      mel(bass,210,"triangle",0.07);
+      [0,.5,1,1.5,3,4.5,6,6.5,7].forEach(function(b){ hit(b*60/210,0.05,0.045); });
+      mel([["E6",.3],["G6",.3],["C7",1.2]],300,"triangle",0.04,2.2);
+    },
+    /* 보류·거절 — 시무룩 */
+    sad:function(){
+      mel([["E4",1],["Ds4",1],["D4",1]],150,"sawtooth",0.045);
+      tone(hz("Cs4"),1.2,1.1,"sawtooth",0.045,hz("A3"));
+      mel([["A2",3.2]],150,"triangle",0.04);
+    },
+    back:function(){ mel([["E5",.5],["C5",.8]],260,"square",0.06); },
+    save:function(){ mel([["A5",.5],["D6",1.1]],260,"square",0.07); mel([["D4",1.6]],260,"triangle",0.05); },
+    del:function(){ hit(0,0.22,0.06); tone(900,0,0.38,"square",0.06,90); },
+    copy:function(){ mel([["E6",.4],["E6",.4],["A6",.9]],280,"square",0.06); },
+    open:function(){ tone(hz("G5"),0,0.06,"triangle",0.07); },
+    tick:function(){ tone(hz("C6"),0,0.045,"square",0.06); },
+    blip:function(){ tone(hz("G6"),0,0.035,"triangle",0.05); },
+    chip:function(){ tone(hz("E6"),0,0.03,"square",0.04); tone(hz("B6"),0.03,0.04,"triangle",0.04); },
+    tab:function(){ tone(hz("B5"),0,0.04,"square",0.05); tone(hz("E6"),0.045,0.06,"square",0.05); },
+    err:function(){ tone(hz("G3"),0,0.16,"sawtooth",0.07); tone(hz("Fs3"),0.15,0.25,"sawtooth",0.07); }
+  };
+  return {
+    play:function(n,a){ if(on&&lib[n]){ try{ lib[n](a); }catch(e){} } },
+    toggle:function(){ on=!on; store("sfx",on?"1":"0"); if(on) lib.tick(); return on; },
+    on:function(){ return on; }
+  };
+})();
+
+/* ---------- 픽셀 펫 · 성장 단계 ---------- */
+var STAGE={"로드":0,"DM발송":1,"회신":2,"1차":3,"2차":4,"최종":5};
+var SPR=[
+ ["...####...","..#....#..",".#......#.",".#..#...#.","#........#","#........#","#........#",".#......#.",".#......#.","..#....#..","...####..."],
+ ["...####...","..#..#.#..",".#..#...#.",".#...#..#.","#...#....#","#....#...#","#...#....#",".#......#.",".#......#.","..#....#..","...####..."],
+ ["..........","...####...","..#....#..",".#......#.",".#.#..#.#.","#........#","#..#..#..#","#...##...#",".#......#.","..#....#..","...####..."],
+ ["...####...","..#....#..",".#.#..#.#.",".#......#.",".#..##..#.","..#....#..","...####...","..#.##.#..",".#.####.#.","...#..#...","..##..##.."],
+ ["#..####..#",".#.#..#.#.","..##..##..","...#..#...","..#.##.#..","..#....#..","...####...","....##....","...####...","...#..#...","..##..##.."],
+ ["..#.#.#...","..#####...","..#.#.#...",".#..#..#..",".#......#.",".#..##..#.","..#....#..","...####...",".#.####.#.","..#....#..",".##....##."],
+ ["..........","...####...","..#....#..",".#......#.",".#.#..#.#.","#........#","#........#","#...##...#",".#.#..#.#.","..#....#..","...####..."]  /* 6 = 시무룩 */
+];
+function sprite(i){
+  var rows=SPR[Math.max(0,Math.min(SPR.length-1,i))], out="";
+  for(var y=0;y<rows.length;y++) for(var x=0;x<rows[y].length;x++)
+    if(rows[y][x]==="#") out+='<rect x="'+x+'" y="'+y+'" width="1" height="1"/>';
+  return '<svg viewBox="0 0 10 11" shape-rendering="crispEdges" fill="#000" aria-hidden="true">'+out+'</svg>';
+}
+/* ---------- 리그 · 방치 · 배지 계산 ---------- */
+function weekStart(){ var d=new Date(); d.setHours(0,0,0,0); var w=(d.getDay()+6)%7; d.setDate(d.getDate()-w); return d.getTime(); }
+function statusAtOf(r){
+  if(r.statusAt) return Number(r.statusAt);
+  if(r.date){ var p=String(r.date).split("-"); if(p.length===3) return new Date(+p[0],+p[1]-1,+p[2]).getTime(); }
+  return Number(r.createdAt)||0;
+}
+function daysSince(ms){ return Math.floor((Date.now()-ms)/86400000); }
+function isStale(r){ return r.status==="DM발송" && daysSince(statusAtOf(r))>=STALE_DAYS; }
+function allRecs(){ return S.road.concat(S.db); }
+function weekPts(owner){
+  var ws=weekStart(), pts=0;
+  allRecs().forEach(function(r){
+    if(r.owner!==owner) return;
+    if((Number(r.createdAt)||0)>=ws) pts+=PTS.등록;
+    if(PTS[r.status]&&statusAtOf(r)>=ws) pts+=PTS[r.status];
+  });
+  return pts;
+}
+function weekCounts(owner){
+  var ws=weekStart(), c={등록:0,회신:0,"1차":0,"2차":0,최종:0};
+  allRecs().forEach(function(r){
+    if(r.owner!==owner) return;
+    if((Number(r.createdAt)||0)>=ws) c.등록++;
+    if(c[r.status]!==undefined&&statusAtOf(r)>=ws) c[r.status]++;
+  });
+  return c;
+}
+function replyRate(owner){
+  var sent=0, got=0;
+  S.road.forEach(function(r){
+    if(owner&&r.owner!==owner) return;
+    if(r.status==="DM발송"){ sent++; }
+    else if(r.status==="회신"||r.status==="1차"||r.status==="2차"||r.status==="최종"){ sent++; got++; }
+  });
+  return {sent:sent,got:got,rate:sent?got/sent:0};
+}
+function ownerLevel(owner){
+  var n=allRecs().filter(function(r){return r.owner===owner;}).length;
+  return {n:n, lv:Math.floor(n/5)+1, xp:n%5, stage:Math.min(5,Math.floor(Math.floor(n/5)/2))};
+}
+var BADGES=[
+  ["인스타 헌터","인스타 10건",function(o){return S.road.filter(function(r){return r.owner===o&&r.platform==="인스타";}).length>=10;},"var(--accent)"],
+  ["길거리의 눈","로드 10건",function(o){return S.road.filter(function(r){return r.owner===o&&r.platform==="로드";}).length>=10;},"var(--sun)"],
+  ["틱톡커","틱톡 10건",function(o){return S.road.filter(function(r){return r.owner===o&&r.platform==="틱톡";}).length>=10;},"var(--lav)"],
+  ["안목","최종 1명",function(o){return allRecs().some(function(r){return r.owner===o&&r.status==="최종";});},"var(--rose)"],
+  ["스나이퍼","회신율 40%↑ (DM 10건↑)",function(o){var x=replyRate(o); return x.sent>=10&&x.rate>=0.4;},"var(--mint)"],
+  ["개근","이번달 5일 이상 등록",function(o){var m=new Date(); var mm=m.getFullYear()+"-"+String(m.getMonth()+1).padStart(2,"0");
+     var days={}; allRecs().forEach(function(r){ if(r.owner===o&&String(r.date||"").indexOf(mm)===0) days[r.date]=1; }); return Object.keys(days).length>=5;},"var(--pumpkin)"],
+  ["백 개의 알","등록 100건",function(o){return ownerLevel(o).n>=100;},"#000"]
+];
+function badgesOf(o){ return BADGES.filter(function(b){ try{ return b[2](o); }catch(e){ return false; } }); }
+function dexList(){
+  return allRecs().filter(function(r){return r.status==="최종";})
+    .sort(function(a,b){ return statusAtOf(b)-statusAtOf(a); });
+}
+
+/* ---------- 리그 탭 ---------- */
+function renderLeague(){
+  var ws=new Date(weekStart());
+  el("lg-title").textContent="이번주 리그 · "+(ws.getMonth()+1)+"/"+ws.getDate()+"~";
+  var rows=OWNERS.map(function(o){ return {o:o,pts:weekPts(o),c:weekCounts(o),lv:ownerLevel(o)}; })
+    .sort(function(a,b){ return b.pts-a.pts||b.lv.n-a.lv.n; });
+  var h='<div class="lg">';
+  rows.forEach(function(x,i){
+    var c=x.c, det=[];
+    if(c.등록)det.push("등록 "+c.등록); if(c.회신)det.push("회신 "+c.회신); if(c["1차"])det.push("1차 "+c["1차"]);
+    if(c["2차"])det.push("2차 "+c["2차"]); if(c.최종)det.push("최종 "+c.최종);
+    h+='<div class="lgrow'+(i===0&&x.pts>0?" top":"")+(x.o===me?" me":"")+'">'+
+       '<div class="rk">'+(i===0&&x.pts>0?"1":i+1)+'</div><div class="tsp">'+sprite(x.lv.stage)+'</div>'+
+       '<div class="nm">'+esc(x.o)+(i===0&&x.pts>0?' <span class="tag" style="background:#000;color:#fff">KING</span>':'')+
+       '<small>LV '+x.lv.lv+' · '+(det.length?det.join(" · "):"이번주 기록 없음")+'</small></div>'+
+       '<div class="pt">'+x.pts+'P</div></div>';
+  });
+  h+='</div>';
+  el("lg-board").innerHTML=h;
+
+  var rh="", all=replyRate("");
+  OWNERS.concat([""]).forEach(function(o){
+    var x=o?replyRate(o):all; if(!o&&!x.sent) return;
+    rh+='<div class="rate"><div>'+(o?esc(o):"<b>팀 전체</b>")+'<br><small>'+x.got+'/'+x.sent+'</small></div>'+
+        '<div class="bar"><i style="width:'+Math.round(x.rate*100)+'%"></i></div>'+
+        '<div class="pc">'+(x.sent?Math.round(x.rate*100)+"%":"-")+'</div></div>';
+  });
+  el("lg-rate").innerHTML=rh||'<div class="empty">아직 DM 기록이 없습니다.</div>';
+
+  el("lg-staledays").textContent=STALE_DAYS;
+  var st=S.road.filter(isStale).sort(function(a,b){ return statusAtOf(a)-statusAtOf(b); });
+  var sh="";
+  st.forEach(function(r){
+    sh+='<div class="stale"><div class="tsp">'+sprite(6)+'</div><div class="sp"><b>'+esc(nameOf(r)||"이름 미입력")+'</b>'+
+        '<small>'+esc(r.owner)+' · '+daysSince(statusAtOf(r))+'일째 답 없음'+(r.url?' · '+esc(String(r.url).replace(/^https?:\/\/(www\.)?/,"")):"")+'</small></div>'+
+        '<button class="mini" data-act="resend" data-id="'+esc(r.id)+'">재발송</button>'+
+        '<button class="mini" data-act="hold" data-id="'+esc(r.id)+'">보류</button></div>';
+  });
+  el("lg-stale").innerHTML=sh||'<div class="empty">배고픈 알이 없습니다. 잘 챙기고 있어요.</div>';
+  Array.prototype.forEach.call(el("lg-stale").querySelectorAll("button"),function(b){
+    b.onclick=function(){
+      var id=b.getAttribute("data-id"), act=b.getAttribute("data-act");
+      if(act==="resend"){ SFX.play("save"); toast(1,"RESEND","다시 DM 보냄으로 기록"); call("updateItem",["road",id,{status:"DM발송"}],"재발송으로 기록했습니다.","r-msg",true); }
+      else { SFX.play("sad"); call("updateItem",["road",id,{status:"보류"}],"보류로 옮겼습니다.","r-msg",true); }
+    };
+  });
+}
+
+/* ---------- 도감 탭 ---------- */
+function renderDex(){
+  var list=dexList(), h="";
+  list.forEach(function(r,i){
+    var isDb=S.db.indexOf(r)>=0;
+    h+='<div class="dexc"><div class="ph" data-i="'+i+'">'+(r.photo?'<img src="'+r.photo+'" alt="">':'<div class="tsp">'+sprite(5)+'</div>')+'</div>'+
+       '<b>'+esc(nameOf(r)||"이름 미입력")+'</b><small>NO.'+String(list.length-i).padStart(3,"0")+'</small>'+
+       '<small style="font-family:inherit;font-size:11px">'+esc(r.owner)+' · '+esc((r.date||"").slice(2))+(isDb?" · DB":"")+'</small></div>';
+  });
+  el("dex-grid").innerHTML=h||'<div class="empty">아직 최종까지 간 인원이 없습니다. 첫 번째 칸을 채워보세요.</div>';
+  Array.prototype.forEach.call(el("dex-grid").querySelectorAll(".ph"),function(p){
+    p.onclick=function(){ var r=list[+p.getAttribute("data-i")]; if(r.photo) openLB(r,S.db.indexOf(r)>=0); };
+  });
+  var bh='<div class="badges">';
+  OWNERS.forEach(function(o){
+    var lv=ownerLevel(o), got=badgesOf(o);
+    bh+='<div class="brow"><div class="who">'+esc(o)+'<small>LV '+lv.lv+' · '+lv.n+'</small></div><div class="bl">';
+    BADGES.forEach(function(b){
+      var has=got.indexOf(b)>=0;
+      bh+='<span class="badge'+(has?"":" lock")+'" title="'+esc(b[1])+'"><i style="background:'+b[3]+'"></i>'+esc(b[0])+
+          (has?'':'<small> · '+esc(b[1])+'</small>')+'</span>';
+    });
+    bh+='</div></div>';
+  });
+  el("dex-badges").innerHTML=bh+'</div>';
+}
+
+var toastT=null;
+/* ---------- 응원 · 스트릭 · 마일스톤 ---------- */
+function myDateSet(who){ var set={}; allRecs().forEach(function(r){ if(r.owner===who&&r.date) set[r.date]=1; }); return set; }
+/* 연속 출석일 (주말은 안 끊김) */
+function streakOf(who,extraToday){
+  var set=myDateSet(who); if(extraToday) set[today()]=1;
+  var d=new Date(); d.setHours(0,0,0,0); var n=0, guard=0;
+  if(!set[toISO(d)]) d.setDate(d.getDate()-1);
+  while(guard++<400){
+    var k=toISO(d), wd=d.getDay();
+    if(set[k]) n++; else if(wd!==0&&wd!==6) break;
+    d.setDate(d.getDate()-1);
+  }
+  return n;
+}
+function todayCountOf(who){ var t=today(); return allRecs().filter(function(r){ return r.owner===who&&r.date===t; }).length; }
+function ordEn(n){ return n===1?"1ST":n===2?"2ND":n===3?"3RD":n+"TH"; }
+function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function cheer(rec,key){
+  var nth=todayCountOf(me)+1, stk=streakOf(me,true), total=ownerLevel(me).n+1;
+  var nm=rec.name||"", h=new Date().getHours(), wd=new Date().getDay();
+  var head="NEW!", lines=[], sound="add", stage=key==="db"?3:(STAGE[rec.status]||0);
+
+  if(total%100===0){ head=total+" EGGS!"; sound="final"; stage=5;
+    lines=[total+"번째 알! 이건 전설입니다. 도감에 이름 새겨야 함","백 개의 알… 이제 눈 감고도 원석이 보이죠?"]; }
+  else if(total%50===0){ head=total+" EGGS"; sound="final"; stage=4;
+    lines=[total+"번째 알. 반백 개. 손목 괜찮으세요?","50개 채웠습니다. 펫이 감동해서 울고 있어요"]; }
+  else if(total%10===0){ head=total+" EGGS"; sound="mile"; stage=Math.min(5,stage+1);
+    lines=[total+"번째 알! 기념 팡파르 드립니다","딱 "+total+"개. 숫자가 예쁘니 오늘은 여기까지… 는 아니죠?"]; }
+  else if(stk>=7&&nth===1){ head="STREAK "+stk; sound="streak";
+    lines=[stk+"일 연속! 이쯤 되면 습관이 아니라 재능",stk+"일째 출석. 펫이 '엄마' 라고 부르기 시작했습니다"]; }
+  else if(stk>=3&&nth===1){ head="STREAK "+stk; sound="streak";
+    lines=[stk+"일 연속 출석. 펫이 통통해졌습니다",stk+"일 연속. 알 농장 사장님 등판"]; }
+  else if(nth>=5){ head=ordEn(nth)+" TODAY"; sound="nth";
+    lines=["오늘만 "+nth+"번째… 알 농장 하시나요?",nth+"번째! 대표님한테 이 화면 캡처해서 보내세요","오늘 "+nth+"개. 펫이 배 터질 것 같대요"]; }
+  else if(nth>=2){ head=ordEn(nth)+" TODAY"; sound="nth";
+    lines=nth===2?["두 번째! 손이 풀렸네요","오늘 두 번째 알. 첫 번째보다 예쁘죠?"]
+                 :["세 번째. 이 속도면 오늘 안에 진화합니다","3번째! 이제 알 냄새만 맡아도 아시는군요","네 번째 알. 눈이 아니라 레이더 아니에요?"].slice(0,nth===3?2:3); }
+  else {
+    if(h<11) lines.push("아침부터 원석 발견. 오늘 운 좋은 날","출근하자마자 한 건. 커피보다 빠르다");
+    else if(h<15) lines.push("점심 먹고 바로 한 건. 소화 잘 되겠다","오후의 첫 알. 졸음 대신 캐스팅");
+    else if(h<19) lines.push("퇴근 전 한 건 더. 이게 프로","해 지기 전에 알 하나. 오늘도 빈손 아님");
+    else lines.push("이 시간에도 캐스팅. 펫이 야근수당 달라는데요","밤에 찾은 원석이 더 빛난다는 말이 있죠 (제가 방금 지어냄)");
+    if(wd===0||wd===6) lines.push("주말에도 캐스팅. 대표님 보고 계시죠?","주말 출석. 펫 왈: '쉬는 날 아니었어?'");
+    if(wd===5&&h>=18) lines.push("금요일 밤에도 캐스팅. 존경합니다");
+    if(rec.platform==="로드") lines.push("발품은 배신 안 해요. 길에서 건진 원석","길거리에서 찾았다. 알고리즘도 못 하는 일");
+    if(rec.platform==="인스타") lines.push("알고리즘보다 빠른 손. 인스타 헌터","인스타에서 건졌다. DM은 뜨거울 때!");
+    if(rec.platform==="틱톡") lines.push("틱톡에서 낚았다. 락 풀리기 전에 DM!","틱톡 원석. 15초 만에 알아본 눈");
+    if(key==="db") lines.push("DB에 정식 등록. 이제 진짜 시작","이름·키·학원까지. 정성 +10");
+    if(nm&&key!=="db") lines.push(nm+"… 이름부터 데뷔각",nm+", 잘 부탁해요. 최종까지 가봅시다");
+    if(!nm&&key!=="db") lines.push("알은 찾았는데 이름표가 없네요. 나중에 [수정]으로 붙여주세요");
+    lines.push("잘했어요. 이 알이 최종까지 갈지 지켜봅시다","오늘의 원석 확보. 회신 오면 소리 더 크게 납니다","좋은 눈. 펫이 박수 치는 중");
+  }
+  return {head:head, text:rnd(lines), sound:sound, stage:stage, nth:nth};
+}
+function celebrate(rec,key){
+  var c=cheer(rec,key);
+  if(c.sound==="final") SFX.play("final");
+  else if(c.sound==="mile"){ SFX.play("add"); setTimeout(function(){ SFX.play("levelUp",5); },420); }
+  else if(c.sound==="streak"){ SFX.play("add"); setTimeout(function(){ SFX.play("levelUp",3); },420); }
+  else if(c.sound==="nth"){ SFX.play("levelUp",Math.min(6,c.nth)); setTimeout(function(){ SFX.play("add"); },380); }
+  else SFX.play("add");
+  toast(c.stage,c.head,c.text);
+}
+function toast(stage,head,text){
+  var t=el("toast"); el("toast-sp").innerHTML=sprite(stage);
+  el("toast-h").textContent=head; el("toast-t").textContent=text||"";
+  t.classList.add("show"); clearTimeout(toastT);
+  toastT=setTimeout(function(){ t.classList.remove("show"); }, stage===5?3400:2800);
+}
+function paintSfx(){ var b=el("sfx"); b.textContent=SFX.on()?"SFX ON":"SFX OFF"; b.classList.toggle("off",!SFX.on()); }
+/* 이름 칸이 비어 있으면 특이사항 앞 조각("강연우 / 10년생…")을 이름으로 씁니다 */
+function nameOf(r){
+  if(r.name) return r.name;
+  var f=String(r.note||"").split(/[\/·|,\n]/)[0].trim();
+  if(f && f.length<=8 && !/[\d@:.]/.test(f)) return f;
+  return "";
+}
+
+/* ---------- 저장소 (IndexedDB) ---------- */
+var IDB=(function(){
+  var db=null;
+  function open(){ return new Promise(function(res,rej){
+    if(db) return res(db);
+    if(!window.indexedDB) return rej(new Error("no idb"));
+    var q=indexedDB.open("casting-board",1);
+    q.onupgradeneeded=function(){ q.result.createObjectStore("kv"); };
+    q.onsuccess=function(){ db=q.result; res(db); };
+    q.onerror=function(){ rej(q.error); };
+  }); }
+  return {
+    get:function(k){ return open().then(function(d){ return new Promise(function(res){
+      var r=d.transaction("kv").objectStore("kv").get(k); r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ res(undefined); }; }); }).catch(function(){ return undefined; }); },
+    set:function(k,v){ return open().then(function(d){ return new Promise(function(res){
+      var t=d.transaction("kv","readwrite"); t.objectStore("kv").put(v,k); t.oncomplete=function(){res(true);}; t.onerror=function(){res(false);}; }); }).catch(function(){ return false; }); }
+  };
+})();
+var THUMBS={};                       /* id → 썸네일 data URL (기기에 저장) */
+var thumbSaveT=null;
+function saveThumbs(){ clearTimeout(thumbSaveT); thumbSaveT=setTimeout(function(){ IDB.set("thumbs",THUMBS); },400); }
+
+/* ---------- 서버 (Apps Script JSON API) ---------- */
+function setBusy(b){ busy=b; el("r-add").disabled=b; el("d-add").disabled=b; }
+function fail(m){ setBusy(false); el("banner").hidden=false; el("banner").textContent=m; SFX.play("err"); }
+function note(id,t){ var n=el(id); if(!n) return; n.textContent=t||"";
+  if(t) setTimeout(function(){ if(n.textContent===t) n.textContent=""; },3500); }
+function qs(o){ return Object.keys(o).map(function(k){ return encodeURIComponent(k)+"="+encodeURIComponent(o[k]); }).join("&"); }
+function apiGet(p){ p.t=TEAM_KEY; return fetch(API+"?"+qs(p),{method:"GET",redirect:"follow",cache:"no-store"}).then(function(r){ return r.json(); }); }
+function apiPost(body){ body.t=TEAM_KEY;
+  return fetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)}).then(function(r){ return r.json(); }); }
+
+/* 서버가 준 목록에 기기에 저장된 썸네일을 붙입니다 */
+function absorb(data){
+  ["road","db"].forEach(function(k){ (data[k]||[]).forEach(function(r){ r.photo=THUMBS[r.id]||""; }); });
+  S={road:data.road||[],db:data.db||[]};
+  IDB.set("snap",{road:S.road,db:S.db,at:Date.now()});
+}
+/* 화면에 있는 카드 중 썸네일이 아직 없는 것만 24장씩 받아옵니다 */
+var thumbBusy=false;
+function pullThumbs(){
+  if(thumbBusy||!navigator.onLine) return;
+  var key=tab==="db"?"db":"road", list=(S[key]||[]).filter(function(r){ return r.hasPhoto&&!THUMBS[r.id]&&!r._noThumb; });
+  if(!list.length){ var other=key==="db"?"road":"db"; list=(S[other]||[]).filter(function(r){ return r.hasPhoto&&!THUMBS[r.id]&&!r._noThumb; }); key=other; }
+  if(!list.length) return;
+  var ids=list.slice(0,24).map(function(r){ return r.id; });
+  thumbBusy=true;
+  apiGet({action:"thumbs",k:key,ids:ids.join(",")}).then(function(res){
+    thumbBusy=false;
+    (res.thumbs||[]).forEach(function(t){ if(t.photo) THUMBS[t.id]=t.photo; });
+    ids.forEach(function(id){ if(!THUMBS[id]) (S[key]||[]).forEach(function(r){ if(r.id===id) r._noThumb=true; }); });
+    saveThumbs(); absorbPhotos(); render(); pullThumbs();
+  }).catch(function(){ thumbBusy=false; });
+}
+function absorbPhotos(){ ["road","db"].forEach(function(k){ (S[k]||[]).forEach(function(r){ r.photo=THUMBS[r.id]||""; }); }); }
+
+/* fn: getAll | addItem | updateItem | editItem | deleteItem  (예전 호출 이름 그대로) */
+function call(fn,args,okMsg,msgEl,mutating){
+  args=args||[];
+  var p;
+  if(fn==="getAll")            p=apiGet({action:"all"});
+  else if(fn==="addItem")      p=apiPost({action:"add",k:args[0],rec:args[1]});
+  else if(fn==="updateItem")   p=apiPost({action:"update",k:args[0],id:args[1],patch:args[2]});
+  else if(fn==="editItem")     p=apiPost({action:"edit",k:args[0],id:args[1],rec:args[2]});
+  else if(fn==="deleteItem")   p=apiPost({action:"delete",k:args[0],id:args[1]});
+  else return;
+  if(mutating) setBusy(true);
+  var done=false;
+  var wd=setTimeout(function(){ if(done)return; done=true; fail("서버 응답이 없습니다. 인터넷 연결을 확인하고 다시 눌러주세요."); },25000);
+  p.then(function(data){
+    if(done) return; done=true; clearTimeout(wd); if(mutating) setBusy(false);
+    if(!data||data.error){ fail("저장하지 못했습니다. ("+(data&&data.error?data.error:"응답 오류")+")"); return; }
+    /* 방금 올린 사진은 서버에 다시 안 물어보고 바로 저장 */
+    if(fn==="addItem"&&data.id&&args[1]&&args[1].photo){ THUMBS[data.id]=args[1].photo; saveThumbs(); }
+    if(fn==="editItem"&&args[2]&&args[2].photo!==undefined){ if(args[2].photo) THUMBS[args[1]]=args[2].photo; else delete THUMBS[args[1]]; saveThumbs(); }
+    if(fn==="deleteItem"){ delete THUMBS[args[1]]; saveThumbs(); }
+    absorb(data); el("banner").hidden=true; tryFocus(); render(); scrollFocus(); pullThumbs();
+    if(okMsg) note(msgEl,okMsg);
+  }).catch(function(e){
+    if(done) return; done=true; clearTimeout(wd); if(mutating) setBusy(false);
+    fail(navigator.onLine?"서버와 통신하지 못했습니다. ("+(e&&e.message?e.message:"오류")+")":"오프라인입니다. 연결되면 다시 시도해주세요.");
+  });
+}
+function fetchFull(fileId){ return apiGet({action:"full",file:fileId}).then(function(x){ return x&&x.photo||""; }); }
+
+/* ---------- 공용 UI ---------- */
+function choices(host,values,state,key,after){
+  host.innerHTML="";
+  values.forEach(function(v){
+    var b=document.createElement("button");
+    b.type="button"; b.className="choice"; b.textContent=v;
+    b.setAttribute("aria-pressed",String(state[key]===v));
+    b.onclick=function(){ state[key]=v; SFX.play("blip");
+      Array.prototype.forEach.call(host.children,function(c){ c.setAttribute("aria-pressed",String(c.textContent===v)); });
+      if(after) after(); };
+    host.appendChild(b);
+  });
+}
+function chips(host,values,current,counts,onPick){
+  host.innerHTML="";
+  values.forEach(function(v){
+    var b=document.createElement("button");
+    b.type="button"; b.className="chip";
+    b.innerHTML=esc(v)+'<span class="n">'+(counts[v]||0)+'</span>';
+    b.setAttribute("aria-pressed",String(current===v));
+    b.onclick=function(){ SFX.play("chip"); onPick(v); };
+    host.appendChild(b);
+  });
+}
+function thumbOf(r,onOpen){
+  var th=document.createElement("div"); th.className="thumb";
+  if(r.photo){
+    var img=document.createElement("img"); img.src=r.photo; img.alt="사진 크게 보기";
+    img.onerror=function(){ th.innerHTML='<span class="ph">사진</span>'; };
+    th.appendChild(img);
+    th.classList.add("clickable"); th.tabIndex=0; th.setAttribute("role","button");
+    th.onclick=onOpen; th.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); onOpen(); } };
+  } else th.innerHTML='<span class="ph">—</span>';
+  return th;
+}
+function statusSelect(key,r){
+  var tone=TONE[r.status]||"mute";
+  var sel=document.createElement("select"); sel.className="status t-"+tone;
+  sel.setAttribute("aria-label","상태");
+  STATUSES.forEach(function(s){ var o=document.createElement("option"); o.value=s; o.textContent=s;
+    if(s===r.status)o.selected=true; sel.appendChild(o); });
+  sel.onchange=function(){
+    var v=sel.value, nm=nameOf(r)||r.name||"", oi=STATUSES.indexOf(r.status), ni=STATUSES.indexOf(v);
+    if(v==="최종"){ SFX.play("final"); toast(5,"★ FINAL ★",(nm||"이름 미입력")+" 최종 합격!"); }
+    else if(v==="보류"||v==="거절"){ SFX.play("sad"); toast(6,v==="보류"?"HOLD...":"BYE...",(nm||"이름 미입력")+" "+v); }
+    else if(ni>oi){ SFX.play("levelUp",STAGE[v]); toast(STAGE[v],"LEVEL UP!",(nm||"이름 미입력")+" → "+v); }
+    else SFX.play("back");
+    call("updateItem",[key,r.id,{status:v}],"상태를 바꿨습니다.",key==="road"?"r-msg":"d-msg",true);
+  };
+  return sel;
+}
+function miniBtn(label,fn,title){
+  var b=document.createElement("button"); b.className="mini"; b.type="button"; b.textContent=label;
+  if(title) b.title=title; b.onclick=function(){ fn(b); }; return b;
+}
+function copyLink(id,btn){
+  var u=APP_URL+(APP_URL.indexOf("?")>=0?"&":"?")+"id="+encodeURIComponent(id);
+  function done(){ SFX.play("copy"); var t=btn.textContent; btn.textContent="복사됨 ✓"; btn.classList.add("done");
+    setTimeout(function(){ btn.textContent=t; btn.classList.remove("done"); },1600); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(u).then(done,function(){ window.prompt("이 링크를 복사하세요",u); });
+  } else window.prompt("이 링크를 복사하세요",u);
+}
+function pick(list,v,cur){ return list.indexOf(v)>=0?v:cur; }
+function startEdit(key,r){
+  SFX.play("open");
+  editing={key:key,id:r.id};
+  if(key==="road"){
+    el("r-name").value=r.name||nameOf(r)||""; el("r-date").value=r.date||today();
+    el("r-place").value=r.place||""; el("r-url").value=r.url||"";
+    el("r-note").value=r.note||""; el("r-contact").value=r.contact||"";
+    R.owner=pick(OWNERS,r.owner,R.owner); R.platform=pick(PLATFORMS,r.platform,R.platform);
+    R.status=pick(STATUSES,r.status,R.status); R.gender=pick(GENDERS,r.gender,R.gender);
+    choices(el("r-owner"),OWNERS,R,"owner"); choices(el("r-platform"),PLATFORMS,R,"platform");
+    choices(el("r-status"),STATUSES,R,"status"); choices(el("r-gender"),GENDERS,R,"gender");
+    rPhoto.set(r.photo||"",""); rPhoto.clean();
+    el("r-title").textContent="수정 중 · "+(nameOf(r)||"이름 미입력"); el("r-title").classList.add("editing");
+    el("r-add").textContent="저장"; el("r-clear").textContent="취소";
+    setTab("road"); note("r-msg","내용을 고친 뒤 저장을 누르세요.");
+  } else {
+    ["name","birth","height","weight","academy","region","language","agency","url","link","note","contact"]
+      .forEach(function(k){ el("d-"+k).value=r[k]||""; });
+    D.owner=pick(OWNERS,r.owner,D.owner); D.status=pick(STATUSES,r.status,D.status);
+    D.gender=pick(GENDERS,r.gender,D.gender); D.position=pick(POSITIONS,r.position,D.position);
+    D.nationality=pick(NATIONS,r.nationality,D.nationality);
+    D.score=pick(SCORES,String(parseInt(r.score,10)||"-"),SCORES[0]);
+    choices(el("d-owner"),OWNERS,D,"owner"); choices(el("d-status"),STATUSES,D,"status");
+    choices(el("d-gender"),GENDERS,D,"gender"); choices(el("d-position"),POSITIONS,D,"position");
+    choices(el("d-nationality"),NATIONS,D,"nationality"); choices(el("d-score"),SCORES,D,"score");
+    dPhoto.set(r.photo||"",""); dPhoto.clean();
+    el("d-title").textContent="수정 중 · "+(r.name||"이름 없음"); el("d-title").classList.add("editing");
+    el("d-add").textContent="저장"; el("d-clear").textContent="취소";
+    setTab("db"); note("d-msg","내용을 고친 뒤 저장을 누르세요.");
+  }
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function cancelEdit(){
+  editing=null;
+  R.platform=PLATFORMS[0]; R.status=STATUSES[0]; R.gender=GENDERS[0];
+  choices(el("r-platform"),PLATFORMS,R,"platform"); choices(el("r-status"),STATUSES,R,"status"); choices(el("r-gender"),GENDERS,R,"gender");
+  D.status=STATUSES[0]; D.score=SCORES[0]; D.gender=GENDERS[0]; D.position=POSITIONS[0]; D.nationality=NATIONS[0];
+  choices(el("d-status"),STATUSES,D,"status"); choices(el("d-score"),SCORES,D,"score"); choices(el("d-gender"),GENDERS,D,"gender");
+  choices(el("d-position"),POSITIONS,D,"position"); choices(el("d-nationality"),NATIONS,D,"nationality");
+  el("r-title").textContent="새로 추가"; el("r-title").classList.remove("editing");
+  el("r-add").textContent="보드에 추가"; el("r-clear").textContent="입력 지우기";
+  el("d-title").textContent="개인 DB 등록"; el("d-title").classList.remove("editing");
+  el("d-add").textContent="DB에 등록"; el("d-clear").textContent="지우기";
+}
+function delBtn(key,id,label){
+  var b=document.createElement("button");
+  b.className="del"; b.type="button"; b.innerHTML="&times;"; b.setAttribute("aria-label","삭제");
+  b.onclick=function(){ if(confirm(label+" 삭제할까요?")){ SFX.play("del"); toast(6,"POOF","삭제됨"); call("deleteItem",[key,id],"삭제했습니다.",key==="road"?"r-msg":"d-msg",true); } };
+  return b;
+}
+
+/* ---------- 사진 ---------- */
+function photoInput(p){
+  var st={thumb:"",full:"",dirty:false};
+  var dz=el(p+"-drop"), img=el(p+"-drop-img"), txt=el(p+"-drop-t"), x=el(p+"-drop-x"), file=el(p+"-file");
+  function set(t,f){ st.thumb=t||""; st.full=f||"";
+    if(st.thumb){ img.src=st.thumb; img.hidden=false; txt.hidden=true; x.hidden=false; dz.classList.add("has"); }
+    else { img.removeAttribute("src"); img.hidden=true; txt.hidden=false; x.hidden=true; dz.classList.remove("has"); } }
+  function draw(im,max,q0,cap){
+    var s=Math.min(1,max/Math.max(im.width,im.height));
+    var w=Math.max(1,Math.round(im.width*s)),h=Math.max(1,Math.round(im.height*s));
+    var c=document.createElement("canvas"); c.width=w; c.height=h;
+    var g=c.getContext("2d"); g.fillStyle="#ffffff"; g.fillRect(0,0,w,h); g.drawImage(im,0,0,w,h);
+    var q=q0,out=c.toDataURL("image/jpeg",q);
+    while(out.length>cap&&q>0.3){ q-=0.1; out=c.toDataURL("image/jpeg",q); }
+    return out; }
+  function take(f){
+    if(!f||f.type.indexOf("image/")!==0) return;
+    var fr=new FileReader();
+    fr.onload=function(){ var im=new Image();
+      im.onload=function(){ var t=draw(im,200,0.7,44000);
+        set(t.length>48000?"":t, draw(im,1400,0.82,900000)); st.dirty=true; };
+      im.src=fr.result; };
+    fr.readAsDataURL(f); }
+  dz.addEventListener("click",function(e){ if(e.target!==x) file.click(); });
+  dz.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); file.click(); } });
+  file.addEventListener("change",function(e){ if(e.target.files[0]) take(e.target.files[0]); e.target.value=""; });
+  x.addEventListener("click",function(e){ e.stopPropagation(); set("",""); st.dirty=true; });
+  ["dragenter","dragover"].forEach(function(t){ dz.addEventListener(t,function(e){ e.preventDefault(); dz.classList.add("over"); }); });
+  ["dragleave","dragend"].forEach(function(t){ dz.addEventListener(t,function(){ dz.classList.remove("over"); }); });
+  dz.addEventListener("drop",function(e){ e.preventDefault(); dz.classList.remove("over");
+    var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) take(f); });
+  return {get:function(){return st;}, set:set, clear:function(){ set("",""); st.dirty=false; }, take:take,
+    isDirty:function(){ return st.dirty; }, clean:function(){ st.dirty=false; }};
+}
+var rPhoto=photoInput("r"), dPhoto=photoInput("d");
+document.addEventListener("paste",function(e){
+  var items=e.clipboardData&&e.clipboardData.items; if(!items) return;
+  for(var i=0;i<items.length;i++){
+    if(items[i].type&&items[i].type.indexOf("image")===0){
+      var f=items[i].getAsFile();
+      if(f){ e.preventDefault(); (tab==="db"?dPhoto:rPhoto).take(f); }
+      return; } }
+});
+
+/* ---------- 크게 보기 ---------- */
+var lb=el("lb"), lbBox=el("lb-box");
+function closeLB(){ lb.classList.remove("open"); lbBox.innerHTML=""; }
+el("lb-x").onclick=closeLB;
+lb.addEventListener("click",function(e){ if(e.target===lb) closeLB(); });
+document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&lb.classList.contains("open")) closeLB(); });
+function openLB(r,isDb){
+  lb.classList.add("open");
+  lbBox.innerHTML='<div class="lb-load">사진을 불러오는 중…</div>';
+  function show(src){
+    lbBox.innerHTML="";
+    var i=document.createElement("img"); i.src=src||""; i.alt=""; lbBox.appendChild(i);
+    var sc=parseInt(r.score,10)||0;
+    var m=document.createElement("div");
+    m.innerHTML='<div class="line1">'+(sc?'<span class="score '+sTone(sc)+'">'+sc+'</span>':'')+
+      '<b>'+(nameOf(r)?esc(nameOf(r))+(r.birth?" ("+esc(r.birth)+")":""):"이름 미입력")+'</b>'+
+      '<span class="tag">'+esc(r.status)+'</span>'+
+      '<span class="d">'+esc(r.date)+' · '+esc(r.owner)+'</span></div>'+
+      ((r.height||r.weight||r.academy||r.place||r.region||r.language)?'<div class="spec">'+
+        ((r.height||r.weight)?'<span><i>키·몸무게</i>'+esc(r.height||"-")+" / "+esc(r.weight||"-")+'</span>':'')+
+        (r.gender?'<span><i>성별</i>'+esc(r.gender)+'</span>':'')+
+        (r.position?'<span><i>포지션</i>'+esc(r.position)+'</span>':'')+
+        (r.region?'<span><i>지역</i>'+esc(r.region)+'</span>':'')+
+        (r.academy?'<span><i>학원</i>'+esc(r.academy)+'</span>':'')+
+        (r.nationality?'<span><i>국적</i>'+esc(r.nationality)+'</span>':'')+
+        (r.language?'<span><i>언어</i>'+esc(r.language)+'</span>':'')+
+        (r.place?'<span><i>장소</i>'+esc(r.place)+'</span>':'')+'</div>':'')+
+      (r.agency?'<div class="line1"><span class="tag t-warn">타사 · '+esc(r.agency)+'</span></div>':'')+
+      (r.url?'<a class="link" href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer">'+esc(String(r.url).replace(/^https?:\/\/(www\.)?/,""))+'</a>':'')+
+      (r.note?'<div class="note">'+linkify(r.note)+'</div>':'')+
+      (r.contact?'<div class="sub2">'+contactHtml(r.contact,r.platform)+'</div>':'');
+    lbBox.appendChild(m);
+  }
+  if(!r.photoFile||!navigator.onLine){ show(r.photo); return; }
+  fetchFull(r.photoFile).then(function(f){ show(f||r.photo); }).catch(function(){ show(r.photo); });
+}
+
+/* ---------- 로드캐스팅 → 개인 DB 승격 ---------- */
+function promote(r){
+  cancelEdit();
+  el("d-name").value=nameOf(r)||""; el("d-birth").value="";
+  el("d-height").value=""; el("d-weight").value=""; el("d-academy").value="";
+  el("d-url").value=r.url||""; el("d-link").value="";
+  el("d-note").value=(r.place? "장소: "+r.place+"\n":"")+(r.note||"");
+  el("d-contact").value=r.contact||"";
+  ["d-region","d-language","d-agency"].forEach(function(id){ el(id).value=""; });
+  D.owner=r.owner||D.owner; D.status=r.status||D.status; D.score=SCORES[0];
+  if(r.gender) D.gender=r.gender;
+  choices(el("d-owner"),OWNERS,D,"owner");
+  choices(el("d-status"),STATUSES,D,"status");
+  choices(el("d-score"),SCORES,D,"score");
+  choices(el("d-gender"),GENDERS,D,"gender");
+  dPhoto.set(r.photo||"", r.photo||"");
+  if(r.photoFile){ fetchFull(r.photoFile).then(function(f){ if(f) dPhoto.set(r.photo||"", f); }).catch(function(){}); }
+  setTab("db");
+  note("d-msg","로드 기록을 가져왔습니다. 이름·키·학원을 채워서 등록하세요.");
+  window.scrollTo(0,0);
+}
+
+/* ---------- 탭 ---------- */
+function setTab(t){ tab=t; store("tab",t); render(); }
+function buildTabs(){
+  var n=el("tabs"); n.innerHTML="";
+  TABS.forEach(function(t){
+    var b=document.createElement("button");
+    b.type="button"; b.setAttribute("role","tab");
+    b.setAttribute("aria-selected",String(tab===t[0]));
+    var cnt=(t[0]==="road"||t[0]==="db")?(S[t[0]]||[]).length:(t[0]==="league"?weekPts(me):dexList().length);
+    b.innerHTML=t[1]+'<span class="n">'+cnt+(t[0]==="league"?"P":"")+'</span>';
+    b.onclick=function(){ if(tab!==t[0]) SFX.play("tab"); setTab(t[0]); window.scrollTo(0,0); };
+    n.appendChild(b);
+  });
+  TABS.forEach(function(t){ el("v-"+t[0]).hidden=(tab!==t[0]); });
+}
+function buildStats(){
+  var h=el("stats"); h.innerHTML="";
+  var wk=daysAgo(7), out=[];
+  if(tab!=="db"){
+    out=[["전체",S.road.length,0],
+         ["진행중",S.road.filter(function(r){return LIVE[r.status];}).length,1],
+         ["이번주",S.road.filter(function(r){return (r.date||"")>=wk;}).length,0],
+         ["배고픈 알",S.road.filter(isStale).length,2]];
+  } else {
+    var sc=S.db.filter(function(r){ return (parseInt(r.score,10)||0)>=4; }).length;
+    out=[["전체",S.db.length,0],["4점 이상",sc,1],
+         ["이번주",S.db.filter(function(r){return (r.date||"")>=wk;}).length,0]];
+  }
+  out.forEach(function(x){
+    var d=document.createElement("div"); d.className="stat"+(x[2]===1?" on":"")+(x[2]===2&&x[1]?" alert":"");
+    d.innerHTML='<b class="mono">'+x[1]+'</b><span>'+x[0]+'</span>';
+    if(x[2]===2){ d.style.cursor="pointer"; d.title="배고픈 알만 보기";
+      d.onclick=function(){ fR.status=(fR.status==="배고픔")?"전체":"배고픔"; tab="road"; render(); }; }
+    h.appendChild(d);
+  });
+  var king=OWNERS.map(function(o){return [o,weekPts(o)];}).sort(function(a,b){return b[1]-a[1];})[0];
+  if(king&&king[1]>0){
+    var dk=document.createElement("div"); dk.className="stat"; dk.style.cursor="pointer"; dk.title="이번주 리그";
+    dk.innerHTML='<b class="mono">'+king[1]+'P</b><span>1위 '+esc(king[0])+'</span>';
+    dk.onclick=function(){ setTab("league"); }; h.appendChild(dk);
+  }
+  /* 담당자 성장: 5건마다 1레벨, 펫은 2레벨마다 진화 */
+  var mine=S.road.filter(function(r){return r.owner===me;}).length+S.db.filter(function(r){return r.owner===me;}).length;
+  var lv=Math.floor(mine/5)+1, xp=mine%5, bar="";
+  for(var i=0;i<5;i++) bar+=i<xp?"\u25AE":"\u25AF";
+  var d2=document.createElement("div"); d2.className="stat lv";
+  var stk=streakOf(me,false);
+  d2.innerHTML='<div class="tsp">'+sprite(Math.min(5,Math.floor((lv-1)/2)))+'</div><div><b>LV '+lv+(stk>=2?' <small style="font-size:9px">STREAK '+stk+'</small>':'')+'</b><span>'+esc(me)+' '+mine+'건 '+bar+'</span></div>';
+  h.appendChild(d2);
+}
+
+/* ---------- 로드캐스팅 목록 ---------- */
+function renderRoad(){
+  var co={"전체":S.road.length}, cs={"전체":S.road.length};
+  OWNERS.forEach(function(o){ co[o]=S.road.filter(function(r){return r.owner===o;}).length; });
+  STATUSES.forEach(function(s){ cs[s]=S.road.filter(function(r){return r.status===s;}).length; });
+  var cg={"전체":S.road.length};
+  GENDERS.forEach(function(x){ cg[x]=S.road.filter(function(r){return r.gender===x;}).length; });
+  chips(el("r-f-gender"),GFILTER,fR.gender,cg,function(v){ fR.gender=v; render(); });
+  chips(el("r-f-owner"),["전체"].concat(OWNERS),fR.owner,co,function(v){ fR.owner=v; render(); });
+  cs["배고픔"]=S.road.filter(isStale).length;
+  chips(el("r-f-status"),["전체"].concat(STATUSES).concat(cs["배고픔"]?["배고픔"]:[]),fR.status,cs,function(v){ fR.status=v; render(); });
+
+  var view=S.road
+    .filter(function(r){ return fR.gender==="전체"||r.gender===fR.gender; })
+    .filter(function(r){ return fR.owner==="전체"||r.owner===fR.owner; })
+    .filter(function(r){ return fR.status==="전체"||(fR.status==="배고픔"?isStale(r):r.status===fR.status); })
+    .sort(function(a,b){ if(a.id===focusId) return -1; if(b.id===focusId) return 1;
+      return (b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0); });
+
+  var host=el("r-list"); host.innerHTML="";
+  if(!view.length){
+    host.innerHTML='<div class="empty">'+(S.road.length?"이 조건에 맞는 건이 없습니다.":"아직 등록된 건이 없습니다. 왼쪽에서 첫 건을 추가해보세요.")+'</div>';
+    return;
+  }
+  view.forEach(function(r){
+    var tone=TONE[r.status]||"mute";
+    var it=document.createElement("div"); it.className="item t-"+tone+(r.id===focusId?" focus":"");
+    it.appendChild(thumbOf(r,function(){ openLB(r,false); }));
+    var b=document.createElement("div"); b.className="body";
+    var nm=nameOf(r);
+    var h='<div class="line1">'+(nm?'<b>'+esc(nm)+'</b>':'<b class="noname">이름 미입력</b>')+
+          '<span class="d">'+esc((r.date||"").slice(5))+'</span>'+
+          '<span class="tag">'+esc(r.platform)+'</span>'+
+          (r.gender?'<span class="tag">'+esc(r.gender)+'</span>':'')+
+          '<span class="tag who">'+esc(r.owner)+'</span></div>';
+    if(r.place) h+='<div class="spec"><span><i>장소</i>'+esc(r.place)+'</span></div>';
+    if(isStale(r)) h+='<div><span class="hungry"><span class="tsp">'+sprite(6)+'</span>'+daysSince(statusAtOf(r))+'일째 답 없음</span></div>';
+    b.innerHTML=h;
+    if(r.url){ var a=document.createElement("a"); a.className="link"; a.href=r.url;
+      a.target="_blank"; a.rel="noopener noreferrer";
+      a.textContent=String(r.url).replace(/^https?:\/\/(www\.)?/,""); b.appendChild(a); }
+    if(r.note){ var n=document.createElement("div"); n.className="note"; n.innerHTML=linkify(r.note); b.appendChild(n); }
+    if(r.contact){ var c=document.createElement("div"); c.className="sub2"; c.innerHTML=contactHtml(r.contact,r.platform); b.appendChild(c); }
+    it.appendChild(b);
+
+    var side=document.createElement("div"); side.className="side";
+    side.appendChild(statusSelect("road",r));
+    var ms=document.createElement("div"); ms.className="minis";
+    ms.appendChild(miniBtn("수정",function(){ startEdit("road",r); }));
+    ms.appendChild(miniBtn("링크",function(b){ copyLink(r.id,b); }));
+    ms.appendChild(miniBtn("DB로 →",function(){ promote(r); },"개인 DB로 옮겨 담기"));
+    if(isStale(r)) ms.appendChild(miniBtn("재발송",function(){ SFX.play("save"); toast(1,"RESEND",(nm||"이름 미입력")+" 다시 DM 보냄");
+      call("updateItem",["road",r.id,{status:"DM발송"}],"재발송으로 기록했습니다.","r-msg",true); },"DM을 다시 보냈으면 눌러서 날짜 초기화"));
+    side.appendChild(ms);
+    side.appendChild(delBtn("road",r.id,(nm||"이 건")+"을(를)"));
+    it.appendChild(side);
+    host.appendChild(it);
+  });
+}
+
+/* ---------- 개인 DB 목록 ---------- */
+function renderDb(){
+  var co={"전체":S.db.length}, cs={"전체":S.db.length};
+  OWNERS.forEach(function(o){ co[o]=S.db.filter(function(r){return r.owner===o;}).length; });
+  ["5","4","3","2","1"].forEach(function(s){
+    cs[s+"점"]=S.db.filter(function(r){ return String(parseInt(r.score,10)||"")===s; }).length; });
+  var dg={"전체":S.db.length};
+  GENDERS.forEach(function(x){ dg[x]=S.db.filter(function(r){return r.gender===x;}).length; });
+  chips(el("d-f-gender"),GFILTER,fD.gender,dg,function(v){ fD.gender=v; render(); });
+  chips(el("d-f-owner"),["전체"].concat(OWNERS),fD.owner,co,function(v){ fD.owner=v; render(); });
+  chips(el("d-f-score"),["전체","5점","4점","3점","2점","1점"],fD.score,cs,function(v){ fD.score=v; render(); });
+
+  var view=S.db
+    .filter(function(r){ return fD.gender==="전체"||r.gender===fD.gender; })
+    .filter(function(r){ return fD.owner==="전체"||r.owner===fD.owner; })
+    .filter(function(r){ return fD.score==="전체"||String(parseInt(r.score,10)||"")+"점"===fD.score; })
+    .sort(function(a,b){
+      if(a.id===focusId) return -1; if(b.id===focusId) return 1;
+      if(D.sort==="점수순"){
+        var sa=parseInt(a.score,10)||0, sb=parseInt(b.score,10)||0;
+        if(sb!==sa) return sb-sa;
+      } else if(D.sort==="이름순"){
+        var c=String(a.name||"").localeCompare(String(b.name||""));
+        if(c) return c;
+      }
+      return (b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0);
+    });
+
+  var host=el("d-list"); host.innerHTML="";
+  if(!view.length){
+    host.innerHTML='<div class="empty">'+(S.db.length?"이 조건에 맞는 인원이 없습니다.":"등록된 인원이 없습니다. 로드캐스팅 목록에서 [DB로 →]를 눌러 옮기거나, 왼쪽에서 직접 등록하세요.")+'</div>';
+    return;
+  }
+  view.forEach(function(r){
+    var tone=TONE[r.status]||"mute";
+    var sc=parseInt(r.score,10)||0;
+    var it=document.createElement("div"); it.className="item t-"+tone+(r.id===focusId?" focus":"");
+    it.appendChild(thumbOf(r,function(){ openLB(r,true); }));
+    var b=document.createElement("div"); b.className="body";
+    var h='<div class="line1">'+(sc?'<span class="score '+sTone(sc)+'">'+sc+'</span>':'')+
+      '<b>'+esc(r.name||"(이름 없음)")+(r.birth?" ("+esc(r.birth)+")":"")+'</b>'+
+      (r.gender?'<span class="tag">'+esc(r.gender)+'</span>':'')+
+      (r.position?'<span class="tag">'+esc(r.position)+'</span>':'')+
+      '<span class="d">'+esc(r.owner)+'</span></div>';
+    if(r.agency) h+='<div class="line1"><span class="tag t-warn">타사 · '+esc(r.agency)+'</span></div>';
+    var spec=[];
+    if(r.height||r.weight) spec.push('<span><i>키·몸무게</i>'+esc(r.height||"-")+" / "+esc(r.weight||"-")+'</span>');
+    if(r.region) spec.push('<span><i>지역</i>'+esc(r.region)+'</span>');
+    if(r.academy) spec.push('<span><i>학원</i>'+esc(r.academy)+'</span>');
+    if(r.nationality&&r.nationality!=="한국") spec.push('<span><i>국적</i>'+esc(r.nationality)+'</span>');
+    if(r.language) spec.push('<span><i>언어</i>'+esc(r.language)+'</span>');
+    if(spec.length) h+='<div class="spec">'+spec.join("")+'</div>';
+    b.innerHTML=h;
+    [["",r.url],["자료 · ",r.link]].forEach(function(p){
+      if(!p[1]) return;
+      var a=document.createElement("a"); a.className="link"; a.href=p[1];
+      a.target="_blank"; a.rel="noopener noreferrer";
+      a.textContent=p[0]+String(p[1]).replace(/^https?:\/\/(www\.)?/,"");
+      b.appendChild(a);
+    });
+    if(r.note){ var n=document.createElement("div"); n.className="note"; n.innerHTML=linkify(r.note); b.appendChild(n); }
+    if(r.contact){ var c=document.createElement("div"); c.className="sub2"; c.innerHTML=contactHtml(r.contact,""); b.appendChild(c); }
+    it.appendChild(b);
+
+    var side=document.createElement("div"); side.className="side";
+    side.appendChild(statusSelect("db",r));
+    var ms=document.createElement("div"); ms.className="minis";
+    ms.appendChild(miniBtn("수정",function(){ startEdit("db",r); }));
+    ms.appendChild(miniBtn("링크",function(b){ copyLink(r.id,b); }));
+    side.appendChild(ms);
+    side.appendChild(delBtn("db",r.id,(r.name||"이 인원")+"을(를)"));
+    it.appendChild(side);
+    host.appendChild(it);
+  });
+}
+
+/* 링크(…/exec?id=…)로 열면 그 카드를 맨 위에 띄웁니다 */
+function tryFocus(){
+  if(!focusId||focusDone) return;
+  var inRoad=S.road.some(function(r){return r.id===focusId;});
+  var inDb=!inRoad&&S.db.some(function(r){return r.id===focusId;});
+  if(!inRoad&&!inDb) return;
+  focusDone=true;
+  if(inRoad){ tab="road"; fR={owner:"전체",status:"전체",gender:"전체"}; }
+  else { tab="db"; fD={owner:"전체",score:"전체",gender:"전체"}; }
+}
+var scrolled=false;
+function scrollFocus(){
+  if(!focusId||scrolled) return;
+  var n=document.querySelector(".item.focus"); if(!n) return;
+  scrolled=true;
+  var r=null, isDb=false;
+  S.road.forEach(function(x){ if(x.id===focusId) r=x; });
+  if(!r) S.db.forEach(function(x){ if(x.id===focusId){ r=x; isDb=true; } });
+  setTimeout(function(){ n.scrollIntoView({block:"center"}); if(r) openLB(r,isDb); },60);
+}
+function render(){
+  buildTabs(); buildStats();
+  if(tab==="road") renderRoad(); else if(tab==="db") renderDb(); else if(tab==="league") renderLeague(); else renderDex();
+}
+
+/* ---------- 입력 ---------- */
+choices(el("r-platform"),PLATFORMS,R,"platform");
+choices(el("r-status"),STATUSES,R,"status");
+choices(el("r-gender"),GENDERS,R,"gender");
+choices(el("d-gender"),GENDERS,D,"gender");
+choices(el("d-position"),POSITIONS,D,"position");
+choices(el("d-nationality"),NATIONS,D,"nationality");
+choices(el("d-status"),STATUSES,D,"status");
+choices(el("d-score"),SCORES,D,"score");
+choices(el("d-sort"),SORTS,D,"sort",render);
+el("r-date").value=today();
+
+var meSel=el("me");
+OWNERS.forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=o; meSel.appendChild(op); });
+var me=store("me")||OWNERS[0];
+if(OWNERS.indexOf(me)<0) me=OWNERS[0];
+meSel.value=me;
+function setMe(v){ store("me",v); R.owner=v; D.owner=v;
+  choices(el("r-owner"),OWNERS,R,"owner"); choices(el("d-owner"),OWNERS,D,"owner"); }
+meSel.onchange=function(){ SFX.play("tab"); setMe(meSel.value); render(); };
+setMe(me);
+
+function clearRoad(){
+  ["r-name","r-url","r-place","r-note","r-contact"].forEach(function(id){ el(id).value=""; });
+  el("r-date").value=today(); rPhoto.clear();
+}
+el("r-add").onclick=function(){
+  if(busy) return;
+  var p=rPhoto.get();
+  var rec={date:el("r-date").value||today(), owner:R.owner, platform:R.platform, status:R.status,
+    gender:R.gender, name:el("r-name").value.trim(),
+    place:el("r-place").value.trim(), url:el("r-url").value.trim(),
+    note:el("r-note").value.trim(), contact:el("r-contact").value.trim()};
+  if(!rec.name && !rec.place && !rec.url && !rec.note && !p.thumb){ SFX.play("err"); note("r-msg","이름·URL·장소·특이사항 중 하나는 적어주세요."); return; }
+  if(editing&&editing.key==="road"){
+    SFX.play("save");
+    if(rPhoto.isDirty()){ rec.photo=p.thumb; rec.photoFull=p.full; }
+    var id=editing.id; cancelEdit(); clearRoad();
+    call("editItem",["road",id,rec],"수정했습니다.","r-msg",true);
+  } else {
+    celebrate(rec,"road");
+    rec.photo=p.thumb; rec.photoFull=p.full;
+    clearRoad();
+    call("addItem",["road",rec],"추가했습니다.","r-msg",true);
+  }
+};
+el("r-clear").onclick=function(){ clearRoad(); cancelEdit(); note("r-msg",""); };
+
+function clearDb(){
+  ["d-name","d-birth","d-height","d-weight","d-academy","d-region","d-language","d-agency",
+   "d-url","d-link","d-note","d-contact"].forEach(function(id){ el(id).value=""; });
+  D.score=SCORES[0]; choices(el("d-score"),SCORES,D,"score");
+  dPhoto.clear();
+}
+el("d-add").onclick=function(){
+  if(busy) return;
+  var p=dPhoto.get();
+  var rec={date:today(), owner:D.owner, status:D.status, gender:D.gender,
+    position:D.position, nationality:D.nationality,
+    region:el("d-region").value.trim(), language:el("d-language").value.trim(),
+    agency:el("d-agency").value.trim(),
+    name:el("d-name").value.trim(), birth:el("d-birth").value.trim(),
+    height:el("d-height").value.trim(), weight:el("d-weight").value.trim(),
+    academy:el("d-academy").value.trim(),
+    score: D.score==="-" ? "" : D.score,
+    url:el("d-url").value.trim(), link:el("d-link").value.trim(),
+    note:el("d-note").value.trim(), contact:el("d-contact").value.trim()};
+  if(!rec.name){ SFX.play("err"); note("d-msg","이름을 적어주세요."); return; }
+  if(editing&&editing.key==="db"){
+    SFX.play("save");
+    if(dPhoto.isDirty()){ rec.photo=p.thumb; rec.photoFull=p.full; }
+    var id=editing.id; cancelEdit(); clearDb();
+    call("editItem",["db",id,rec],"수정했습니다.","d-msg",true);
+  } else {
+    celebrate(rec,"db");
+    rec.photo=p.thumb; rec.photoFull=p.full;
+    clearDb();
+    call("addItem",["db",rec],"등록했습니다.","d-msg",true);
+  }
+};
+el("d-clear").onclick=function(){ clearDb(); cancelEdit(); note("d-msg",""); };
+el("reload").onclick=function(){ SFX.play("tick"); call("getAll",[],"새로 불러왔습니다.",tab==="road"?"r-msg":"d-msg"); };
+el("sfx").onclick=function(){ SFX.toggle(); paintSfx(); };
+paintSfx();
+
+tab=store("tab")||"road";
+if(!TABS.some(function(t){return t[0]===tab;})) tab="road";
+render();
+(function(){ try{ var id=new URLSearchParams(location.search).get("id"); if(id) focusId=String(id); }catch(e){} })();
+
+/* 1) 기기에 저장된 것부터 바로 보여주고 → 2) 서버에서 최신으로 */
+Promise.all([IDB.get("thumbs"),IDB.get("snap")]).then(function(v){
+  if(v[0]&&typeof v[0]==="object") THUMBS=v[0];
+  if(v[1]&&v[1].road){ S={road:v[1].road,db:v[1].db||[]}; absorbPhotos(); tryFocus(); render(); scrollFocus(); }
+}).catch(function(){}).then(function(){ if(navigator.onLine) call("getAll",[]); else pullThumbs(); });
+setInterval(function(){ if(!busy&&navigator.onLine&&!lb.classList.contains("open")&&document.visibilityState==="visible") call("getAll",[]); },60000);
+document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible"&&navigator.onLine&&!busy) call("getAll",[]); });
+
+/* 오프라인 표시 */
+function paintOnline(){ el("offline").classList.toggle("show",!navigator.onLine); }
+window.addEventListener("online",function(){ paintOnline(); call("getAll",[]); });
+window.addEventListener("offline",paintOnline); paintOnline();
+
+/* 홈 화면 설치 안내 */
+(function(){
+  var standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
+  var dismissed=store("install_x")==="1";
+  var ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var box=el("install"); el("install-sp").innerHTML=sprite(0);
+  el("install-x").onclick=function(){ box.classList.remove("show"); store("install_x","1"); };
+  if(standalone||dismissed) return;
+  var deferred=null;
+  window.addEventListener("beforeinstallprompt",function(e){ e.preventDefault(); deferred=e;
+    el("install-t").textContent="설치하면 홈 화면에서 바로 열립니다"; el("install-go").hidden=false; box.classList.add("show"); });
+  el("install-go").onclick=function(){ if(!deferred) return; deferred.prompt(); deferred.userChoice.then(function(){ box.classList.remove("show"); }); };
+  if(ios){ el("install-t").textContent="사파리 아래 공유(□↑) → 「홈 화면에 추가」"; box.classList.add("show"); }
+})();
+
+/* 서비스 워커: 화면 파일을 기기에 저장 → 다음부턴 0.5초 */
+if("serviceWorker" in navigator){ window.addEventListener("load",function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); }); }
+
+/* iOS: 첫 터치에서 소리 잠금 해제 */
+document.addEventListener("touchend",function once(){ try{ SFX.play("blip"); }catch(e){} document.removeEventListener("touchend",once); },{passive:true});
+</script>
+</body>
+</html>
