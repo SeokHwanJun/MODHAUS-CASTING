@@ -332,8 +332,99 @@ select.status.t-ok{background:var(--mint); color:#000}
 @media (min-width:760px){ .install{margin:14px 22px 0} }
 @media (min-width:1040px){ .install{max-width:1240px; margin-left:auto; margin-right:auto} }
 
+/* ══════════ 앱 레이아웃 (하단 바 · 시트 · 컴팩트) ══════════ */
+.tabs{display:none !important}
+body{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+.stats{overflow:visible !important; margin-top:10px}
+.stat{flex:1 1 0 !important; min-width:0 !important; padding:7px 4px}
+.stat b{font-size:16px} .stat span{font-size:10px; white-space:nowrap}
+.stat.lv{flex:1.5 1 0 !important; gap:6px; padding-left:8px}
+.stat.lv .tsp{width:20px; height:23px} .stat.lv b{font-size:12px} .stat.lv span{font-size:7.5px}
+main{padding-top:10px}
+
+/* 하단 바 */
+.nav{position:fixed; left:0; right:0; bottom:0; z-index:45; background:var(--bar); border-top:3px solid #000;
+  display:flex; align-items:flex-end; justify-content:space-around; padding:6px 6px calc(7px + env(safe-area-inset-bottom))}
+.nav button{flex:1; background:none; border:0; font:inherit; display:flex; flex-direction:column; align-items:center; gap:3px;
+  color:#000; padding:2px 0; cursor:pointer; -webkit-tap-highlight-color:transparent}
+.nav .ic{width:38px; height:38px; border-radius:50%; border:2px solid #000; background:#fff; display:flex; align-items:center;
+  justify-content:center; box-shadow:var(--pop-o-sm)}
+.nav .ic svg{width:18px; height:18px}
+.nav button[aria-selected="true"] .ic{background:var(--lcd); transform:translate(2px,2px); box-shadow:none}
+.nav button span.l{font-size:10.5px; font-weight:700; line-height:1}
+.nav button span.l small{font-family:"Silkscreen",monospace; font-size:7px; font-weight:400; margin-left:2px; opacity:.7}
+.nav button.plus .ic{width:60px; height:60px; background:var(--accent); margin-top:-30px; border-width:3px; box-shadow:var(--pop-o)}
+.nav button.plus .ic svg{width:24px; height:24px}
+.nav button.plus:active .ic{transform:translate(3px,3px); box-shadow:none}
+@media (min-width:760px){ .nav{padding-left:20%; padding-right:20%} }
+
+/* 시트 */
+.sheet{position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.55); display:none; align-items:flex-end; justify-content:center}
+.sheet.open{display:flex}
+.sheet .panel{width:100%; max-height:calc(100dvh - 36px); overflow:auto; background:var(--ground); border:3px solid #000; border-bottom:0;
+  border-radius:24px 24px 0 0; padding:8px 12px calc(14px + env(safe-area-inset-bottom)); animation:up .2s ease-out; -webkit-overflow-scrolling:touch}
+@keyframes up{from{transform:translateY(36px); opacity:0} to{transform:none; opacity:1}}
+.sheet .grip{width:44px; height:5px; border-radius:3px; background:#000; margin:2px auto 10px; opacity:.45}
+.sheet .card{margin:0}
+@media (min-width:760px){ .sheet{align-items:center; padding:20px} .sheet .panel{max-width:600px; border-radius:24px; border-bottom:3px solid #000; max-height:90vh} }
+
+/* 컴팩트 폼 */
+.fhead{display:flex; align-items:center; margin-bottom:10px} .fhead h3{margin:0; flex:1} .fhead .del{font-size:22px}
+.frow{display:flex; gap:10px; align-items:stretch; margin-bottom:4px}
+.frow .drop{width:104px; min-height:0; flex:0 0 auto; border-radius:14px; align-self:stretch}
+.frow .drop img{height:100%; min-height:104px}
+.frow .drop-t{font-size:12px; font-weight:700} .frow .drop-t small{font-weight:500}
+.frow .fcol{flex:1; min-width:0}
+.fcard .f{margin-bottom:9px} .fcard .f>label{font-size:11.5px}
+.fcard input[type=text],.fcard input[type=date],.fcard textarea{padding:9px 11px; font-size:15px; border-radius:11px}
+.fcard textarea{min-height:58px}
+.fcard .hint{font-size:11px}
+.choices.sm{gap:6px} .choices.sm .choice{padding:6px 11px; font-size:13px}
+.pair{display:flex; gap:12px} .pair .f{flex:1 1 auto} .pair .f.fx{flex:0 0 auto}
+.fcard .row-btns{position:sticky; bottom:-14px; background:var(--surface); padding:10px 0 4px; margin-top:2px}
+.fcard .row-btns .btn{width:auto; flex:1}
+.fcard .two{gap:0 10px}
+
+/* 필터 바 */
+.fbar{display:flex; gap:7px; align-items:center; margin:0 0 10px; overflow-x:auto; scrollbar-width:none; padding:2px 0 4px}
+.fbar::-webkit-scrollbar{display:none}
+.seg{display:inline-flex; border:2px solid #000; border-radius:999px; overflow:hidden; background:#fff; flex:0 0 auto; box-shadow:var(--pop-o-sm)}
+.seg button{border:0; background:none; font:inherit; font-size:12.5px; font-weight:700; padding:6px 11px; color:#000; cursor:pointer}
+.seg button[aria-pressed="true"]{background:#000; color:#fff}
+.seg button+button{border-left:2px solid #000}
+.seg .n{font-family:"Silkscreen",monospace; font-size:8px; opacity:.6; margin-left:3px}
+.fsel{border:2px solid #000; border-radius:999px; background:#fff; font:inherit; font-size:12.5px; font-weight:700; color:#000;
+  padding:6px 24px 6px 11px; -webkit-appearance:none; appearance:none; flex:0 0 auto; box-shadow:var(--pop-o-sm); cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 5'%3E%3Cpath d='M0 0h8L4 5z' fill='%23000'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 9px center; background-size:8px 5px}
+.fsel.on{background-color:var(--sun)}
+
+/* 컴팩트 카드 */
+.item{padding:10px; gap:10px; margin-bottom:9px; cursor:pointer}
+.item .thumb{width:54px; height:54px}
+.item .note{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; white-space:normal; font-size:13px}
+.item .link{font-size:11.5px}
+.item .spec{font-size:11.5px}
+.line1 b{font-size:15px}
+select.status{padding:5px 9px; font-size:12px}
+@media (max-width:759px){
+  .item{flex-wrap:nowrap}
+  .item .side{flex:0 0 auto; flex-direction:column; align-items:flex-end; justify-content:flex-start; border-top:0; padding-top:0}
+  .item .side select.status{margin-right:0}
+  .item .thumb{width:54px; height:54px}
+}
+
+/* 상세 (크게 보기) — 폰에선 아래에서 올라오는 시트 */
+.lb-act{display:flex; flex-wrap:wrap; gap:7px; align-items:center; padding-top:10px; margin-top:6px; border-top:2px dashed var(--line-2)}
+.lb-act .del{margin-left:auto}
+@media (max-width:759px){
+  .lb{align-items:flex-end; padding:0}
+  .lb-box{max-width:100%; width:100%; max-height:92dvh; border-radius:24px 24px 0 0; border-bottom:0; padding:14px 14px calc(16px + env(safe-area-inset-bottom))}
+  .lb-box img{max-height:48vh}
+}
+
 /* ── 펫 토스트 ── */
-.toast{position:fixed; left:50%; bottom:22px; transform:translate(-50%,24px); opacity:0; z-index:70;
+.toast{position:fixed; left:50%; bottom:calc(100px + env(safe-area-inset-bottom)); transform:translate(-50%,24px); opacity:0; z-index:70;
   display:flex; align-items:center; gap:12px; background:var(--lcd); border:3px solid #000; border-radius:14px;
   padding:10px 18px 10px 12px; box-shadow:var(--pop-o); pointer-events:none; max-width:min(92vw,440px);
   transition:transform .18s ease-out, opacity .18s}
@@ -387,47 +478,8 @@ select.status.t-ok{background:var(--mint); color:#000}
   <!-- 로드캐스팅 -->
   <section id="v-road">
     <div class="split">
-      <div class="form-col">
-        <div class="card">
-          <h3 id="r-title">새로 추가</h3>
-          <div class="two">
-            <div class="f"><label for="r-name">이름</label>
-              <input type="text" id="r-name" placeholder="강연우 (모르면 비워두기)"></div>
-            <div class="f"><label for="r-date">일시</label><input type="date" id="r-date"></div>
-          </div>
-          <div class="f"><label for="r-place">어디서 봤는지</label>
-            <input type="text" id="r-place" placeholder="홍대 걷고싶은거리 · 인스타 릴스"></div>
-          <div class="f"><label>담당자</label><div class="choices" id="r-owner"></div></div>
-          <div class="f"><label>경로</label><div class="choices" id="r-platform"></div></div>
-          <div class="f"><label>상태</label><div class="choices" id="r-status"></div></div>
-          <div class="f"><label>성별</label><div class="choices" id="r-gender"></div></div>
-          <div class="f"><label for="r-url">URL 주소</label>
-            <input type="text" id="r-url" placeholder="https://www.instagram.com/p/..." inputmode="url"></div>
-          <div class="f"><label>사진</label>
-            <div class="drop" id="r-drop" tabindex="0" role="button" aria-label="사진 추가">
-              <img id="r-drop-img" alt="" hidden>
-              <span class="drop-t" id="r-drop-t">사진 추가<small>탭해서 촬영 · 끌어다 놓기 · 붙여넣기</small></span>
-              <button type="button" class="drop-x" id="r-drop-x" aria-label="사진 지우기" hidden>&times;</button>
-            </div>
-            <input type="file" id="r-file" accept="image/*" hidden>
-          </div>
-          <div class="f"><label for="r-note">특이사항</label>
-            <textarea id="r-note" placeholder="09년생 추정 / 여 / 친구 2명과 함께 / 명함 전달함"></textarea>
-            <p class="hint">출생연도를 맨 앞에 적어두면 나중에 거르기 쉽습니다.</p></div>
-          <div class="f"><label for="r-contact">연락처</label>
-            <input type="text" id="r-contact" placeholder="@계정 또는 학부모 연락처">
-            <p class="hint">미성년자는 본인 번호보다 학부모 연락처를. 1차 미팅 전엔 DM 계정만 적어도 충분합니다.</p></div>
-          <div class="row-btns">
-            <button class="btn" id="r-add">보드에 추가</button>
-            <button class="btn ghost sm" id="r-clear">입력 지우기</button>
-          </div>
-          <div class="msg" id="r-msg"></div>
-        </div>
-      </div>
       <div class="list-col">
-        <div class="filters" id="r-f-gender"></div>
-        <div class="filters" id="r-f-owner"></div>
-        <div class="filters" id="r-f-status"></div>
+        <div class="fbar"><div class="seg" id="r-f-gender"></div><select class="fsel" id="r-f-owner" aria-label="담당자"></select><select class="fsel" id="r-f-status" aria-label="상태"></select></div>
         <div id="r-list"></div>
       </div>
     </div>
@@ -436,72 +488,8 @@ select.status.t-ok{background:var(--mint); color:#000}
   <!-- 개인 DB -->
   <section id="v-db" hidden>
     <div class="split">
-      <div class="form-col">
-        <div class="card">
-          <h3 id="d-title">개인 DB 등록</h3>
-          <div class="two">
-            <div class="f"><label for="d-name">이름</label>
-              <input type="text" id="d-name" placeholder="레인우문"></div>
-            <div class="f"><label for="d-birth">출생연도</label>
-              <input type="text" id="d-birth" placeholder="09" inputmode="numeric"></div>
-          </div>
-          <div class="two">
-            <div class="f"><label for="d-height">키 (cm)</label>
-              <input type="text" id="d-height" placeholder="160" inputmode="numeric"></div>
-            <div class="f"><label for="d-weight">체중 (kg)</label>
-              <input type="text" id="d-weight" placeholder="43" inputmode="numeric"></div>
-          </div>
-          <div class="f"><label>성별</label><div class="choices" id="d-gender"></div></div>
-          <div class="f"><label>포지션</label><div class="choices" id="d-position"></div></div>
-          <div class="two">
-            <div class="f"><label for="d-region">지역</label>
-              <input type="text" id="d-region" placeholder="서울 강남"></div>
-            <div class="f"><label for="d-academy">학원</label>
-              <input type="text" id="d-academy" placeholder="픽플래닛 잠실본점"></div>
-          </div>
-          <div class="f"><label>국적</label><div class="choices" id="d-nationality"></div></div>
-          <div class="f"><label for="d-language">가능 언어</label>
-            <input type="text" id="d-language" placeholder="한국어 · 영어 · 중국어"></div>
-          <div class="f"><label for="d-agency">타사 진행</label>
-            <input type="text" id="d-agency" placeholder="KOZ, 웨이크원 진행중">
-            <p class="hint">경쟁사에 걸려 있으면 꼭 적어주세요. 목록에서 눈에 띄게 표시됩니다.</p></div>
-          <div class="f"><label>점수 <span class="hint" style="display:inline">5점 만점</span></label>
-            <div class="choices" id="d-score"></div></div>
-
-          <div class="sec">담당 · 상태</div>
-          <div class="f"><label>담당자</label><div class="choices" id="d-owner"></div></div>
-          <div class="f"><label>상태</label><div class="choices" id="d-status"></div></div>
-
-          <div class="sec">자료</div>
-          <div class="f"><label>사진</label>
-            <div class="drop" id="d-drop" tabindex="0" role="button" aria-label="사진 추가">
-              <img id="d-drop-img" alt="" hidden>
-              <span class="drop-t" id="d-drop-t">사진 추가<small>탭해서 촬영 · 끌어다 놓기 · 붙여넣기</small></span>
-              <button type="button" class="drop-x" id="d-drop-x" aria-label="사진 지우기" hidden>&times;</button>
-            </div>
-            <input type="file" id="d-file" accept="image/*" hidden>
-          </div>
-          <div class="f"><label for="d-url">SNS 주소</label>
-            <input type="text" id="d-url" placeholder="https://www.instagram.com/..." inputmode="url"></div>
-          <div class="f"><label for="d-link">자료 링크</label>
-            <input type="text" id="d-link" placeholder="드라이브 영상·사진 링크" inputmode="url"></div>
-          <div class="f"><label for="d-note">메모</label>
-            <textarea id="d-note" placeholder="건장한 느낌의 체형&#10;네추럴한 느낌&#10;싱가폴 출신, 한국어·영어·중국어 가능"></textarea>
-            <p class="hint">줄바꿈으로 나눠 적으면 목록에서도 줄 단위로 보입니다.</p></div>
-          <div class="f"><label for="d-contact">연락처</label>
-            <input type="text" id="d-contact" placeholder="@계정 또는 학부모 연락처"></div>
-          <div class="row-btns">
-            <button class="btn" id="d-add">DB에 등록</button>
-            <button class="btn ghost sm" id="d-clear">지우기</button>
-          </div>
-          <div class="msg" id="d-msg"></div>
-        </div>
-      </div>
       <div class="list-col">
-        <div class="filters" id="d-f-gender"></div>
-        <div class="filters" id="d-f-owner"></div>
-        <div class="filters" id="d-f-score"></div>
-        <div class="sortbar"><span>정렬</span><div class="choices" id="d-sort"></div></div>
+        <div class="fbar"><div class="seg" id="d-f-gender"></div><select class="fsel" id="d-f-owner" aria-label="담당자"></select><select class="fsel" id="d-f-score" aria-label="점수"></select><select class="fsel" id="d-sort" aria-label="정렬"></select></div>
         <div id="d-list"></div>
       </div>
     </div>
@@ -542,7 +530,108 @@ select.status.t-ok{background:var(--mint); color:#000}
 
 <div class="toast" id="toast" aria-live="polite"><div class="tsp" id="toast-sp"></div><div><b id="toast-h"></b><span id="toast-t"></span></div></div>
 
-<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="사진 크게 보기">
+<div class="sheet" id="sheet-r" role="dialog" aria-modal="true"><div class="panel">
+  <div class="grip"></div>
+  <div class="card fcard">
+    <div class="fhead"><h3 id="r-title">새로 추가</h3><button type="button" class="del" id="r-close" aria-label="닫기">&times;</button></div>
+    <div class="frow">
+      <div class="drop" id="r-drop" tabindex="0" role="button" aria-label="사진 추가">
+        <img id="r-drop-img" alt="" hidden>
+        <span class="drop-t" id="r-drop-t">사진<small>탭해서 촬영</small></span>
+        <button type="button" class="drop-x" id="r-drop-x" aria-label="사진 지우기" hidden>&times;</button>
+      </div>
+      <input type="file" id="r-file" accept="image/*" hidden>
+      <div class="fcol">
+        <div class="f"><label for="r-name">이름</label>
+          <input type="text" id="r-name" placeholder="모르면 비워두기"></div>
+        <div class="f"><label for="r-date">일시</label><input type="date" id="r-date"></div>
+        <div class="f"><label>성별</label><div class="choices sm" id="r-gender"></div></div>
+      </div>
+    </div>
+    <div class="f"><label for="r-place">어디서 봤는지</label>
+      <input type="text" id="r-place" placeholder="홍대 걷고싶은거리 · 인스타 릴스"></div>
+    <div class="f"><label>경로</label><div class="choices sm" id="r-platform"></div></div>
+    <div class="f"><label>상태</label><div class="choices sm" id="r-status"></div></div>
+    <div class="f"><label>담당자</label><div class="choices sm" id="r-owner"></div></div>
+    <div class="f"><label for="r-url">URL 주소</label>
+      <input type="text" id="r-url" placeholder="https://www.instagram.com/p/..." inputmode="url"></div>
+    <div class="f"><label for="r-note">특이사항</label>
+      <textarea id="r-note" placeholder="09년생 추정 / 친구 2명과 함께 / 명함 전달함"></textarea></div>
+    <div class="f"><label for="r-contact">연락처</label>
+      <input type="text" id="r-contact" placeholder="@계정 또는 학부모 연락처">
+      <p class="hint">미성년자는 본인 번호보다 학부모 연락처를.</p></div>
+    <div class="row-btns">
+      <button class="btn" id="r-add">보드에 추가</button>
+      <button class="btn ghost sm" id="r-clear">지우기</button>
+    </div>
+    <div class="msg" id="r-msg"></div>
+  </div>
+</div></div>
+<div class="sheet" id="sheet-d" role="dialog" aria-modal="true"><div class="panel">
+  <div class="grip"></div>
+  <div class="card fcard">
+          <div class="fhead"><h3 id="d-title">개인 DB 등록</h3><button type="button" class="del" id="d-close" aria-label="닫기">&times;</button></div>
+          <div class="frow">
+            <div class="drop" id="d-drop" tabindex="0" role="button" aria-label="사진 추가">
+              <img id="d-drop-img" alt="" hidden>
+              <span class="drop-t" id="d-drop-t">사진<small>탭해서 촬영</small></span>
+              <button type="button" class="drop-x" id="d-drop-x" aria-label="사진 지우기" hidden>&times;</button>
+            </div>
+            <input type="file" id="d-file" accept="image/*" hidden>
+            <div class="fcol">
+              <div class="f"><label for="d-name">이름</label>
+                <input type="text" id="d-name" placeholder="레인우문"></div>
+              <div class="f"><label for="d-birth">출생연도</label>
+                <input type="text" id="d-birth" placeholder="09" inputmode="numeric"></div>
+            </div>
+          </div>
+          <div class="two">
+            <div class="f"><label for="d-height">키 (cm)</label>
+              <input type="text" id="d-height" placeholder="160" inputmode="numeric"></div>
+            <div class="f"><label for="d-weight">체중 (kg)</label>
+              <input type="text" id="d-weight" placeholder="43" inputmode="numeric"></div>
+          </div>
+          <div class="f"><label>성별</label><div class="choices sm" id="d-gender"></div></div>
+          <div class="f"><label>포지션</label><div class="choices sm" id="d-position"></div></div>
+          <div class="two">
+            <div class="f"><label for="d-region">지역</label>
+              <input type="text" id="d-region" placeholder="서울 강남"></div>
+            <div class="f"><label for="d-academy">학원</label>
+              <input type="text" id="d-academy" placeholder="픽플래닛 잠실본점"></div>
+          </div>
+          <div class="f"><label>국적</label><div class="choices sm" id="d-nationality"></div></div>
+          <div class="f"><label for="d-language">가능 언어</label>
+            <input type="text" id="d-language" placeholder="한국어 · 영어 · 중국어"></div>
+          <div class="f"><label for="d-agency">타사 진행</label>
+            <input type="text" id="d-agency" placeholder="KOZ, 웨이크원 진행중">
+            </div>
+          <div class="f"><label>점수 <span class="hint" style="display:inline">5점 만점</span></label>
+            <div class="choices sm" id="d-score"></div></div>
+
+          <div class="sec">담당 · 상태</div>
+          <div class="f"><label>담당자</label><div class="choices sm" id="d-owner"></div></div>
+          <div class="f"><label>상태</label><div class="choices sm" id="d-status"></div></div>
+
+          <div class="sec">자료</div>
+          <div class="f"><label for="d-url">SNS 주소</label>
+            <input type="text" id="d-url" placeholder="https://www.instagram.com/..." inputmode="url"></div>
+          <div class="f"><label for="d-link">자료 링크</label>
+            <input type="text" id="d-link" placeholder="드라이브 영상·사진 링크" inputmode="url"></div>
+          <div class="f"><label for="d-note">메모</label>
+            <textarea id="d-note" placeholder="건장한 느낌의 체형&#10;네추럴한 느낌&#10;싱가폴 출신, 한국어·영어·중국어 가능"></textarea>
+            </div>
+          <div class="f"><label for="d-contact">연락처</label>
+            <input type="text" id="d-contact" placeholder="@계정 또는 학부모 연락처"></div>
+          <div class="row-btns">
+            <button class="btn" id="d-add">DB에 등록</button>
+            <button class="btn ghost sm" id="d-clear">지우기</button>
+          </div>
+          <div class="msg" id="d-msg"></div>
+        </div>
+</div></div>
+<nav class="nav" id="nav" aria-label="메뉴"></nav>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="상세">
   <button type="button" class="lb-x" id="lb-x" aria-label="닫기">&times;</button>
   <div class="lb-box" id="lb-box"></div>
 </div>
@@ -996,6 +1085,7 @@ function call(fn,args,okMsg,msgEl,mutating){
     if(fn==="addItem"&&data.id&&args[1]&&args[1].photo){ THUMBS[data.id]=args[1].photo; saveThumbs(); }
     if(fn==="editItem"&&args[2]&&args[2].photo!==undefined){ if(args[2].photo) THUMBS[args[1]]=args[2].photo; else delete THUMBS[args[1]]; saveThumbs(); }
     if(fn==="deleteItem"){ delete THUMBS[args[1]]; saveThumbs(); }
+    if(fn==="addItem"||fn==="editItem") closeForm();
     absorb(data); el("banner").hidden=true; tryFocus(); render(); scrollFocus(); pullThumbs();
     if(okMsg) note(msgEl,okMsg);
   }).catch(function(e){
@@ -1019,6 +1109,26 @@ function choices(host,values,state,key,after){
       if(after) after(); };
     host.appendChild(b);
   });
+}
+function seg(host,values,current,counts,onPick){
+  host.innerHTML="";
+  values.forEach(function(v){
+    var b=document.createElement("button"); b.type="button";
+    b.innerHTML=esc(v)+(counts[v]!==undefined?'<span class="n">'+counts[v]+'</span>':'');
+    b.setAttribute("aria-pressed",String(current===v));
+    b.onclick=function(){ SFX.play("chip"); onPick(v); };
+    host.appendChild(b);
+  });
+}
+function fsel(host,values,current,counts,onPick,label){
+  host.innerHTML="";
+  values.forEach(function(v){
+    var o=document.createElement("option"); o.value=v;
+    o.textContent=(v==="전체"?label+" 전체":v)+(counts&&counts[v]!==undefined?" · "+counts[v]:"");
+    if(v===current) o.selected=true; host.appendChild(o);
+  });
+  host.classList.toggle("on",current!=="전체"&&label!=="정렬");
+  host.onchange=function(){ SFX.play("chip"); onPick(host.value); };
 }
 function chips(host,values,current,counts,onPick){
   host.innerHTML="";
@@ -1054,6 +1164,7 @@ function statusSelect(key,r){
     else if(v==="보류"||v==="거절"){ SFX.play("sad"); toast(6,v==="보류"?"HOLD...":"BYE...",(nm||"이름 미입력")+" "+v); }
     else if(ni>oi){ SFX.play("levelUp",STAGE[v]); toast(STAGE[v],"LEVEL UP!",(nm||"이름 미입력")+" → "+v); }
     else SFX.play("back");
+    if(lb.classList.contains("open")) closeLB();
     call("updateItem",[key,r.id,{status:v}],"상태를 바꿨습니다.",key==="road"?"r-msg":"d-msg",true);
   };
   return sel;
@@ -1085,7 +1196,7 @@ function startEdit(key,r){
     rPhoto.set(r.photo||"",""); rPhoto.clean();
     el("r-title").textContent="수정 중 · "+(nameOf(r)||"이름 미입력"); el("r-title").classList.add("editing");
     el("r-add").textContent="저장"; el("r-clear").textContent="취소";
-    setTab("road"); note("r-msg","내용을 고친 뒤 저장을 누르세요.");
+    setTab("road"); closeLB(); openForm("r"); note("r-msg","내용을 고친 뒤 저장을 누르세요.");
   } else {
     ["name","birth","height","weight","academy","region","language","agency","url","link","note","contact"]
       .forEach(function(k){ el("d-"+k).value=r[k]||""; });
@@ -1099,9 +1210,8 @@ function startEdit(key,r){
     dPhoto.set(r.photo||"",""); dPhoto.clean();
     el("d-title").textContent="수정 중 · "+(r.name||"이름 없음"); el("d-title").classList.add("editing");
     el("d-add").textContent="저장"; el("d-clear").textContent="취소";
-    setTab("db"); note("d-msg","내용을 고친 뒤 저장을 누르세요.");
+    setTab("db"); closeLB(); openForm("d"); note("d-msg","내용을 고친 뒤 저장을 누르세요.");
   }
-  window.scrollTo({top:0,behavior:"smooth"});
 }
 function cancelEdit(){
   editing=null;
@@ -1198,6 +1308,16 @@ function openLB(r,isDb){
       (r.note?'<div class="note">'+linkify(r.note)+'</div>':'')+
       (r.contact?'<div class="sub2">'+contactHtml(r.contact,r.platform)+'</div>':'');
     lbBox.appendChild(m);
+    var key=isDb?"db":"road", nm=nameOf(r)||r.name||"";
+    var act=document.createElement("div"); act.className="lb-act";
+    act.appendChild(statusSelect(key,r));
+    act.appendChild(miniBtn("수정",function(){ startEdit(key,r); }));
+    act.appendChild(miniBtn("링크",function(b){ copyLink(r.id,b); }));
+    if(!isDb) act.appendChild(miniBtn("DB로 →",function(){ promote(r); },"개인 DB로 옮겨 담기"));
+    if(!isDb&&isStale(r)) act.appendChild(miniBtn("재발송",function(){ SFX.play("save"); closeLB(); toast(1,"RESEND",(nm||"이름 미입력")+" 다시 DM 보냄");
+      call("updateItem",["road",r.id,{status:"DM발송"}],"재발송으로 기록했습니다.","r-msg",true); }));
+    var d=delBtn(key,r.id,(nm||"이 건")+"을(를)"); var od=d.onclick; d.onclick=function(){ closeLB(); od(); }; act.appendChild(d);
+    lbBox.appendChild(act);
   }
   if(!r.photoFile||!navigator.onLine){ show(r.photo); return; }
   fetchFull(r.photoFile).then(function(f){ show(f||r.photo); }).catch(function(){ show(r.photo); });
@@ -1220,14 +1340,40 @@ function promote(r){
   choices(el("d-gender"),GENDERS,D,"gender");
   dPhoto.set(r.photo||"", r.photo||"");
   if(r.photoFile){ fetchFull(r.photoFile).then(function(f){ if(f) dPhoto.set(r.photo||"", f); }).catch(function(){}); }
-  setTab("db");
+  setTab("db"); closeLB(); openForm("d");
   note("d-msg","로드 기록을 가져왔습니다. 이름·키·학원을 채워서 등록하세요.");
-  window.scrollTo(0,0);
 }
 
 /* ---------- 탭 ---------- */
 function setTab(t){ tab=t; store("tab",t); render(); }
+var PIX={
+ road:["..........",".########.","..........",".########.","..........",".########.","..........",".#####....","..........",".........."],
+ db:["...####...","..#....#..","..#....#..","...####...","..........",".########.","#........#","#........#","#........#","##########"],
+ plus:["....##....","....##....","....##....","####..####","#........#","####..####","....##....","....##....","....##....",".........."],
+ league:["#..####..#","#.#....#.#","##......##",".#......#.","..#....#..","...####...","....##....","....##....","..######..","..######.."],
+ dex:["..........",".########.",".#......#.",".#.####.#.",".#......#.",".#.####.#.",".#......#.",".#.####.#.",".#......#.",".########."]
+};
+function pix(rows){ var o=""; for(var y=0;y<rows.length;y++) for(var x=0;x<rows[y].length;x++) if(rows[y][x]==="#") o+='<rect x="'+x+'" y="'+y+'" width="1" height="1"/>';
+  return '<svg viewBox="0 0 10 10" shape-rendering="crispEdges" fill="#000" aria-hidden="true">'+o+'</svg>'; }
+var NAVL={road:"로드",db:"개인DB",league:"리그",dex:"도감"};
+function buildNav(){
+  var n=el("nav"); n.innerHTML="";
+  [TABS[0],TABS[1],null,TABS[2],TABS[3]].forEach(function(t){
+    var b=document.createElement("button"); b.type="button";
+    if(!t){ b.className="plus"; b.innerHTML='<span class="ic">'+pix(PIX.plus)+'</span><span class="l">등록</span>';
+      b.onclick=function(){ SFX.play("blip"); openForm(tab==="db"?"d":"r"); }; n.appendChild(b); return; }
+    var cnt=(t[0]==="road"||t[0]==="db")?(S[t[0]]||[]).length:(t[0]==="league"?weekPts(me)+"P":dexList().length);
+    b.setAttribute("aria-selected",String(tab===t[0]));
+    b.innerHTML='<span class="ic">'+pix(PIX[t[0]])+'</span><span class="l">'+NAVL[t[0]]+'<small>'+cnt+'</small></span>';
+    b.onclick=function(){ if(tab!==t[0]) SFX.play("tab"); setTab(t[0]); window.scrollTo(0,0); };
+    n.appendChild(b);
+  });
+}
+function openForm(w){ closeForm(); el("sheet-"+w).classList.add("open"); document.body.style.overflow="hidden";
+  setTimeout(function(){ var f=el(w==="r"?"r-name":"d-name"); if(f&&!("ontouchstart" in window)) f.focus(); },50); }
+function closeForm(){ ["sheet-r","sheet-d"].forEach(function(i){ el(i).classList.remove("open"); }); document.body.style.overflow=""; }
 function buildTabs(){
+  buildNav();
   var n=el("tabs"); n.innerHTML="";
   TABS.forEach(function(t){
     var b=document.createElement("button");
@@ -1246,7 +1392,6 @@ function buildStats(){
   if(tab!=="db"){
     out=[["전체",S.road.length,0],
          ["진행중",S.road.filter(function(r){return LIVE[r.status];}).length,1],
-         ["이번주",S.road.filter(function(r){return (r.date||"")>=wk;}).length,0],
          ["배고픈 알",S.road.filter(isStale).length,2]];
   } else {
     var sc=S.db.filter(function(r){ return (parseInt(r.score,10)||0)>=4; }).length;
@@ -1260,12 +1405,7 @@ function buildStats(){
       d.onclick=function(){ fR.status=(fR.status==="배고픔")?"전체":"배고픔"; tab="road"; render(); }; }
     h.appendChild(d);
   });
-  var king=OWNERS.map(function(o){return [o,weekPts(o)];}).sort(function(a,b){return b[1]-a[1];})[0];
-  if(king&&king[1]>0){
-    var dk=document.createElement("div"); dk.className="stat"; dk.style.cursor="pointer"; dk.title="이번주 리그";
-    dk.innerHTML='<b class="mono">'+king[1]+'P</b><span>1위 '+esc(king[0])+'</span>';
-    dk.onclick=function(){ setTab("league"); }; h.appendChild(dk);
-  }
+
   /* 담당자 성장: 5건마다 1레벨, 펫은 2레벨마다 진화 */
   var mine=S.road.filter(function(r){return r.owner===me;}).length+S.db.filter(function(r){return r.owner===me;}).length;
   var lv=Math.floor(mine/5)+1, xp=mine%5, bar="";
@@ -1283,10 +1423,10 @@ function renderRoad(){
   STATUSES.forEach(function(s){ cs[s]=S.road.filter(function(r){return r.status===s;}).length; });
   var cg={"전체":S.road.length};
   GENDERS.forEach(function(x){ cg[x]=S.road.filter(function(r){return r.gender===x;}).length; });
-  chips(el("r-f-gender"),GFILTER,fR.gender,cg,function(v){ fR.gender=v; render(); });
-  chips(el("r-f-owner"),["전체"].concat(OWNERS),fR.owner,co,function(v){ fR.owner=v; render(); });
+  seg(el("r-f-gender"),GFILTER,fR.gender,cg,function(v){ fR.gender=v; render(); });
+  fsel(el("r-f-owner"),["전체"].concat(OWNERS),fR.owner,co,function(v){ fR.owner=v; render(); },"담당자");
   cs["배고픔"]=S.road.filter(isStale).length;
-  chips(el("r-f-status"),["전체"].concat(STATUSES).concat(cs["배고픔"]?["배고픔"]:[]),fR.status,cs,function(v){ fR.status=v; render(); });
+  fsel(el("r-f-status"),["전체"].concat(STATUSES).concat(cs["배고픔"]?["배고픔"]:[]),fR.status,cs,function(v){ fR.status=v; render(); },"상태");
 
   var view=S.road
     .filter(function(r){ return fR.gender==="전체"||r.gender===fR.gender; })
@@ -1323,15 +1463,8 @@ function renderRoad(){
 
     var side=document.createElement("div"); side.className="side";
     side.appendChild(statusSelect("road",r));
-    var ms=document.createElement("div"); ms.className="minis";
-    ms.appendChild(miniBtn("수정",function(){ startEdit("road",r); }));
-    ms.appendChild(miniBtn("링크",function(b){ copyLink(r.id,b); }));
-    ms.appendChild(miniBtn("DB로 →",function(){ promote(r); },"개인 DB로 옮겨 담기"));
-    if(isStale(r)) ms.appendChild(miniBtn("재발송",function(){ SFX.play("save"); toast(1,"RESEND",(nm||"이름 미입력")+" 다시 DM 보냄");
-      call("updateItem",["road",r.id,{status:"DM발송"}],"재발송으로 기록했습니다.","r-msg",true); },"DM을 다시 보냈으면 눌러서 날짜 초기화"));
-    side.appendChild(ms);
-    side.appendChild(delBtn("road",r.id,(nm||"이 건")+"을(를)"));
     it.appendChild(side);
+    it.onclick=function(e){ if(e.target.closest("select,button,a")) return; SFX.play("open"); openLB(r,false); };
     host.appendChild(it);
   });
 }
@@ -1344,9 +1477,10 @@ function renderDb(){
     cs[s+"점"]=S.db.filter(function(r){ return String(parseInt(r.score,10)||"")===s; }).length; });
   var dg={"전체":S.db.length};
   GENDERS.forEach(function(x){ dg[x]=S.db.filter(function(r){return r.gender===x;}).length; });
-  chips(el("d-f-gender"),GFILTER,fD.gender,dg,function(v){ fD.gender=v; render(); });
-  chips(el("d-f-owner"),["전체"].concat(OWNERS),fD.owner,co,function(v){ fD.owner=v; render(); });
-  chips(el("d-f-score"),["전체","5점","4점","3점","2점","1점"],fD.score,cs,function(v){ fD.score=v; render(); });
+  seg(el("d-f-gender"),GFILTER,fD.gender,dg,function(v){ fD.gender=v; render(); });
+  fsel(el("d-f-owner"),["전체"].concat(OWNERS),fD.owner,co,function(v){ fD.owner=v; render(); },"담당자");
+  fsel(el("d-f-score"),["전체","5점","4점","3점","2점","1점"],fD.score,cs,function(v){ fD.score=v; render(); },"점수");
+  fsel(el("d-sort"),SORTS,D.sort,null,function(v){ D.sort=v; render(); },"정렬");
 
   var view=S.db
     .filter(function(r){ return fD.gender==="전체"||r.gender===fD.gender; })
@@ -1402,12 +1536,8 @@ function renderDb(){
 
     var side=document.createElement("div"); side.className="side";
     side.appendChild(statusSelect("db",r));
-    var ms=document.createElement("div"); ms.className="minis";
-    ms.appendChild(miniBtn("수정",function(){ startEdit("db",r); }));
-    ms.appendChild(miniBtn("링크",function(b){ copyLink(r.id,b); }));
-    side.appendChild(ms);
-    side.appendChild(delBtn("db",r.id,(r.name||"이 인원")+"을(를)"));
     it.appendChild(side);
+    it.onclick=function(e){ if(e.target.closest("select,button,a")) return; SFX.play("open"); openLB(r,true); };
     host.appendChild(it);
   });
 }
@@ -1446,7 +1576,6 @@ choices(el("d-position"),POSITIONS,D,"position");
 choices(el("d-nationality"),NATIONS,D,"nationality");
 choices(el("d-status"),STATUSES,D,"status");
 choices(el("d-score"),SCORES,D,"score");
-choices(el("d-sort"),SORTS,D,"sort",render);
 el("r-date").value=today();
 
 var meSel=el("me");
@@ -1484,6 +1613,9 @@ el("r-add").onclick=function(){
   }
 };
 el("r-clear").onclick=function(){ clearRoad(); cancelEdit(); note("r-msg",""); };
+el("r-close").onclick=function(){ clearRoad(); cancelEdit(); closeForm(); };
+el("d-close").onclick=function(){ clearDb(); cancelEdit(); closeForm(); };
+["sheet-r","sheet-d"].forEach(function(i){ el(i).addEventListener("click",function(e){ if(e.target===el(i)){ (i==="sheet-r"?clearRoad:clearDb)(); cancelEdit(); closeForm(); } }); });
 
 function clearDb(){
   ["d-name","d-birth","d-height","d-weight","d-academy","d-region","d-language","d-agency",
