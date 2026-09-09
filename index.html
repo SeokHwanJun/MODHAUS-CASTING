@@ -494,6 +494,53 @@ body::-webkit-scrollbar{width:0; height:0}
 .scroll::-webkit-scrollbar-track{background:var(--lcd); border:2px solid var(--edge); border-radius:2px}
 .scroll::-webkit-scrollbar-thumb{background:var(--edge); border:2px solid var(--edge); border-radius:2px}
 
+/* 팀 공동 게이지 */
+.goalcard{background:linear-gradient(180deg,#FFF9F5,var(--surface))}
+.goal{display:flex; align-items:center; gap:14px}
+.goal-egg{width:58px; height:64px; flex:0 0 auto}
+.goal-egg.grow{animation:wob 2.6s ease-in-out infinite}
+.goal-egg.done{animation:pop .6s ease-out}
+.goal-body{flex:1; min-width:0}
+.goal-num{display:flex; align-items:baseline; gap:6px}
+.goal-num b{font-family:"Silkscreen",monospace; font-size:26px; line-height:1}
+.goal-num span{font-family:"Silkscreen",monospace; font-size:12px; color:var(--ink-3)}
+.goal-bar{margin:7px 0 6px; height:16px; border:2px solid var(--kb); border-radius:999px; overflow:hidden;
+  background:repeating-linear-gradient(90deg,var(--lcd) 0 7px,rgba(0,0,0,.10) 7px 8px);
+  box-shadow:inset 0 2px 0 rgba(0,0,0,.10)}
+.goal-bar i{display:block; height:100%; width:0;
+  background:repeating-linear-gradient(90deg,var(--orange) 0 6px,var(--orange-2) 6px 8px);
+  transition:width .5s ease}
+.goal-bar.done i{background:repeating-linear-gradient(90deg,#F7C400 0 6px,#FFE27A 6px 8px)}
+.goal-msg{font-size:12.5px; font-weight:700; color:var(--ink-2)}
+.goal-who{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; padding-top:11px; border-top:2px dashed var(--line-2)}
+.gw{display:inline-flex; align-items:center; gap:5px; border:2px solid var(--kb); border-radius:999px;
+  background:#fff; padding:3px 10px 3px 7px; font-size:11.5px; font-weight:700; box-shadow:0 2px 0 var(--ks)}
+.gw b{font-family:"Silkscreen",monospace; font-size:10px; font-weight:400}
+.gw.zero{opacity:.45}
+.gw.me{background:var(--accent-soft); border-color:var(--orange-d)}
+.gw.tap{cursor:pointer; font-family:inherit; touch-action:manipulation}
+.gw.tap:active{transform:translateY(2px); box-shadow:none}
+.scene.tap{cursor:pointer; touch-action:manipulation}
+.scene.tap:active{background:var(--surface-2)}
+
+/* 이번주 장면 */
+.scene{display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1.5px dashed var(--line)}
+.scene:last-child{border-bottom:0}
+.scene .tsp{width:26px; height:29px; flex:0 0 auto; margin-top:1px}
+.scene .sb{flex:1; min-width:0}
+.scene b{display:block; font-size:13.5px}
+.scene small{display:block; font-size:12.5px; color:var(--ink-2); line-height:1.5; margin-top:1px}
+.scene.big b{color:var(--orange-d)}
+.scene.quiet small{color:var(--ink-3)}
+
+/* 내 기록 */
+.grow{display:flex; gap:9px; flex-wrap:wrap}
+.gcell{flex:1 1 44%; min-width:120px; border:2px solid var(--kb); border-radius:12px; background:var(--surface-2);
+  padding:9px 10px; box-shadow:0 2px 0 var(--ks)}
+.gcell b{display:block; font-family:"Silkscreen",monospace; font-size:19px; line-height:1.1}
+.gcell span{display:block; font-size:10.5px; color:var(--ink-2); margin-top:3px}
+.gcell .up{color:#2E7D32} .gcell .dn{color:var(--ink-3)}
+
 /* 눌러서 이동 */
 .stat.tap,.lgrow.tap,tr.tap{cursor:pointer; touch-action:manipulation}
 .stat.tap:active{transform:translate(1px,1px)}
@@ -798,19 +845,41 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
   </section>
   <!-- 리그 -->
   <section id="v-league" hidden>
+    <!-- 팀 공동 게이지 -->
+    <div class="card goalcard">
+      <h3 id="goal-title">이번주 팀 알</h3>
+      <p class="hint" style="margin:-6px 0 12px" id="goal-sub"></p>
+      <div class="goal">
+        <div class="goal-egg tsp" id="goal-sp"></div>
+        <div class="goal-body">
+          <div class="goal-num"><b class="mono" id="goal-now">0</b><span id="goal-max">/ 40</span></div>
+          <div class="goal-bar"><i id="goal-fill"></i></div>
+          <div class="goal-msg" id="goal-msg"></div>
+        </div>
+      </div>
+      <div class="goal-who" id="goal-who"></div>
+    </div>
+    <!-- 이번주 장면 -->
     <div class="card">
+      <h3>이번주 우리 팀</h3>
+      <p class="hint" style="margin:-6px 0 12px">한 사람도 빠짐없이, 이번주에 있었던 좋은 일 한 줄씩.</p>
+      <div id="lg-scene"></div>
+    </div>
+    <!-- 내 성장 (팀원 화면) -->
+    <div class="card" id="card-grow" hidden>
+      <h3>내 기록</h3>
+      <p class="hint" style="margin:-6px 0 12px">남이 아니라 지난주의 나와 비교합니다.</p>
+      <div id="lg-grow"></div>
+    </div>
+    <!-- 팀장 전용 -->
+    <div class="card" id="card-perf" hidden>
       <h3 id="pf-title">이번달 성과표</h3>
-      <p class="hint" style="margin:-6px 0 12px">담당자별 이번달 실적. 괄호는 지난달. 전환율 = 회신 이상으로 간 비율.</p>
+      <p class="hint" style="margin:-6px 0 12px"><b>팀장 전용</b> · 담당자별 이번달 실적. 괄호는 지난달. 전환율 = 회신 이상으로 간 비율.</p>
       <div class="scroll" id="lg-perf"></div>
     </div>
-    <div class="card">
-      <h3 id="lg-title">이번주 순위</h3>
-      <p class="hint" style="margin:-6px 0 12px">월요일 0시에 리셋 · 등록 +1 · 회신 +3 · 1차 +5 · 2차 +8 · 최종 +10 · 최종합격 +20 (이번주에 그 상태가 된 건만)</p>
-      <div id="lg-board"></div>
-    </div>
-    <div class="card">
+    <div class="card" id="card-rate" hidden>
       <h3>회신율</h3>
-      <p class="hint" style="margin:-6px 0 12px">DM 보낸 것 중 답이 온 비율 (전체 기간). 이 숫자가 오르면 DM 문구가 좋아진 겁니다.</p>
+      <p class="hint" style="margin:-6px 0 12px"><b>팀장 전용</b> · DM 보낸 것 중 답이 온 비율 (전체 기간). 이 숫자가 오르면 DM 문구가 좋아진 겁니다.</p>
       <div id="lg-rate"></div>
     </div>
     <div class="card">
@@ -1009,7 +1078,9 @@ var STALE_DAYS=7;
 /* ===== 설정 — 이 두 줄만 회사 것에 맞추면 됩니다 ===== */
 var API = "https://script.google.com/macros/s/AKfycbxYMA-AhEg1UUsHrqSkVygcjMIgPlKsavJHJOeJuEO9CFJHkA9ucUUarn6kWvuTBEB1YQ/exec";
 var TEAM_KEY = "modhaus-nd";
-var TK = store("tk")||"", ME = store("nm")||"";   /* 로그인 열쇠 · 로그인한 사람 */          /* Code.gs 의 TEAM_KEY 와 같아야 합니다 */
+var TK = store("tk")||"", ME = store("nm")||"";   /* 로그인 열쇠 · 로그인한 사람 */
+var ADMIN = store("adm")==="1";                   /* 팀장이면 성과표까지 보입니다 */
+function isAdmin(){ return ADMIN; }          /* Code.gs 의 TEAM_KEY 와 같아야 합니다 */
 var APP_URL = location.origin + location.pathname;
 var editing = null, focusId = "", focusDone = false;
 
@@ -1303,30 +1374,101 @@ function renderPerf(){
     n.onclick=function(){ jump({owner:n.getAttribute("data-own")||"전체",tab:"road"}); };
   });
 }
-function renderLeague(){
-  renderPerf();
+/* ── 팀 공동 게이지 ── */
+function teamGoal(){ return OWNERS.length*8; }              /* 팀원 5명 × 8건 = 40 */
+function teamWeek(){ var ws=weekStart();
+  return firstOf().filter(function(r){ return (Number(r.createdAt)||0)>=ws; }).length; }
+function weekOf(owner){ var ws=weekStart();
+  return firstOf().filter(function(r){ return r.owner===owner&&(Number(r.createdAt)||0)>=ws; }).length; }
+function lastWeekOf(owner){ var ws=weekStart(), pw=ws-7*86400000;
+  return firstOf().filter(function(r){ var c=Number(r.createdAt)||0; return r.owner===owner&&c>=pw&&c<ws; }).length; }
+function renderGoal(){
+  var now=teamWeek(), max=teamGoal(), pct=Math.min(1,now/max), done=now>=max;
   var ws=new Date(weekStart());
-  el("lg-title").textContent="이번주 순위 · "+(ws.getMonth()+1)+"/"+ws.getDate()+"~";
-  var rows=OWNERS.map(function(o){ return {o:o,pts:weekPts(o),c:weekCounts(o),lv:ownerLevel(o)}; })
-    .sort(function(a,b){ return b.pts-a.pts||b.lv.n-a.lv.n; });
-  var h='<div class="lg">';
-  rows.forEach(function(x,i){
-    var c=x.c, det=[];
-    if(c.등록)det.push("등록 "+c.등록); if(c.회신)det.push("회신 "+c.회신); if(c["1차"])det.push("1차 "+c["1차"]);
-    if(c["2차"])det.push("2차 "+c["2차"]); if(c.최종)det.push("최종 "+c.최종); if(c.최종합격)det.push("합격 "+c.최종합격);
-    h+='<div class="lgrow tap'+(i===0&&x.pts>0?" top":"")+(x.o===me?" me":"")+'" role="button" tabindex="0" data-own="'+esc(x.o)+'">'+
-       '<div class="rk">'+(i===0&&x.pts>0?"1":i+1)+'</div><div class="tsp">'+sprite(x.lv.stage)+'</div>'+
-       '<div class="nm">'+esc(x.o)+(i===0&&x.pts>0?' <span class="tag" style="background:#000;color:#fff">KING</span>':'')+
-       '<small>LV '+x.lv.lv+' · '+(det.length?det.join(" · "):"이번주 기록 없음")+'</small></div>'+
-       '<div class="pt">'+x.pts+'P</div></div>';
+  el("goal-sub").textContent=(ws.getMonth()+1)+"/"+ws.getDate()+" 월요일부터 · 팀원 "+OWNERS.length+"명이 함께 채웁니다";
+  el("goal-now").textContent=now; el("goal-max").textContent="/ "+max;
+  el("goal-fill").style.width=Math.round(pct*100)+"%";
+  var bar=el("goal-fill").parentNode; bar.classList.toggle("done",done);
+  var sp=el("goal-sp");
+  sp.innerHTML=sprite(done?5:Math.min(4,Math.floor(pct*5)));
+  sp.className="goal-egg tsp "+(done?"done":"grow");
+  var left=max-now;
+  el("goal-msg").textContent = done
+    ? "부화 성공! 이번주 목표를 넘겼습니다 \uD83C\uDF89".replace(" \uD83C\uDF89","")
+    : (pct>=0.75 ? "금이 가기 시작했습니다. "+left+"건 남았어요."
+    : pct>=0.4  ? "알이 자라는 중. "+left+"건 남았습니다."
+    : pct>0     ? "이제 시작. "+left+"건 남았습니다."
+    :             "이번주 첫 알을 기다리는 중입니다.");
+  /* 한 주에 한 번만 축하 */
+  if(done){
+    var k=String(weekStart());
+    if(store("hatched")!==k){ store("hatched",k); SFX.play("levelUp",5);
+      toast(5,"TEAM HATCH!","이번주 팀 목표 달성! 다 같이 해낸 겁니다"); }
+  }
+  var h=el("goal-who"); h.innerHTML="";
+  OWNERS.map(function(o){ return {o:o,n:weekOf(o)}; }).sort(function(a,b){ return b.n-a.n; })
+    .forEach(function(x){
+      var d=document.createElement("button"); d.type="button";
+      d.className="gw tap"+(x.n?"":" zero")+(x.o===me?" me":"");
+      d.innerHTML=esc(x.o)+' <b>'+x.n+'</b>';
+      d.onclick=function(){ jump({owner:x.o,tab:"road"}); };
+      h.appendChild(d);
+    });
+}
+
+/* ── 이번주 장면 — 한 사람도 빠짐없이 한 줄씩 ── */
+var SCENE_RANK=["최종합격","최종","2차","1차","회신"];
+function sceneOf(o){
+  var ws=weekStart();
+  var mine=people().filter(function(r){ return r.owner===o; });
+  for(var i=0;i<SCENE_RANK.length;i++){
+    var st=SCENE_RANK[i];
+    var hit=mine.filter(function(r){ return r.status===st&&statusAtOf(r)>=ws; });
+    if(hit.length){
+      var nm=nameOf(hit[0])||"이름 미입력", more=hit.length>1?(" 외 "+(hit.length-1)+"명"):"";
+      if(st==="최종합격") return {k:"big",sp:5,t:nm+more+" 최종 합격!",s:"도감에 새 칸이 열렸습니다. 팀 전체의 성과입니다."};
+      if(st==="최종")     return {k:"big",sp:4,t:nm+more+" 최종 단계 진입",s:"여기까지 온 것만으로도 큽니다."};
+      if(st==="2차")      return {k:"",sp:3,t:nm+more+" 2차 진출",s:"두 번 만났다는 건 서로 마음이 있다는 뜻이죠."};
+      if(st==="1차")      return {k:"",sp:3,t:nm+more+" 1차 미팅 성사",s:"DM에서 만남으로. 제일 어려운 구간을 넘었습니다."};
+      return {k:"",sp:2,t:nm+more+" 답장 도착",s:"연락이 왔다는 건 관심이 있다는 겁니다."};
+    }
+  }
+  var n=weekOf(o), stk=streakOf(o);
+  if(n>=8)  return {k:"",sp:3,t:"이번주 "+n+"건 등록",s:"꾸준함이 제일 무섭습니다. 이 중에 반드시 나옵니다."};
+  if(n>0)   return {k:"",sp:2,t:"이번주 "+n+"건 등록"+(stk>1?" · "+stk+"일 연속":""),s:"매일 한 건이 쌓이면 한 달에 20건입니다."};
+  if(stk>0) return {k:"quiet",sp:1,t:stk+"일 연속 기록 중",s:"이번주는 아직 조용하네요. 한 건이면 이어집니다."};
+  return {k:"quiet",sp:0,t:"이번주는 아직 조용합니다",s:"한 건만 올려도 팀 알이 그만큼 자랍니다."};
+}
+function renderScene(){
+  var h="";
+  OWNERS.forEach(function(o){
+    var x=sceneOf(o);
+    h+='<div class="scene tap '+x.k+'" role="button" tabindex="0" data-own="'+esc(o)+'"><div class="tsp">'+sprite(x.sp)+'</div><div class="sb">'+
+       '<b>'+esc(o)+' · '+esc(x.t)+'</b><small>'+esc(x.s)+'</small></div></div>';
   });
-  h+='</div>';
-  el("lg-board").innerHTML=h;
-  Array.prototype.forEach.call(el("lg-board").querySelectorAll("[data-own]"),function(n){
+  el("lg-scene").innerHTML=h;
+  Array.prototype.forEach.call(el("lg-scene").querySelectorAll("[data-own]"),function(n){
     function go(){ jump({owner:n.getAttribute("data-own"),tab:"road"}); }
     n.onclick=go; n.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } };
   });
+}
 
+/* ── 내 기록 (팀원 화면) ── */
+function renderGrow(){
+  var n=weekOf(me), pw=lastWeekOf(me), d=n-pw, stk=streakOf(me), rr=replyRate(me);
+  var lv=ownerLevel(me);
+  var diff = d>0 ? '<span class="up">▲ '+d+'</span>' : d<0 ? '<span class="dn">▼ '+(-d)+'</span>' : '<span class="dn">-</span>';
+  el("lg-grow").innerHTML=
+    '<div class="grow">'+
+    '<div class="gcell"><b>'+n+'</b><span>이번주 등록<br>지난주 '+pw+' '+diff+'</span></div>'+
+    '<div class="gcell"><b>'+stk+'일</b><span>연속 기록<br>(주말은 안 끊깁니다)</span></div>'+
+    '<div class="gcell"><b>'+(rr.sent?Math.round(rr.rate*100)+"%":"-")+'</b><span>내 회신율<br>'+rr.got+'/'+rr.sent+'</span></div>'+
+    '<div class="gcell"><b>LV '+lv.lv+'</b><span>누적 '+lv.n+'건</span></div>'+
+    '</div>';
+}
+
+/* ── 회신율 (팀장 화면) ── */
+function renderRate(){
   var rh="", all=replyRate("");
   OWNERS.concat([""]).forEach(function(o){
     var x=o?replyRate(o):all; if(!o&&!x.sent) return;
@@ -1335,6 +1477,14 @@ function renderLeague(){
         '<div class="pc">'+(x.sent?Math.round(x.rate*100)+"%":"-")+'</div></div>';
   });
   el("lg-rate").innerHTML=rh||'<div class="empty">아직 DM 기록이 없습니다.</div>';
+}
+
+function renderLeague(){
+  var admin=isAdmin();
+  el("card-perf").hidden=!admin; el("card-rate").hidden=!admin; el("card-grow").hidden=admin;
+  renderGoal();
+  renderScene();
+  if(admin){ renderPerf(); renderRate(); } else { renderGrow(); }
 
   el("lg-staledays").textContent=STALE_DAYS;
   var st=S.road.filter(isStale).sort(function(a,b){ return statusAtOf(a)-statusAtOf(b); });
@@ -1372,7 +1522,10 @@ function renderDex(){
   OWNERS.forEach(function(o){
     var lv=ownerLevel(o), got=badgesOf(o);
     bh+='<div class="brow"><div class="who">'+esc(o)+'<small>LV '+lv.lv+' · '+lv.n+'</small></div><div class="bl">';
-    BADGES.forEach(function(b){
+    var next=BADGES.filter(function(b){ return got.indexOf(b)<0; })[0];   /* 다음 하나만 */
+    var showList=got.concat(next?[next]:[]);
+    if(!showList.length) showList=[BADGES[0]];
+    showList.forEach(function(b){
       var has=got.indexOf(b)>=0;
       bh+='<span class="badge'+(has?"":" lock")+'" title="'+esc(b[1])+'"><i style="background:'+b[3]+'"></i>'+esc(b[0])+
           (has?'':'<small> · '+esc(b[1])+'</small>')+'</span>';
@@ -2186,7 +2339,7 @@ function buildNav(){
     var b=document.createElement("button"); b.type="button";
     if(!t){ b.className="plus"; b.innerHTML='<span class="ic">'+pix(PIX.plus)+'</span><span class="l">등록</span>';
       b.onclick=function(){ SFX.play("blip"); openForm(tab==="db"?"d":"r"); }; n.appendChild(b); return; }
-    var cnt=(t[0]==="road"||t[0]==="db")?(S[t[0]]||[]).length:(t[0]==="league"?weekPts(me)+"P":dexList().length);
+    var cnt=(t[0]==="road"||t[0]==="db")?(S[t[0]]||[]).length:(t[0]==="league"?(teamWeek()+"/"+teamGoal()):dexList().length);
     b.setAttribute("aria-selected",String(tab===t[0]));
     b.innerHTML='<span class="ic">'+pix(PIX[t[0]])+'<i class="cnt">'+cnt+'</i></span><span class="l">'+NAVL[t[0]]+'</span>';
     b.onclick=function(){ if(tab!==t[0]) SFX.play("tab"); setTab(t[0]); window.scrollTo(0,0); };
@@ -2210,8 +2363,8 @@ function buildTabs(){
     var b=document.createElement("button");
     b.type="button"; b.setAttribute("role","tab");
     b.setAttribute("aria-selected",String(tab===t[0]));
-    var cnt=(t[0]==="road"||t[0]==="db")?(S[t[0]]||[]).length:(t[0]==="league"?weekPts(me):dexList().length);
-    b.innerHTML=t[1]+'<span class="n">'+cnt+(t[0]==="league"?"P":"")+'</span>';
+    var cnt=(t[0]==="road"||t[0]==="db")?(S[t[0]]||[]).length:(t[0]==="league"?(teamWeek()+"/"+teamGoal()):dexList().length);
+    b.innerHTML=t[1]+'<span class="n">'+cnt+'</span>';
     b.onclick=function(){ if(tab!==t[0]) SFX.play("tab"); setTab(t[0]); window.scrollTo(0,0); };
     n.appendChild(b);
   });
@@ -2221,12 +2374,11 @@ function buildStats(){
   var h=el("stats"); h.innerHTML="";
   var wk=daysAgo(7), out=[];
   if(tab!=="db"){
-    var king=OWNERS.map(function(o){return [o,weekPts(o)];}).sort(function(a,b){return b[1]-a[1];})[0];
     var RB=S.road.filter(function(r){ return who==="전체"||r.owner===who; });
+    var tw=teamWeek(), tg=teamGoal();
     out=[["전체",RB.length,0,function(){ jump({tab:"road"}); }],
          ["진행중",RB.filter(function(r){return LIVE[r.status];}).length,1,function(){ jump({tab:"road",status:"진행중"}); }],
-         [king&&king[1]>0?"1위 "+king[0]:"이번주",king&&king[1]>0?king[1]+"P":S.road.filter(function(r){return (r.date||"")>=wk;}).length,3,
-          function(){ setTab("league"); window.scrollTo(0,0); }]];
+         ["팀 알",tw+"/"+tg,tw>=tg?1:3,function(){ setTab("league"); window.scrollTo(0,0); }]];
   } else {
     var DB=S.db.filter(function(r){ return who==="전체"||r.owner===who; });
     var sc=DB.filter(function(r){ return (parseInt(r.score,10)||0)>=4; }).length;
@@ -2594,7 +2746,7 @@ function lkGo(){
     lkBusy=false; el("lock").classList.remove("busy");
     el("lock-msg").textContent="이름을 고르고 PIN 4자리를 눌러주세요";
     if(!res||res.error){ lkErr((res&&res.error)||"확인하지 못했습니다."); return; }
-    TK=res.tk; ME=res.name; store("tk",TK); store("nm",ME);
+    TK=res.tk; ME=res.name; ADMIN=!!res.admin; store("tk",TK); store("nm",ME); store("adm",ADMIN?"1":"");
     SFX.play("levelUp",3);
     lockClose();
     setWho(ME); render();
@@ -2608,14 +2760,13 @@ function lkGo(){
 /* 내 계정 카드 */
 function bindAccount(){
   el("ac-me").textContent=ME||"(로그인 전)";
-  var isAdmin=(ME===OWNERS[OWNERS.length-1]||ME==="전석환");
-  el("ac-admin").hidden=!isAdmin;
-  if(isAdmin&&!el("ac-tgt").options.length)
+  el("ac-admin").hidden=!ADMIN;
+  if(ADMIN&&!el("ac-tgt").options.length)
     OWNERS.forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=o; el("ac-tgt").appendChild(op); });
   el("ac-out").onclick=function(){
     SFX.play("back");
     apiGet({action:"logout"}).catch(function(){});
-    TK=""; ME=""; store("tk",""); store("nm","");
+    TK=""; ME=""; ADMIN=false; store("tk",""); store("nm",""); store("adm","");
     S={road:[],db:[],cm:[]}; render(); lockOpen("로그아웃했습니다");
   };
   el("ac-pin").onclick=function(){
