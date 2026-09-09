@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>캐스팅 보드</title>
 <meta name="theme-color" content="#FFC86B">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,7 +33,9 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none !important}
-html,body{margin:0; padding:0; color-scheme:light; width:100%; max-width:100%; overflow-x:hidden; overscroll-behavior-x:none; touch-action:pan-y}
+html,body{margin:0; padding:0; color-scheme:light; width:100%; max-width:100%; overflow-x:hidden; overscroll-behavior-x:none;
+  touch-action:pan-y; -webkit-text-size-adjust:100%; text-size-adjust:100%}
+button,a,select,input,textarea{touch-action:manipulation}
 main,section,.item,.fbar,.stats,.card{max-width:100%}
 body{background:var(--ground); color:var(--ink); font-size:15px; line-height:1.55;
   font-family:"IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
@@ -53,22 +55,36 @@ body{padding-top:64px}
 .pill:hover{background:var(--sun)}
 .pill:active{transform:translate(2px,2px); box-shadow:none}
 @keyframes wig{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
-/* 상단 아이콘 */
-.ic{position:relative; flex:0 0 auto; width:38px; height:36px; border:2px solid #000; border-radius:11px; background:#fff;
+/* 상단: 담당자 줄 */
+.top{background:var(--bar); padding:7px 12px 4px; display:flex; align-items:center; gap:8px}
+.top .sp{flex:1}
+.pill.who{font-size:14px; padding:6px 26px 6px 13px}
+/* 상단: 도구 버튼 줄 (다마고치 기기 버튼) */
+.tools{background:var(--bar); border-bottom:2px solid var(--edge); padding:2px 10px 8px;
+  display:grid; grid-template-columns:repeat(5,1fr); gap:6px}
+.tl{display:flex; flex-direction:column; align-items:center; gap:2px; border:2px solid #000; border-radius:12px;
+  background:#fff; padding:5px 2px 4px; cursor:pointer; text-decoration:none; box-shadow:var(--pop-o-sm); font:inherit}
+.tl:active{transform:translate(2px,2px); box-shadow:none}
+.tl .i{width:26px; height:22px; display:flex; align-items:center; justify-content:center;
+  background:var(--lcd); border:2px solid #000; border-radius:6px}
+.tl .i svg{width:14px; height:14px}
+.tl .l{font-size:10.5px; font-weight:800; color:#000; letter-spacing:-.02em}
+.tl.quick{background:var(--sun)} .tl.quick .i{background:#fff}
+.tl.quick.hot{animation:pulse 1.1s ease-in-out infinite}
+.tl.quick.hot .i{background:var(--accent)} .tl.quick.hot .i svg{fill:#fff}
+@keyframes pulse{0%,100%{box-shadow:var(--pop-o-sm)}50%{box-shadow:0 0 0 5px rgba(255,119,23,.32),var(--pop-o-sm)}}
+.tl.kko .i{background:#FEE500} .tl.map .i{background:#DFF3E4} .tl.cal .i{background:#E4ECFF}
+.tl.tel .i{background:var(--accent)} .tl.tel .i svg{fill:#fff}
+.tl .badge{position:absolute; top:-6px; right:-6px; min-width:17px; height:17px; border-radius:999px; background:var(--rose);
+  border:2px solid #000; color:#fff; font-family:"Silkscreen",monospace; font-size:8px; line-height:13px; padding:0 3px}
+.tl{position:relative}
+/* 소리 토글 */
+.ic{position:relative; flex:0 0 auto; width:38px; height:34px; border:2px solid #000; border-radius:11px; background:#fff;
   display:inline-flex; align-items:center; justify-content:center; padding:0; cursor:pointer; box-shadow:var(--pop-o-sm); text-decoration:none}
 .ic:active{transform:translate(2px,2px); box-shadow:none}
-.ic svg{width:20px; height:20px}
-.ic.quick{background:var(--lcd); width:46px}
-.ic.quick.hot{background:var(--sun); animation:pulse 1.1s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:var(--pop-o-sm)}50%{box-shadow:0 0 0 5px rgba(255,119,23,.32),var(--pop-o-sm)}}
-.ic.map{background:#DFF3E4} .ic.cal{background:#E4ECFF}
-.ic.tel{background:var(--accent)} .ic.tel svg{fill:#fff}
+.ic svg{width:19px; height:19px}
 .ic.snd.off{background:var(--surface-3); opacity:.6}
-.ic .badge{position:absolute; top:-6px; right:-6px; min-width:17px; height:17px; border-radius:999px; background:var(--rose);
-  border:2px solid #000; color:#fff; font-family:"Silkscreen",monospace; font-size:8px; line-height:13px; padding:0 3px}
-@media (max-width:759px){ .top{gap:6px; padding:8px 10px} .top .sp{gap:6px}
-  .ic{width:36px; height:34px} .ic.quick{width:44px} .ic svg{width:19px; height:19px}
-  .pill.who{max-width:106px; overflow:hidden; text-overflow:ellipsis} }
+@media (max-width:400px){ .tl .l{font-size:9.5px} .tl .i{width:24px; height:21px} .pill.who{max-width:150px} }
 /* 댓글·별점 */
 .tag.star{background:var(--sun); color:#000; border-color:transparent} .tag.star small{font-size:9px; opacity:.7}
 .cmts{margin-top:12px; padding-top:10px; border-top:2px dashed var(--line-2)}
@@ -79,6 +95,8 @@ body{padding-top:64px}
 .cmb{border:2px solid var(--line-2); background:#fff; color:var(--ink-2); border-radius:8px; font:inherit; font-size:10.5px;
   font-weight:700; padding:2px 7px; margin-left:4px; cursor:pointer}
 .cmb:hover{border-color:#000; color:#000} .cmb.del:hover{border-color:var(--rose); color:var(--rose)}
+.cmb.wait{border-color:transparent; color:var(--ink-3); font-weight:500}
+.mini:disabled,.btn:disabled{opacity:.5}
 .cmrow2{display:flex; align-items:center; gap:8px; margin-bottom:6px}
 .cmlab{font-size:11.5px; font-weight:700; color:var(--ink-2)}
 .cmwho{padding:5px 22px 5px 10px; font-size:12.5px}
@@ -527,14 +545,16 @@ select.status[data-st="거절"]{background:var(--c-rej); color:#fff}
 
 <div class="hd">
 <div class="top">
-  <button class="ic quick" id="quick" type="button" aria-label="빠른 등록 — 복사한 링크로" title="복사한 링크로 바로 등록"></button>
-  <a class="ic map" id="nmap" href="https://map.naver.com/" target="_blank" rel="noopener" aria-label="네이버지도" title="네이버지도"></a>
-  <a class="ic cal" id="cal" href="https://calendar.google.com/calendar/r" target="_blank" rel="noopener" aria-label="구글 캘린더" title="구글 캘린더"></a>
-  <a class="ic tel" id="sos" href="tel:01096901908" aria-label="팀장에게 전화" title="팀장에게 전화"></a>
-  <div class="sp">
-    <select id="me" class="pill who" aria-label="담당자 보기"></select>
-    <button class="ic snd" id="sfx" type="button" aria-label="효과음 켜기/끄기" title="효과음"></button>
-  </div>
+  <select id="me" class="pill who" aria-label="담당자 보기"></select>
+  <div class="sp"></div>
+  <button class="ic snd" id="sfx" type="button" aria-label="효과음 켜기/끄기" title="효과음"></button>
+</div>
+<div class="tools">
+  <button class="tl quick" id="quick" type="button"><span class="i"></span><span class="l">빠른등록</span></button>
+  <a class="tl kko" id="kko" href="#"><span class="i"></span><span class="l">카톡</span></a>
+  <a class="tl map" id="nmap" href="#"><span class="i"></span><span class="l">지도</span></a>
+  <a class="tl cal" id="cal" href="#"><span class="i"></span><span class="l">일정</span></a>
+  <a class="tl tel" id="sos" href="tel:01096901908"><span class="i"></span><span class="l">전화</span></a>
 </div>
 
 <div class="tabs" id="tabs" role="tablist"></div>
@@ -1167,25 +1187,27 @@ var ICONS={
   tel:["..####....",".##..##...","##....##..","##...##...","##..##....",".##.##....","..####..##","...##..###","....######",".....####."],
   snd:["...##.....","..###.....",".####..#..","#####.#.#.","#####.#.#.","#####.#.#.",".####..#..","..###.....","...##.....",".........."],
   mute:["...##.....","..###.....",".####.....","#####.#..#","#####..##.","#####.###.",".####.#..#","..###.....","...##.....",".........."],
-  bolt:[".....###..","....###...","...###....","..###.....",".########.","......###.",".....###..","....###...","...###....","..##......"]
+  bolt:["....####..","...###....","..###.....",".###......",".########.","......###.",".....###..","....###...","...###....","..###....."],
+  kko:["..######..",".########.","##########","##.##.##.#","##########","##########",".########.","..######..","...##.....","..##......"]
 };
 function paintSfx(){ var b=el("sfx"); b.innerHTML=pix(SFX.on()?ICONS.snd:ICONS.mute); b.classList.toggle("off",!SFX.on()); }
 function paintTopIcons(){
-  el("cal").innerHTML=pix(ICONS.cal); el("nmap").innerHTML=pix(ICONS.map); el("sos").innerHTML=pix(ICONS.tel);
-  el("quick").innerHTML='<span class="badge" id="quick-b" hidden></span>'+pix(ICONS.bolt);
+  function ico(id,art){ el(id).querySelector(".i").innerHTML=pix(art); }
+  ico("cal",ICONS.cal); ico("nmap",ICONS.map); ico("sos",ICONS.tel); ico("kko",ICONS.kko); ico("quick",ICONS.bolt);
+  var bd=document.createElement("span"); bd.className="badge"; bd.id="quick-b"; bd.hidden=true; el("quick").appendChild(bd);
   el("sos").addEventListener("click",function(){ SFX.play("tab"); });
-  /* 지도·캘린더: 앱이 깔려 있으면 앱으로, 아니면 1초 뒤 웹으로 */
-  function appOrWeb(id,appUrl,webUrl){
-    el(id).addEventListener("click",function(e){
-      e.preventDefault(); SFX.play("tab");
-      var t0=Date.now(), fell=false;
-      var timer=setTimeout(function(){ if(document.visibilityState==="visible"&&Date.now()-t0<1600&&!fell){ fell=true; window.open(webUrl,"_blank"); } },1100);
-      document.addEventListener("visibilitychange",function once(){ if(document.visibilityState!=="visible"){ clearTimeout(timer); document.removeEventListener("visibilitychange",once); } });
-      location.href=appUrl;
-    });
-  }
+  appOrWeb("kko","kakaotalk://","https://www.kakaocorp.com/page/service/service/KakaoTalk");
   appOrWeb("nmap","nmap://map?appname=seokhwanjun.github.io","https://map.naver.com/");
   appOrWeb("cal",/iphone|ipad|ipod/i.test(navigator.userAgent)?"comgooglecalendar://":"https://calendar.google.com/calendar/r","https://calendar.google.com/calendar/r");
+}
+function appOrWeb(id,appUrl,webUrl){
+  el(id).addEventListener("click",function(e){
+    e.preventDefault(); SFX.play("tab");
+    var t0=Date.now(), fell=false;
+    var timer=setTimeout(function(){ if(document.visibilityState==="visible"&&Date.now()-t0<1600&&!fell){ fell=true; window.open(webUrl,"_blank"); } },1100);
+    document.addEventListener("visibilitychange",function once(){ if(document.visibilityState!=="visible"){ clearTimeout(timer); document.removeEventListener("visibilitychange",once); } });
+    location.href=appUrl;
+  });
 }
 
 /* ── 빠른 등록: 복사한 링크로 바로 채워 넣기 ──────────────────
@@ -1264,11 +1286,13 @@ function qs(o){ return Object.keys(o).map(function(k){ return encodeURIComponent
 function wait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
 /* 아이폰(저전력 모드·5G)에서 첫 요청이 끊기는 일이 잦아 두 번까지 조용히 다시 시도합니다 */
 function tryFetch(url,opt,left){
+  var isPost=opt&&opt.method==="POST";
   return fetch(url,opt).then(function(r){
-    if(!r.ok&&left>0) return wait(1200).then(function(){ return tryFetch(url,opt,left-1); });
+    if(!r.ok&&left>0&&!isPost) return wait(1200).then(function(){ return tryFetch(url,opt,left-1); });
     return r.json();
   }).catch(function(e){
-    if(left>0) return wait(1200).then(function(){ return tryFetch(url,opt,left-1); });
+    /* 저장 요청은 다시 보내지 않습니다 — 두 번 저장되는 사고를 막기 위해 */
+    if(left>0&&!isPost) return wait(1200).then(function(){ return tryFetch(url,opt,left-1); });
     throw e;
   });
 }
@@ -1311,8 +1335,16 @@ function applyThumbs(ids){
 function absorbPhotos(){ ["road","db"].forEach(function(k){ (S[k]||[]).forEach(function(r){ r.photo=THUMBS[r.id]||""; }); }); }
 
 /* fn: getAll | addItem | updateItem | editItem | deleteItem  (예전 호출 이름 그대로) */
+var inflight={};
 function call(fn,args,okMsg,msgEl,mutating){
   args=args||[];
+  /* 같은 저장 요청이 연달아 들어오면 한 번만 (버튼 여러 번 눌러도 하나만 등록) */
+  var sig=fn+":"+JSON.stringify(args).slice(0,400);
+  if(mutating){
+    if(inflight[sig]&&Date.now()-inflight[sig]<10000){ SFX.play("err"); return; }
+    inflight[sig]=Date.now();
+  }
+  function freeSig(){ if(mutating) delete inflight[sig]; }
   var p;
   if(fn==="getAll")            p=apiGet({action:"all"});
   else if(fn==="addItem")      p=apiPost({action:"add",k:args[0],rec:args[1]});
@@ -1327,11 +1359,11 @@ function call(fn,args,okMsg,msgEl,mutating){
   var done=false, t0=Date.now();
   var slow=setTimeout(function(){ if(done)return; el("banner").hidden=false;
     el("banner").textContent="서버가 깨어나는 중입니다… 조금만 기다려주세요 ("+(fn==="getAll"?"불러오기":"저장")+")"; },8000);
-  var wd=setTimeout(function(){ if(done)return; done=true; if(mutating){ setBusy(false); restorePending(); }
+  var wd=setTimeout(function(){ if(done)return; done=true; freeSig(); if(mutating){ setBusy(false); restorePending(); }
     el("banner").hidden=false; el("banner").textContent="서버 응답이 60초 넘게 없습니다. 새로고침을 눌러 다시 시도해주세요.";
     if(fn==="getAll"&&!call._retried){ call._retried=true; setTimeout(function(){ call("getAll",[]); },3000); } },60000);
   p.then(function(data){
-    var late=done; done=true; clearTimeout(slow); clearTimeout(wd); if(mutating) setBusy(false);
+    var late=done; done=true; clearTimeout(slow); clearTimeout(wd); freeSig(); if(mutating) setBusy(false);
     if(!data||data.error){
       if(data&&data.dupId){ pending=null; closeForm(); clearDb(); setTab("db"); focusId=data.dupId; focusDone=true; scrolled=false;
         SFX.play("err"); toast(3,"ALREADY",data.error); call("getAll",[]); return; }
@@ -1349,7 +1381,7 @@ function call(fn,args,okMsg,msgEl,mutating){
     if((fn==="addComment"||fn==="delComment")&&lbRec) refreshLB();
     if(okMsg) note(msgEl,okMsg);
   }).catch(function(e){
-    if(done) return; done=true; clearTimeout(slow); clearTimeout(wd); if(mutating) setBusy(false);
+    if(done) return; done=true; clearTimeout(slow); clearTimeout(wd); freeSig(); if(mutating) setBusy(false);
     var m=String(e&&e.message||"오류");
     if(mutating) restorePending();
     if(/expected pattern|Unexpected token|JSON/i.test(m)) fail("서버가 앱용으로 배포되지 않았습니다. Code.gs 새 버전 배포가 필요합니다.");
@@ -1643,8 +1675,9 @@ function commentBlock(r,key){
     var d=new Date(Number(c.createdAt)||0), when=(d.getMonth()+1)+"/"+d.getDate();
     h+='<div class="cm'+(c.id===cmEdit?" editing":"")+'" data-id="'+esc(c.id)+'">'+
        '<div class="cma"><b>'+esc(c.author)+'</b>'+(c.score?'<span class="cms">'+stars(parseInt(c.score,10))+'</span>':'')+'<span class="cmd">'+when+'</span>'+
-       '<button type="button" class="cmb" data-act="edit" data-id="'+esc(c.id)+'">수정</button>'+
-       '<button type="button" class="cmb del" data-act="del" data-id="'+esc(c.id)+'">삭제</button></div>'+
+       (String(c.id).indexOf("tmp")===0?'<span class="cmb wait">저장 중…</span>':
+        '<button type="button" class="cmb" data-act="edit" data-id="'+esc(c.id)+'">수정</button>'+
+        '<button type="button" class="cmb del" data-act="del" data-id="'+esc(c.id)+'">삭제</button>')+'</div>'+
        (c.text?'<div class="cmt">'+esc(c.text)+'</div>':'')+'</div>';
   });
   var cur=null; list.forEach(function(c){ if(c.id===cmEdit) cur=c; });
@@ -1664,12 +1697,23 @@ function commentBlock(r,key){
     b.onclick=function(){ SFX.play("blip"); var n=+b.getAttribute("data-n"); pick=(pick===n)?0:n; stars_set(); };
   });
   wrap.querySelector("#cm-who").onchange=function(){ SFX.play("chip"); };
-  wrap.querySelector("#cm-send").onclick=function(){
+  var sendBtn=wrap.querySelector("#cm-send");
+  sendBtn.onclick=function(){
+    if(sendBtn.disabled) return;
     var t=wrap.querySelector("#cm-text").value.trim(), au=wrap.querySelector("#cm-who").value;
     if(!pick&&!t){ SFX.play("err"); return; }
-    if(cmEdit){ var id=cmEdit; cmEdit=null; SFX.play("save");
-      call("editComment",[id,{author:au,score:pick||"",text:t}],"고쳤습니다.",key==="road"?"r-msg":"d-msg",true); return; }
+    sendBtn.disabled=true; sendBtn.textContent="…";
+    if(cmEdit){
+      var id=cmEdit; cmEdit=null; SFX.play("save");
+      (S.cm||[]).forEach(function(c){ if(c.id===id){ c.author=au; c.score=String(pick||""); c.text=t; } });  /* 화면 먼저 */
+      refreshLB();
+      call("editComment",[id,{author:au,score:pick||"",text:t}],"고쳤습니다.",key==="road"?"r-msg":"d-msg",true);
+      return;
+    }
     SFX.play("save"); toast(3,"COMMENT",au+" 의견 남김"+(pick?" · "+stars(pick):""));
+    /* 서버 응답을 기다리지 않고 먼저 보여줍니다 */
+    S.cm=(S.cm||[]).concat([{id:"tmp"+Date.now(),key:key,recId:r.id,author:au,score:String(pick||""),text:t,createdAt:Date.now()}]);
+    refreshLB();
     call("addComment",[{key:key,recId:r.id,author:au,score:pick||"",text:t}],"의견을 남겼습니다.",key==="road"?"r-msg":"d-msg",true);
   };
   if(wrap.querySelector("#cm-cancel")) wrap.querySelector("#cm-cancel").onclick=function(){ cmEdit=null; refreshLB(); };
