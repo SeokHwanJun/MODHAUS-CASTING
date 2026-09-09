@@ -1762,9 +1762,25 @@ function apiGet(p){ return withAuth(function(){ p.t=TEAM_KEY; p.tk=TK;
 function apiPost(body){ return withAuth(function(){ body.t=TEAM_KEY; body.tk=TK;
   return tryFetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)},2); }); }
 /* 로그인은 열쇠 없이 보냅니다 */
-function apiLogin(name,pin){
-  return tryFetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify({action:"login",name:name,pin:pin})},1);
+function apiLogin(name,pin,left){
+  if(left===undefined) left=2;
+  return fetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action:"login",name:name,pin:pin})})
+    .then(function(r){
+      if(!r.ok&&left>0) return wait(1200).then(function(){ return apiLogin(name,pin,left-1); });
+      return r.json();
+    })
+    .catch(function(e){
+      /* 로그인은 다시 보내도 아무것도 안 망가집니다 — 조용히 한 번 더 */
+      if(left>0) return wait(1200).then(function(){ return apiLogin(name,pin,left-1); });
+      throw e;
+    });
+}
+/* 잠금화면이 열리면 서버부터 깨워둡니다. 이름 고르고 4자리 누르는 동안 준비돼요. */
+var warmT=0;
+function warmUp(){
+  if(Date.now()-warmT<60000) return; warmT=Date.now();
+  try{ fetch(API+"?action=ping&t="+encodeURIComponent(TEAM_KEY),{method:"GET",cache:"no-store"}).catch(function(){}); }catch(e){}
 }
 
 /* 서버가 준 목록에 기기에 저장된 썸네일을 붙입니다 */
@@ -2709,6 +2725,7 @@ function lockOpen(msg){
   el("lock-sp").innerHTML=sprite(0);
   lkWho(); lkDots(); lkPad();
   L.hidden=false; document.body.style.overflow="hidden";
+  warmUp();
 }
 function lockClose(){ var L=el("lock"); if(!L) return; L.hidden=true; document.body.style.overflow=""; }
 function lkWho(){
@@ -2716,7 +2733,7 @@ function lkWho(){
   OWNERS.forEach(function(o){
     var b=document.createElement("button"); b.type="button"; b.textContent=o;
     b.setAttribute("aria-pressed",String(o===lkName));
-    b.onclick=function(){ SFX.play("chip"); lkName=o; lkPin=""; el("lock-err").hidden=true; lkWho(); lkDots(); };
+    b.onclick=function(){ SFX.play("chip"); lkName=o; lkPin=""; el("lock-err").hidden=true; lkRetry(false); lkWho(); lkDots(); };
     h.appendChild(b);
   });
 }
@@ -2728,7 +2745,7 @@ function lkPad(){
   ["1","2","3","4","5","6","7","8","9","x","0","<"].forEach(function(k){
     var b=document.createElement("button"); b.type="button";
     if(k==="x"){ b.className="blank"; b.disabled=true; }
-    else if(k==="<"){ b.className="fn"; b.textContent="지움"; b.onclick=function(){ SFX.play("back"); lkPin=lkPin.slice(0,-1); lkDots(); }; }
+    else if(k==="<"){ b.className="fn"; b.textContent="지움"; b.onclick=function(){ SFX.play("back"); lkRetry(false); el("lock-err").hidden=true; lkPin=lkPin.slice(0,-1); lkDots(); }; }
     else { b.textContent=k; b.onclick=function(){ lkTap(k); }; }
     h.appendChild(b);
   });
@@ -2737,27 +2754,44 @@ function lkTap(d){
   if(lkBusy) return;
   if(!lkName){ lkErr("이름을 먼저 골라주세요."); return; }
   if(lkPin.length>=4) return;
-  SFX.play("blip"); lkPin+=d; lkDots();
+  lkRetry(false); SFX.play("blip"); lkPin+=d; lkDots();
   if(lkPin.length===4) setTimeout(lkGo,120);
 }
-function lkErr(m){ var e=el("lock-err"); e.textContent=m; e.hidden=false; SFX.play("err"); lkPin=""; lkDots(); }
+function lkErr(m,keep){ var e=el("lock-err"); e.textContent=m; e.hidden=false; SFX.play("err");
+  if(!keep){ lkPin=""; lkDots(); } }
 function lkGo(){
   lkBusy=true; el("lock").classList.add("busy");
+  el("lock-err").hidden=true;
   el("lock-msg").textContent="확인 중…";
+  /* 아침 첫 접속이면 서버 깨우는 데 몇 초 걸립니다 — 기다리는 중이라고 알려줍니다 */
+  var slow=setTimeout(function(){ if(lkBusy) el("lock-msg").textContent="서버를 깨우는 중… 잠시만요"; },3500);
+  function done(){ lkBusy=false; clearTimeout(slow); el("lock").classList.remove("busy");
+    el("lock-msg").textContent="이름을 고르고 PIN 4자리를 눌러주세요"; }
   apiLogin(lkName,lkPin).then(function(res){
-    lkBusy=false; el("lock").classList.remove("busy");
-    el("lock-msg").textContent="이름을 고르고 PIN 4자리를 눌러주세요";
+    done();
     if(!res||res.error){ lkErr((res&&res.error)||"확인하지 못했습니다."); return; }
     TK=res.tk; ME=res.name; ADMIN=!!res.admin; store("tk",TK); store("nm",ME); store("adm",ADMIN?"1":"");
     SFX.play("levelUp",3);
     lockClose();
-    setWho(ME); render();
-    call("getAll",[]);
+    setWho(ME); render(); bindAccount();
+    call("getAll",["fresh"]);
   }).catch(function(){
-    lkBusy=false; el("lock").classList.remove("busy");
-    el("lock-msg").textContent="이름을 고르고 PIN 4자리를 눌러주세요";
-    lkErr("서버와 통신하지 못했습니다. 잠시 뒤 다시 시도해주세요.");
+    done();
+    /* 번호는 그대로 두고, 누르면 바로 다시 보냅니다 (다시 입력 안 하셔도 됩니다) */
+    lkErr("연결이 잠깐 끊겼습니다. 아래 확인을 눌러주세요.",true);
+    lkRetry(true);
   });
+}
+/* 통신 실패 때만 나오는 '확인' 버튼 */
+function lkRetry(on){
+  var box=el("lock-err"); var b=el("lock-again");
+  if(!on){ if(b) b.hidden=true; return; }
+  if(!b){ b=document.createElement("button"); b.type="button"; b.id="lock-again"; b.className="btn";
+    b.style.marginTop="14px"; b.textContent="확인";
+    box.parentNode.appendChild(b);
+    b.onclick=function(){ b.hidden=true; if(lkPin.length===4) lkGo(); else { el("lock-err").hidden=true; lkDots(); } };
+  }
+  b.hidden=false;
 }
 /* 내 계정 카드 */
 function bindAccount(){
