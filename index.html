@@ -1813,7 +1813,7 @@ function call(fn,args,okMsg,msgEl,mutating){
   }
   function freeSig(){ if(mutating) delete inflight[sig]; }
   var p;
-  if(fn==="getAll")            p=apiGet({action:"all"});
+  if(fn==="getAll")            p=apiGet(args[0]==="fresh"?{action:"all",fresh:1}:{action:"all"});
   else if(fn==="addItem")      p=apiPost({action:"add",k:args[0],rec:args[1]});
   else if(fn==="updateItem")   p=apiPost({action:"update",k:args[0],id:args[1],patch:args[2]});
   else if(fn==="editItem")     p=apiPost({action:"edit",k:args[0],id:args[1],rec:args[2]});
@@ -2890,7 +2890,7 @@ var ptrPulls=0, ptrLast=0;
     } else {
       ptr.classList.add("spin"); txt.textContent="불러오는 중…"; sp.innerHTML=sprite(0); SFX.play("tick");
     }
-    call("getAll",[],"새로 불러왔습니다.",tab==="road"?"r-msg":"d-msg");
+    call("getAll",["fresh"],"새로 불러왔습니다.",tab==="road"?"r-msg":"d-msg");
     if("serviceWorker" in navigator) navigator.serviceWorker.getRegistration().then(function(r){ if(r) r.update(); }).catch(function(){});
     setTimeout(function(){ spinning=false; reset(); }, crack?1900:1400);
   },{passive:true});
