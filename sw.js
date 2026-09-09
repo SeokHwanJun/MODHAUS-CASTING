@@ -1,7 +1,7 @@
 /* 캐스팅 보드 — 화면 파일 저장소.
    index.html 은 '네트워크 우선'(3초 안에 오면 최신, 안 오면 저장본) → 새 버전이 올라가면 다음 실행에 바로 적용.
    아이콘·매니페스트는 저장본 우선. 데이터(Apps Script)는 건드리지 않음. */
-var VERSION = "casting-v11";
+var VERSION = "casting-v16";
 var SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
 
 self.addEventListener("install", function (e) {
