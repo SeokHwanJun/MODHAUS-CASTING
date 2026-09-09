@@ -64,6 +64,10 @@ body{padding-top:64px}
 .pill:hover{background:var(--sun)}
 .pill:active{transform:translate(2px,2px); box-shadow:none}
 .pill.sfx{font-family:"Silkscreen",monospace; font-size:9.5px; letter-spacing:.06em; padding:7px 10px}
+.pill.who{background:var(--sun); font-weight:800; padding-right:22px; -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 5'%3E%3Cpath d='M0 0h8L4 5z' fill='%23000'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 8px center; background-size:8px 5px}
+.pill.who.all{background-color:#fff}
 .pill.sfx.off{background:var(--surface-3); color:var(--ink-3)}
 
 /* ── 탭 (기기 버튼) ── */
@@ -394,7 +398,7 @@ main{padding-top:10px}
 .fcard .two{gap:0 10px}
 
 /* 필터 바 */
-.fbar{display:flex; gap:7px; align-items:center; margin:0 0 10px; overflow-x:auto; scrollbar-width:none; padding:2px 0 4px}
+.fbar{display:flex; gap:6px; align-items:center; margin:0 0 10px; flex-wrap:wrap; overflow:visible; padding:2px 0 4px}
 .fbar::-webkit-scrollbar{display:none}
 .seg{display:inline-flex; border:2px solid #000; border-radius:999px; overflow:hidden; background:#fff; flex:0 0 auto; box-shadow:var(--pop-o-sm)}
 .seg button{border:0; background:none; font:inherit; font-size:12.5px; font-weight:700; padding:6px 11px; color:#000; cursor:pointer}
@@ -407,7 +411,7 @@ main{padding-top:10px}
   background-repeat:no-repeat; background-position:right 9px center; background-size:8px 5px}
 .fsel.on{background-color:var(--sun)}
 .fclear{border:2px solid #000; border-radius:999px; background:#000; color:#fff; font:inherit; font-size:12px; font-weight:700; padding:6px 11px; flex:0 0 auto; cursor:pointer}
-.qc{border:2px solid #000; border-radius:999px; background:#fff; color:#000; font:inherit; font-size:12.5px; font-weight:700; padding:6px 12px; flex:0 0 auto; cursor:pointer; box-shadow:var(--pop-o-sm); white-space:nowrap}
+.qc{border:2px solid #000; border-radius:999px; background:#fff; color:#000; font:inherit; font-size:12px; font-weight:700; padding:5px 10px; flex:0 0 auto; cursor:pointer; box-shadow:var(--pop-o-sm); white-space:nowrap}
 .qc[aria-pressed="true"]{background:#000; color:#fff; transform:translate(2px,2px); box-shadow:none}
 .qc.warn[aria-pressed="true"]{background:var(--sun); color:#000}
 .qc .n{font-family:"Silkscreen",monospace; font-size:8px; opacity:.65; margin-left:4px}
@@ -474,8 +478,7 @@ select.status{padding:5px 9px; font-size:12px}
       <rect x="6" y="2" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="8" y="7" width="1" height="1"/><rect x="3" y="7" width="1" height="1"/>
     </svg></span><span class="t">신인개발팀 캐스팅 보드</span><small>CASTING</small></h1>
   <div class="sp">
-    <small>나</small>
-    <select id="me" class="pill" aria-label="내 이름"></select>
+    <select id="me" class="pill who" aria-label="담당자 보기"></select>
     <button class="pill sfx" id="sfx" type="button" aria-label="효과음 켜기/끄기">SFX ON</button>
     <button class="pill" id="reload" type="button">새로고침</button>
   </div>
@@ -515,7 +518,12 @@ select.status{padding:5px 9px; font-size:12px}
   <!-- 리그 -->
   <section id="v-league" hidden>
     <div class="card">
-      <h3 id="lg-title">이번주 리그</h3>
+      <h3 id="pf-title">이번달 성과표</h3>
+      <p class="hint" style="margin:-6px 0 12px">담당자별 이번달 실적. 괄호는 지난달. 전환율 = 회신 이상으로 간 비율.</p>
+      <div class="scroll" id="lg-perf"></div>
+    </div>
+    <div class="card">
+      <h3 id="lg-title">이번주 순위</h3>
       <p class="hint" style="margin:-6px 0 12px">월요일 0시에 리셋 · 등록 +1 · 회신 +3 · 1차 +5 · 2차 +8 · 최종 +10 · 최종합격 +20 (이번주에 그 상태가 된 건만)</p>
       <div id="lg-board"></div>
     </div>
@@ -523,11 +531,6 @@ select.status{padding:5px 9px; font-size:12px}
       <h3>회신율</h3>
       <p class="hint" style="margin:-6px 0 12px">DM 보낸 것 중 답이 온 비율 (전체 기간). 이 숫자가 오르면 DM 문구가 좋아진 겁니다.</p>
       <div id="lg-rate"></div>
-    </div>
-    <div class="card">
-      <h3 id="pf-title">이번달 성과표</h3>
-      <p class="hint" style="margin:-6px 0 12px">담당자별 이번달 실적. 괄호는 지난달. 전환율 = 회신 이상으로 간 비율.</p>
-      <div class="scroll" id="lg-perf"></div>
     </div>
     <div class="card">
       <h3>리마인드</h3>
@@ -698,7 +701,7 @@ var GENDERS = ["여","남"];
 var POSITIONS = ["보컬","댄스","랩","비주얼","연기","올라운드"];
 var NATIONS = ["한국","일본","중국","기타"];
 var GFILTER = ["전체","여","남"];
-var TABS = [["road","SNS/로드"],["db","개인DB (학원, 그외)"],["league","리그"],["dex","도감"]];
+var TABS = [["road","SNS/로드"],["db","개인DB (학원, 그외)"],["league","성과"],["dex","도감"]];
 var PTS={등록:1,회신:3,"1차":5,"2차":8,최종:10,최종합격:20};
 var STALE_DAYS=7;
 /* ===== 설정 — 이 두 줄만 회사 것에 맞추면 됩니다 ===== */
@@ -711,11 +714,11 @@ var S = {road:[], db:[]};
 var tab = "road", busy = false;
 var R = {owner:OWNERS[0], platform:PLATFORMS[0], status:STATUSES[0], gender:GENDERS[0]};
 var D = {owner:OWNERS[0], status:STATUSES[0], score:SCORES[0], sort:"진행순", gender:GENDERS[0], position:POSITIONS[0], nationality:NATIONS[0]};
-var fR = {owner:"전체", status:"전체", gender:"전체", platform:"전체", sort:"진행순"};
+var fR = {owner:"전체", status:"전체", gender:"전체", platform:"전체", sort:"진행순"};   /* owner 는 위쪽 이름이 정함 */
 var fD = {owner:"전체", score:"전체", gender:"전체"};
-function resetF(){ fR={owner:"전체",status:"전체",gender:"전체",platform:"전체",sort:fR.sort||"진행순"}; fD={owner:"전체",score:"전체",gender:"전체"}; }
-function fCountR(){ return (fR.owner!=="전체")+(fR.status!=="전체")+(fR.gender!=="전체")+(fR.platform!=="전체"); }
-function fCountD(){ return (fD.owner!=="전체")+(fD.score!=="전체")+(fD.gender!=="전체"); }
+function resetF(){ var w=(typeof who==="undefined")?"전체":who; fR={owner:w,status:"전체",gender:"전체",platform:"전체",sort:fR.sort||"진행순"}; fD={owner:w,score:"전체",gender:"전체"}; }
+function fCountR(){ return (fR.status!=="전체")+(fR.gender!=="전체")+(fR.platform!=="전체"); }
+function fCountD(){ return (fD.score!=="전체")+(fD.gender!=="전체"); }
 
 function el(id){ return document.getElementById(id); }
 function toISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
@@ -933,7 +936,7 @@ function renderPerf(){
 function renderLeague(){
   renderPerf();
   var ws=new Date(weekStart());
-  el("lg-title").textContent="이번주 리그 · "+(ws.getMonth()+1)+"/"+ws.getDate()+"~";
+  el("lg-title").textContent="이번주 순위 · "+(ws.getMonth()+1)+"/"+ws.getDate()+"~";
   var rows=OWNERS.map(function(o){ return {o:o,pts:weekPts(o),c:weekCounts(o),lv:ownerLevel(o)}; })
     .sort(function(a,b){ return b.pts-a.pts||b.lv.n-a.lv.n; });
   var h='<div class="lg">';
@@ -1212,22 +1215,21 @@ function qc(label,count,pressed,onTap,cls){
 }
 function fbarRoad(){
   var h=el("r-fbar"); h.innerHTML="";
-  var mine=S.road.filter(function(r){return r.owner===me;}).length, stale=S.road.filter(isStale).length;
-  var all=fCountR()===0;
-  h.appendChild(qc("전체",S.road.length,all,function(){ resetF(); render(); }));
-  h.appendChild(qc("나",mine,fR.owner===me,function(){ fR.owner=(fR.owner===me?"전체":me); render(); }));
+  var base=S.road.filter(function(r){ return who==="전체"||r.owner===who; });
+  var stale=base.filter(isStale).length;
+  h.appendChild(qc((who==="전체"?"팀":who)+" 전체",base.length,fCountR()===0,function(){ resetF(); render(); }));
   if(stale) h.appendChild(qc("리마인드",stale,fR.status==="배고픔",function(){ fR.status=(fR.status==="배고픔"?"전체":"배고픔"); render(); }));
-  var n=fCountR()-(fR.owner===me?1:0)-(fR.status==="배고픔"?1:0);
+  var n=fCountR()-(fR.status==="배고픔"?1:0);
   h.appendChild(qc("필터"+(n>0?" · "+n:"")+" ▾",null,false,function(){ openFilter("road"); },"f"+(n>0?" on":"")));
   h.appendChild(qc((fR.sort||"진행순")+" ▾",null,false,function(){ openFilter("road",true); },"s"));
 }
 function fbarDb(){
   var h=el("d-fbar"); h.innerHTML="";
-  var mine=S.db.filter(function(r){return r.owner===me;}).length, top=S.db.filter(function(r){return (parseInt(r.score,10)||0)>=4;}).length;
-  h.appendChild(qc("전체",S.db.length,fCountD()===0,function(){ resetF(); render(); }));
-  h.appendChild(qc("나",mine,fD.owner===me,function(){ fD.owner=(fD.owner===me?"전체":me); render(); }));
+  var base=S.db.filter(function(r){ return who==="전체"||r.owner===who; });
+  var top=base.filter(function(r){return (parseInt(r.score,10)||0)>=4;}).length;
+  h.appendChild(qc((who==="전체"?"팀":who)+" 전체",base.length,fCountD()===0,function(){ resetF(); render(); }));
   h.appendChild(qc("4점↑",top,fD.score==="4점↑",function(){ fD.score=(fD.score==="4점↑"?"전체":"4점↑"); render(); },"warn"));
-  var n=fCountD()-(fD.owner===me?1:0)-(fD.score==="4점↑"?1:0);
+  var n=fCountD()-(fD.score==="4점↑"?1:0);
   h.appendChild(qc("필터"+(n>0?" · "+n:"")+" ▾",null,false,function(){ openFilter("db"); },"f"+(n>0?" on":"")));
   h.appendChild(qc((D.sort||"진행순")+" ▾",null,false,function(){ openFilter("db",true); },"s"));
 }
@@ -1248,22 +1250,22 @@ function buildFilter(){
   var body=el("f-body"); body.innerHTML="";
   if(fKey==="road"){
     var co={"전체":S.road.length}; OWNERS.forEach(function(o){ co[o]=S.road.filter(function(r){return r.owner===o;}).length; });
-    var cs={"전체":S.road.length}; STATUSES.forEach(function(x){ cs[x]=S.road.filter(function(r){return r.status===x;}).length; }); cs["배고픔"]=S.road.filter(isStale).length;
-    var cp={"전체":S.road.length}; PLATFORMS.forEach(function(x){ cp[x]=S.road.filter(function(r){return r.platform===x;}).length; });
-    var cg={"전체":S.road.length}; GENDERS.forEach(function(x){ cg[x]=S.road.filter(function(r){return r.gender===x;}).length; });
+    var B=S.road.filter(function(r){ return who==="전체"||r.owner===who; });
+    var cs={"전체":B.length}; STATUSES.forEach(function(x){ cs[x]=B.filter(function(r){return r.status===x;}).length; }); cs["배고픔"]=B.filter(isStale).length;
+    var cp={"전체":B.length}; PLATFORMS.forEach(function(x){ cp[x]=B.filter(function(r){return r.platform===x;}).length; });
+    var cg={"전체":B.length}; GENDERS.forEach(function(x){ cg[x]=B.filter(function(r){return r.gender===x;}).length; });
     body.appendChild(grp("정렬",SORTS_R,fR.sort,function(v){ fR.sort=v; }));
-    body.appendChild(grp("담당자",["전체"].concat(OWNERS),fR.owner,function(v){ fR.owner=v; },co));
     body.appendChild(grp("상태",["전체","배고픔"].concat(STATUSES),fR.status,function(v){ fR.status=v; },cs));
     body.appendChild(grp("성별",GFILTER,fR.gender,function(v){ fR.gender=v; },cg));
     body.appendChild(grp("경로",["전체"].concat(PLATFORMS),fR.platform,function(v){ fR.platform=v; },cp));
     el("f-apply").textContent=viewRoad().length+"건 보기";
   } else {
     var co2={"전체":S.db.length}; OWNERS.forEach(function(o){ co2[o]=S.db.filter(function(r){return r.owner===o;}).length; });
-    var sc={"전체":S.db.length,"4점↑":S.db.filter(function(r){return (parseInt(r.score,10)||0)>=4;}).length};
-    ["5점","4점","3점","2점","1점"].forEach(function(x){ sc[x]=S.db.filter(function(r){ return String(parseInt(r.score,10)||"")+"점"===x; }).length; });
-    var dg={"전체":S.db.length}; GENDERS.forEach(function(x){ dg[x]=S.db.filter(function(r){return r.gender===x;}).length; });
+    var B2=S.db.filter(function(r){ return who==="전체"||r.owner===who; });
+    var sc={"전체":B2.length,"4점↑":B2.filter(function(r){return (parseInt(r.score,10)||0)>=4;}).length};
+    ["5점","4점","3점","2점","1점"].forEach(function(x){ sc[x]=B2.filter(function(r){ return String(parseInt(r.score,10)||"")+"점"===x; }).length; });
+    var dg={"전체":B2.length}; GENDERS.forEach(function(x){ dg[x]=B2.filter(function(r){return r.gender===x;}).length; });
     body.appendChild(grp("정렬",SORTS,D.sort,function(v){ D.sort=v; }));
-    body.appendChild(grp("담당자",["전체"].concat(OWNERS),fD.owner,function(v){ fD.owner=v; },co2));
     body.appendChild(grp("점수",["전체","4점↑","5점","4점","3점","2점","1점"],fD.score,function(v){ fD.score=v; },sc));
     body.appendChild(grp("성별",GFILTER,fD.gender,function(v){ fD.gender=v; },dg));
     el("f-apply").textContent=viewDb().length+"명 보기";
@@ -1534,7 +1536,7 @@ var PIX={
 };
 function pix(rows){ var o=""; for(var y=0;y<rows.length;y++) for(var x=0;x<rows[y].length;x++) if(rows[y][x]==="#") o+='<rect x="'+x+'" y="'+y+'" width="1" height="1"/>';
   return '<svg viewBox="0 0 10 10" shape-rendering="crispEdges" fill="#000" aria-hidden="true">'+o+'</svg>'; }
-var NAVL={road:"로드",db:"개인DB",league:"리그",dex:"도감"};
+var NAVL={road:"로드",db:"개인DB",league:"성과",dex:"도감"};
 function buildNav(){
   var n=el("nav"); n.innerHTML="";
   [TABS[0],TABS[1],null,TABS[2],TABS[3]].forEach(function(t){
@@ -1576,28 +1578,35 @@ function buildStats(){
   var wk=daysAgo(7), out=[];
   if(tab!=="db"){
     var king=OWNERS.map(function(o){return [o,weekPts(o)];}).sort(function(a,b){return b[1]-a[1];})[0];
-    out=[["전체",S.road.length,0],
-         ["진행중",S.road.filter(function(r){return LIVE[r.status];}).length,1],
+    var RB=S.road.filter(function(r){ return who==="전체"||r.owner===who; });
+    out=[["전체",RB.length,0],
+         ["진행중",RB.filter(function(r){return LIVE[r.status];}).length,1],
          [king&&king[1]>0?"1위 "+king[0]:"이번주",king&&king[1]>0?king[1]+"P":S.road.filter(function(r){return (r.date||"")>=wk;}).length,3]];
   } else {
-    var sc=S.db.filter(function(r){ return (parseInt(r.score,10)||0)>=4; }).length;
-    out=[["전체",S.db.length,0],["4점 이상",sc,1],
-         ["이번주",S.db.filter(function(r){return (r.date||"")>=wk;}).length,0]];
+    var DB=S.db.filter(function(r){ return who==="전체"||r.owner===who; });
+    var sc=DB.filter(function(r){ return (parseInt(r.score,10)||0)>=4; }).length;
+    out=[["전체",DB.length,0],["4점 이상",sc,1],
+         ["이번주",DB.filter(function(r){return (r.date||"")>=wk;}).length,0]];
   }
   out.forEach(function(x){
     var d=document.createElement("div"); d.className="stat"+(x[2]===1?" on":"")+(x[2]===2&&x[1]?" alert":"");
     d.innerHTML='<b class="mono">'+x[1]+'</b><span>'+x[0]+'</span>';
-    if(x[2]===3){ d.style.cursor="pointer"; d.title="이번주 리그"; d.onclick=function(){ setTab("league"); }; }
+    if(x[2]===3){ d.style.cursor="pointer"; d.title="성과"; d.onclick=function(){ setTab("league"); }; }
     h.appendChild(d);
   });
 
   /* 담당자 성장: 5건마다 1레벨, 펫은 2레벨마다 진화 */
-  var mine=S.road.filter(function(r){return r.owner===me;}).length+S.db.filter(function(r){return r.owner===me;}).length;
-  var lv=Math.floor(mine/5)+1, xp=mine%5, bar="";
-  for(var i=0;i<5;i++) bar+=i<xp?"\u25AE":"\u25AF";
   var d2=document.createElement("div"); d2.className="stat lv";
-  var stk=streakOf(me,false);
-  d2.innerHTML='<div class="tsp">'+sprite(Math.min(5,Math.floor((lv-1)/2)))+'</div><div><b>LV '+lv+(stk>=2?' <small style="font-size:9px">STREAK '+stk+'</small>':'')+'</b><span>'+esc(me)+' '+mine+'건 '+bar+'</span></div>';
+  if(who==="전체"){
+    var tot=allRecs().length, tw=allRecs().filter(function(r){ return (Number(r.createdAt)||0)>=weekStart(); }).length;
+    d2.innerHTML='<div class="tsp">'+sprite(Math.min(5,Math.floor(tot/50)))+'</div><div><b>TEAM</b><span>'+tot+'건 · 이번주 +'+tw+'</span></div>';
+  } else {
+    var mine=allRecs().filter(function(r){return r.owner===who;}).length;
+    var lv=Math.floor(mine/5)+1, xp=mine%5, bar="";
+    for(var i=0;i<5;i++) bar+=i<xp?"\u25AE":"\u25AF";
+    var stk=streakOf(who,false);
+    d2.innerHTML='<div class="tsp">'+sprite(Math.min(5,Math.floor((lv-1)/2)))+'</div><div><b>LV '+lv+(stk>=2?' <small style="font-size:9px">STREAK '+stk+'</small>':'')+'</b><span>'+esc(who)+' '+mine+'건 '+bar+'</span></div>';
+  }
   h.appendChild(d2);
 }
 
@@ -1623,7 +1632,7 @@ function renderRoad(){
           '<span class="d">'+esc((r.date||"").slice(5))+'</span>'+
           '<span class="tag">'+esc(r.platform)+'</span>'+
           (r.gender?'<span class="tag">'+esc(r.gender)+'</span>':'')+
-          '<span class="tag who">'+esc(r.owner)+'</span></div>';
+          (who==="전체"?'<span class="tag who">'+esc(r.owner)+'</span>':'')+'</div>';
     if(r.place) h+='<div class="spec"><span><i>장소</i>'+esc(r.place)+'</span></div>';
     if(isStale(r)) h+='<div><span class="hungry"><span class="tsp">'+sprite(6)+'</span>'+daysSince(statusAtOf(r))+'일째 답 없음</span></div>';
     b.innerHTML=h;
@@ -1672,7 +1681,7 @@ function renderDb(){
       '<b>'+esc(r.name||"(이름 없음)")+(r.birth?" ("+esc(r.birth)+")":"")+'</b>'+
       (r.gender?'<span class="tag">'+esc(r.gender)+'</span>':'')+
       (r.position?'<span class="tag">'+esc(r.position)+'</span>':'')+
-      '<span class="d">'+esc(r.owner)+'</span></div>';
+      (who==="전체"?'<span class="d">'+esc(r.owner)+'</span>':'')+'</div>';
     if(r.agency) h+='<div class="line1"><span class="tag t-warn">타사 · '+esc(r.agency)+'</span></div>';
     var spec=[];
     if(r.height||r.weight) spec.push('<span><i>키·몸무게</i>'+esc(r.height||"-")+" / "+esc(r.weight||"-")+'</span>');
@@ -1739,15 +1748,22 @@ choices(el("d-status"),STATUSES,D,"status");
 choices(el("d-score"),SCORES,D,"score");
 el("r-date").value=today();
 
+/* 위쪽 이름 = 메인 컨트롤. 고르면 아래 목록·LV·등록 기본값이 전부 그 사람 기준으로 바뀝니다. '팀 전체'는 모두 보기. */
 var meSel=el("me");
-OWNERS.forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=o; meSel.appendChild(op); });
-var me=store("me")||OWNERS[0];
-if(OWNERS.indexOf(me)<0) me=OWNERS[0];
-meSel.value=me;
-function setMe(v){ me=v; store("me",v); R.owner=v; D.owner=v;
-  choices(el("r-owner"),OWNERS,R,"owner"); choices(el("d-owner"),OWNERS,D,"owner"); }
-meSel.onchange=function(){ SFX.play("tab"); setMe(meSel.value); render(); };
-setMe(me);
+["전체"].concat(OWNERS).forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=(o==="전체"?"팀 전체":o); meSel.appendChild(op); });
+var who=store("who")||OWNERS[0];
+if(who!=="전체"&&OWNERS.indexOf(who)<0) who=OWNERS[0];
+var me=(who==="전체")?(store("me")||OWNERS[0]):who;     /* 등록 기본 담당자·응원 멘트용 */
+function setWho(v){
+  who=v; store("who",v); meSel.value=v; meSel.classList.toggle("all",v==="전체");
+  if(v!=="전체"){ me=v; store("me",v); R.owner=v; D.owner=v; }
+  choices(el("r-owner"),OWNERS,R,"owner"); choices(el("d-owner"),OWNERS,D,"owner");
+  /* 담당자 바꾸면 성별·상태 같은 세부 조건은 전부 풀고 그 사람 것 전부 */
+  fR={owner:v,status:"전체",gender:"전체",platform:"전체",sort:fR.sort||"진행순"};
+  fD={owner:v,score:"전체",gender:"전체"};
+}
+meSel.onchange=function(){ SFX.play("tab"); setWho(meSel.value); render(); window.scrollTo(0,0); };
+setWho(who);
 
 function clearRoad(){
   ["r-name","r-url","r-place","r-note","r-contact"].forEach(function(id){ el(id).value=""; });
@@ -1814,7 +1830,8 @@ el("d-add").onclick=function(){
   }
 };
 el("d-clear").onclick=function(){ clearDb(); cancelEdit(); note("d-msg",""); };
-el("reload").onclick=function(){ SFX.play("tick"); call("getAll",[],"새로 불러왔습니다.",tab==="road"?"r-msg":"d-msg"); };
+el("reload").onclick=function(){ SFX.play("tick"); call("getAll",[],"새로 불러왔습니다.",tab==="road"?"r-msg":"d-msg");
+  if("serviceWorker" in navigator) navigator.serviceWorker.getRegistration().then(function(r){ if(r) r.update(); }).catch(function(){}); };
 el("sfx").onclick=function(){ SFX.toggle(); paintSfx(); };
 paintSfx();
 
@@ -1861,7 +1878,15 @@ window.addEventListener("offline",paintOnline); paintOnline();
 })();
 
 /* 서비스 워커: 화면 파일을 기기에 저장 → 다음부턴 0.5초 */
-if("serviceWorker" in navigator){ window.addEventListener("load",function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); }); }
+if("serviceWorker" in navigator){
+  window.addEventListener("load",function(){ navigator.serviceWorker.register("sw.js").then(function(reg){ setInterval(function(){ try{ reg.update(); }catch(e){} },30*60*1000); }).catch(function(){}); });
+  var reloading=false;
+  navigator.serviceWorker.addEventListener("controllerchange",function(){
+    if(reloading) return; reloading=true;
+    if(anySheetOpen()||lb.classList.contains("open")){ toast(1,"UPDATE","새 화면이 준비됐어요. 다음에 열 때 적용"); return; }
+    toast(1,"UPDATE","새 화면으로 바꾸는 중…"); setTimeout(function(){ location.reload(); },900);
+  });
+}
 
 /* iOS: 첫 터치에서 소리 잠금 해제 */
 document.addEventListener("touchend",function once(){ try{ SFX.play("blip"); }catch(e){} document.removeEventListener("touchend",once); },{passive:true});
