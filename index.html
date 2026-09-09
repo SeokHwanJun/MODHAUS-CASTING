@@ -470,6 +470,38 @@ main{padding-top:10px}
 .fcard .row-btns .btn{width:auto; flex:1}
 .fcard .two{gap:0 10px}
 
+/* 눌러서 이동 */
+.stat.tap,.lgrow.tap,tr.tap{cursor:pointer; touch-action:manipulation}
+.stat.tap:active{transform:translate(1px,1px)}
+.lgrow.tap:active{transform:translate(2px,2px)}
+.stat.tap::after{content:"›"; position:absolute; right:7px; top:5px; font-size:13px; color:var(--ink-3); font-weight:700}
+.stat{position:relative}
+tr.tap td.nm{text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px}
+tr.tap:active td{background:var(--surface-2)}
+
+/* 잠금화면 */
+.lock{position:fixed; inset:0; z-index:9000; background:var(--ground); display:flex; align-items:center; justify-content:center;
+  padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); overflow-y:auto; overscroll-behavior:contain}
+.lockbox{width:100%; max-width:320px; text-align:center}
+.lockegg{width:56px; height:62px; margin:0 auto 12px; animation:wob 2.4s ease-in-out infinite}
+.lockh{display:block; font-size:19px; letter-spacing:-.3px}
+.lockp{margin:6px 0 18px; font-size:13px; color:var(--ink-2)}
+.lockwho{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:18px}
+.lockwho button{border:2px solid #000; border-radius:999px; background:#fff; color:#000; font:inherit; font-size:13px;
+  font-weight:700; padding:7px 13px; cursor:pointer; box-shadow:var(--pop-o-sm); touch-action:manipulation}
+.lockwho button[aria-pressed="true"]{background:var(--sun); transform:translate(2px,2px); box-shadow:none}
+.dots{display:flex; gap:13px; justify-content:center; margin:0 0 20px}
+.dots i{width:15px; height:15px; border:2.5px solid #000; border-radius:50%; background:#fff; transition:background .12s}
+.dots i.on{background:#000}
+.pad{display:grid; grid-template-columns:repeat(3,1fr); gap:9px}
+.pad button{height:56px; border:2.5px solid #000; border-radius:16px; background:var(--surface); color:#000;
+  font-family:"Silkscreen",monospace; font-size:20px; cursor:pointer; box-shadow:var(--pop-sm); touch-action:manipulation}
+.pad button:active{transform:translate(2px,2px); box-shadow:none}
+.pad button.fn{font-family:inherit; font-size:13px; font-weight:700; background:var(--surface-2)}
+.pad button.blank{border:0; background:none; box-shadow:none; pointer-events:none}
+.lockerr{margin:16px 0 0; font-size:13px; font-weight:700; color:#C0392B}
+.lock.busy .pad{opacity:.45; pointer-events:none}
+
 /* 필터 바 */
 .fbar{display:flex; gap:6px; align-items:center; margin:0 0 10px; flex-wrap:wrap; overflow:visible; padding:2px 0 4px}
 .fbar::-webkit-scrollbar{display:none}
@@ -609,6 +641,18 @@ select.status[data-st="거절"]{background:var(--c-rej); color:#fff}
 <div class="offline" id="offline">OFFLINE</div>
 <div class="ptr" id="ptr"><span class="spark"></span><div class="tsp" id="ptr-sp"></div><span id="ptr-t">당겨서 새로고침</span></div>
 
+<div class="lock" id="lock" hidden>
+  <div class="lockbox">
+    <div class="tsp lockegg" id="lock-sp"></div>
+    <b class="lockh">신인개발팀 캐스팅</b>
+    <p class="lockp" id="lock-msg">이름을 고르고 PIN 4자리를 눌러주세요</p>
+    <div class="lockwho" id="lock-who"></div>
+    <div class="dots" id="lock-dots"><i></i><i></i><i></i><i></i></div>
+    <div class="pad" id="lock-pad"></div>
+    <p class="lockerr" id="lock-err" hidden></p>
+  </div>
+</div>
+
 <main>
   <div id="banner" hidden class="banner"></div>
 
@@ -654,6 +698,23 @@ select.status[data-st="거절"]{background:var(--c-rej); color:#fff}
       <h3>리마인드</h3>
       <p class="hint" style="margin:-6px 0 12px">DM 보내고 <b id="lg-staledays"></b>일 넘게 답 없는 후보. 급한 건 아니고, 생각날 때 재발송하거나 보류로 정리하면 됩니다.</p>
       <div id="lg-stale"></div>
+    </div>
+    <div class="card">
+      <h3>내 계정</h3>
+      <p class="hint" style="margin:-6px 0 12px"><b id="ac-me"></b> 님으로 로그인되어 있습니다. 등록하는 건은 모두 이 이름으로 기록됩니다.</p>
+      <div class="row-btns" style="display:flex; gap:8px; flex-wrap:wrap">
+        <button type="button" class="btn ghost" id="ac-pin">내 PIN 바꾸기</button>
+        <button type="button" class="btn ghost" id="ac-out">로그아웃</button>
+      </div>
+      <div id="ac-admin" hidden style="margin-top:14px; padding-top:14px; border-top:2px dashed var(--line-2)">
+        <p class="hint" style="margin:0 0 10px"><b>팀장 전용</b> · 팀원이 PIN 을 잊었을 때 새로 정해주세요.</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <select id="ac-tgt" class="fsel"></select>
+          <input id="ac-newpin" type="tel" inputmode="numeric" maxlength="4" placeholder="새 PIN 4자리"
+            style="width:130px; padding:8px 12px; border:2px solid #000; border-radius:999px; font:inherit; font-size:15px">
+          <button type="button" class="btn ghost" id="ac-reset">초기화</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -828,7 +889,8 @@ var PTS={등록:1,회신:3,"1차":5,"2차":8,최종:10,최종합격:20};
 var STALE_DAYS=7;
 /* ===== 설정 — 이 두 줄만 회사 것에 맞추면 됩니다 ===== */
 var API = "https://script.google.com/macros/s/AKfycbxYMA-AhEg1UUsHrqSkVygcjMIgPlKsavJHJOeJuEO9CFJHkA9ucUUarn6kWvuTBEB1YQ/exec";
-var TEAM_KEY = "modhaus-nd";          /* Code.gs 의 TEAM_KEY 와 같아야 합니다 */
+var TEAM_KEY = "modhaus-nd";
+var TK = store("tk")||"", ME = store("nm")||"";   /* 로그인 열쇠 · 로그인한 사람 */          /* Code.gs 의 TEAM_KEY 와 같아야 합니다 */
 var APP_URL = location.origin + location.pathname;
 var editing = null, focusId = "", focusDone = false;
 
@@ -840,8 +902,8 @@ var fR = {owner:"전체", status:"전체", gender:"전체", platform:"전체", s
 var Q="";           /* 검색어 */
 var PAGE=30, shownR=PAGE, shownD=PAGE;   /* 목록은 30장씩 보여주고 스크롤하면 더 */
 var fD = {owner:"전체", score:"전체", gender:"전체"};
-function resetF(){ Q=""; shownR=shownD=PAGE; var w=(typeof who==="undefined")?"전체":who; fR={owner:w,status:"전체",gender:"전체",platform:"전체",age:"전체",sort:fR.sort||"진행순"}; fD={owner:w,score:"전체",gender:"전체",age:"전체"}; }
-function fCountR(){ return (fR.status!=="전체")+(fR.gender!=="전체")+(fR.platform!=="전체")+(fR.age!=="전체"); }
+function resetF(){ Q=""; searchOpen=""; shownR=shownD=PAGE; var w=(typeof who==="undefined")?"전체":who; fR={owner:w,status:"전체",gender:"전체",platform:"전체",age:"전체",week:false,sort:fR.sort||"진행순"}; fD={owner:w,score:"전체",gender:"전체",age:"전체",week:false}; }
+function fCountR(){ return (fR.status!=="전체")+(fR.gender!=="전체")+(fR.platform!=="전체")+(fR.age!=="전체")+(!!fR.week); }
 /* 출생연도 필터 — 데이터에 있는 연도만 보여줍니다 */
 function ageList(list){
   var m={}; list.forEach(function(r){ var y=birthOf(r); if(y) m[y]=(m[y]||0)+1; });
@@ -882,11 +944,33 @@ function contactHtml(c,platform){
 /* ---------- 8비트 효과음 (다마고치 · RPG) ---------- */
 var SFX=(function(){
   var ctx=null, on=store("sfx")!=="0";
-  function ac(){
-    if(!ctx){ try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
-    if(ctx.state==="suspended"){ try{ ctx.resume(); }catch(e){} }
-    return ctx;
+  function make(){ try{ return new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
+  function kill(){ try{ if(ctx) ctx.close(); }catch(e){} ctx=null; }
+  /* 아이폰은 앱을 한참 안 보면 소리 엔진을 재웁니다("suspended"),
+     전화가 오거나 다른 앱이 소리를 내면 아예 끊어버립니다("interrupted").
+     깨워보고, 그래도 안 깨어나면 엔진을 새로 만듭니다. */
+  function wake(){
+    if(!ctx) return;
+    if(ctx.state==="running") return;
+    if(ctx.state==="closed"){ kill(); return; }
+    try{
+      var pr=ctx.resume();
+      if(pr&&pr.catch) pr.catch(function(){ kill(); });
+    }catch(e){ kill(); }
+    setTimeout(function(){ if(ctx&&ctx.state!=="running") kill(); },400);
   }
+  function ac(){
+    if(!ctx) ctx=make();
+    if(!ctx) return null;
+    if(ctx.state==="closed"){ ctx=make(); if(!ctx) return null; }
+    if(ctx.state!=="running"){ try{ ctx.resume(); }catch(e){} }
+    return ctx.state==="closed"?null:ctx;
+  }
+  /* 화면을 만지거나 앱으로 돌아올 때마다 미리 깨워둡니다 (탭 하기 전에 실행됨) */
+  document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible") wake(); });
+  ["pointerdown","touchend","keydown"].forEach(function(ev){
+    document.addEventListener(ev,function(){ if(!ctx) return; wake(); },{passive:true,capture:true});
+  });
   function env(g,t,dur,vol,a){
     g.gain.setValueAtTime(0.0001,t);
     g.gain.exponentialRampToValueAtTime(vol,t+(a||0.008));
@@ -1091,11 +1175,14 @@ function renderPerf(){
   var h='<table class="pf"><tr><th>담당</th>'+cols.map(function(c){return "<th>"+c[0]+"</th>";}).join("")+'<th>전환</th></tr>';
   function row(o,label,cls){
     var a=perfOf(o,mk), b=perfOf(o,mk2), conv=a.등록?Math.round(a.회신/a.등록*100):0;
-    return '<tr class="'+cls+'"><td class="nm">'+esc(label)+'</td>'+cols.map(function(c){ return '<td>'+a[c[1]]+'<small>('+b[c[1]]+')</small></td>'; }).join("")+'<td>'+(a.등록?conv+"%":"-")+'</td></tr>';
+    return '<tr class="'+cls+' tap" data-own="'+esc(o)+'"><td class="nm">'+esc(label)+'</td>'+cols.map(function(c){ return '<td>'+a[c[1]]+'<small>('+b[c[1]]+')</small></td>'; }).join("")+'<td>'+(a.등록?conv+"%":"-")+'</td></tr>';
   }
   OWNERS.forEach(function(o){ h+=row(o,o,o===me?"me":""); });
   h+=row("","팀 전체","sum")+'</table>';
   el("lg-perf").innerHTML=h;
+  Array.prototype.forEach.call(el("lg-perf").querySelectorAll("[data-own]"),function(n){
+    n.onclick=function(){ jump({owner:n.getAttribute("data-own")||"전체",tab:"road"}); };
+  });
 }
 function renderLeague(){
   renderPerf();
@@ -1108,7 +1195,7 @@ function renderLeague(){
     var c=x.c, det=[];
     if(c.등록)det.push("등록 "+c.등록); if(c.회신)det.push("회신 "+c.회신); if(c["1차"])det.push("1차 "+c["1차"]);
     if(c["2차"])det.push("2차 "+c["2차"]); if(c.최종)det.push("최종 "+c.최종); if(c.최종합격)det.push("합격 "+c.최종합격);
-    h+='<div class="lgrow'+(i===0&&x.pts>0?" top":"")+(x.o===me?" me":"")+'">'+
+    h+='<div class="lgrow tap'+(i===0&&x.pts>0?" top":"")+(x.o===me?" me":"")+'" role="button" tabindex="0" data-own="'+esc(x.o)+'">'+
        '<div class="rk">'+(i===0&&x.pts>0?"1":i+1)+'</div><div class="tsp">'+sprite(x.lv.stage)+'</div>'+
        '<div class="nm">'+esc(x.o)+(i===0&&x.pts>0?' <span class="tag" style="background:#000;color:#fff">KING</span>':'')+
        '<small>LV '+x.lv.lv+' · '+(det.length?det.join(" · "):"이번주 기록 없음")+'</small></div>'+
@@ -1116,6 +1203,10 @@ function renderLeague(){
   });
   h+='</div>';
   el("lg-board").innerHTML=h;
+  Array.prototype.forEach.call(el("lg-board").querySelectorAll("[data-own]"),function(n){
+    function go(){ jump({owner:n.getAttribute("data-own"),tab:"road"}); }
+    n.onclick=go; n.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } };
+  });
 
   var rh="", all=replyRate("");
   OWNERS.concat([""]).forEach(function(o){
@@ -1379,9 +1470,17 @@ function tryFetch(url,opt,left){
     throw e;
   });
 }
-function apiGet(p){ p.t=TEAM_KEY; return tryFetch(API+"?"+qs(p),{method:"GET",redirect:"follow",cache:"no-store"},2); }
-function apiPost(body){ body.t=TEAM_KEY;
-  return tryFetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)},2); }
+function guard(pr){ return pr.then(function(res){
+  if(res&&res.error==="AUTH"){ TK=""; store("tk",""); lockOpen("다시 로그인해주세요"); var e=new Error("AUTH"); e.auth=true; throw e; }
+  return res; }); }
+function apiGet(p){ p.t=TEAM_KEY; p.tk=TK; return guard(tryFetch(API+"?"+qs(p),{method:"GET",redirect:"follow",cache:"no-store"},2)); }
+function apiPost(body){ body.t=TEAM_KEY; body.tk=TK;
+  return guard(tryFetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)},2)); }
+/* 로그인은 열쇠 없이 보냅니다 */
+function apiLogin(name,pin){
+  return tryFetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action:"login",name:name,pin:pin})},1);
+}
 
 /* 서버가 준 목록에 기기에 저장된 썸네일을 붙입니다 */
 function absorb(data){
@@ -1586,7 +1685,8 @@ function viewRoad(){
     .filter(function(r){ return fR.gender==="전체"||r.gender===fR.gender; })
     .filter(function(r){ return fR.owner==="전체"||r.owner===fR.owner; })
     .filter(function(r){ return fR.platform==="전체"||r.platform===fR.platform; })
-    .filter(function(r){ return fR.status==="전체"||(fR.status==="배고픔"?isStale(r):r.status===fR.status); })
+    .filter(function(r){ return fR.status==="전체"||(fR.status==="배고픔"?isStale(r):(fR.status==="진행중"?!!LIVE[r.status]:r.status===fR.status)); })
+    .filter(function(r){ return !fR.week||(r.date||"")>=daysAgo(7); })
     .filter(function(r){ return ageHit(r,fR.age); })
     .filter(hit);
 }
@@ -1596,6 +1696,7 @@ function viewDb(){
     .filter(function(r){ return fD.gender==="전체"||r.gender===fD.gender; })
     .filter(function(r){ return fD.owner==="전체"||r.owner===fD.owner; })
     .filter(function(r){ if(fD.score==="전체") return true; var sc=parseInt(r.score,10)||0; return fD.score==="4점↑"?sc>=4:String(sc||"")+"점"===fD.score; })
+    .filter(function(r){ return !fD.week||(r.date||"")>=daysAgo(7); })
     .filter(function(r){ return ageHit(r,fD.age); })
     .filter(hit);
 }
@@ -1684,7 +1785,7 @@ function startEdit(key,r){
     el("r-note").value=r.note||""; el("r-contact").value=r.contact||"";
     R.owner=pick(OWNERS,r.owner,R.owner); R.platform=pick(PLATFORMS,r.platform,R.platform);
     R.status=pick(STATUSES,r.status,R.status); R.gender=pick(GENDERS,r.gender,R.gender);
-    choices(el("r-owner"),OWNERS,R,"owner"); choices(el("r-platform"),PLATFORMS,R,"platform");
+    choices(el("r-owner"),[R.owner],R,"owner"); choices(el("r-platform"),PLATFORMS,R,"platform");
     choices(el("r-status"),STATUSES,R,"status"); choices(el("r-gender"),GENDERS,R,"gender");
     rPhoto.set(r.photo||"",""); rPhoto.clean();
     el("r-title").textContent="수정 중 · "+(nameOf(r)||"이름 미입력"); el("r-title").classList.add("editing");
@@ -1697,7 +1798,7 @@ function startEdit(key,r){
     D.gender=pick(GENDERS,r.gender,D.gender); D.position=pick(POSITIONS,r.position,D.position);
     D.nationality=pick(NATIONS,r.nationality,D.nationality);
     D.score=pick(SCORES,String(parseInt(r.score,10)||"-"),SCORES[0]);
-    choices(el("d-owner"),OWNERS,D,"owner"); choices(el("d-status"),STATUSES,D,"status");
+    choices(el("d-owner"),[D.owner],D,"owner"); choices(el("d-status"),STATUSES,D,"status");
     choices(el("d-gender"),GENDERS,D,"gender"); choices(el("d-position"),POSITIONS,D,"position");
     choices(el("d-nationality"),NATIONS,D,"nationality"); choices(el("d-score"),SCORES,D,"score");
     dPhoto.set(r.photo||"",""); dPhoto.clean();
@@ -1909,7 +2010,7 @@ function promote(r){
   ["d-region","d-language","d-agency"].forEach(function(id){ el(id).value=""; });
   D.owner=r.owner||D.owner; D.status=r.status||D.status; D.score=SCORES[0];
   if(r.gender) D.gender=r.gender;
-  choices(el("d-owner"),OWNERS,D,"owner");
+  choices(el("d-owner"),[D.owner],D,"owner");
   choices(el("d-status"),STATUSES,D,"status");
   choices(el("d-score"),SCORES,D,"score");
   choices(el("d-gender"),GENDERS,D,"gender");
@@ -1922,6 +2023,21 @@ function promote(r){
 
 /* ---------- 탭 ---------- */
 function setTab(t){ tab=t; store("tab",t); shownR=shownD=PAGE; render(); }
+/* 숫자·순위를 누르면 그 조건의 목록으로 바로 넘어갑니다 */
+function jump(o){
+  o=o||{}; SFX.play("tab");
+  if(o.owner!==undefined&&o.owner!==who) setWho(o.owner);
+  else {
+    fR={owner:who,status:"전체",gender:"전체",platform:"전체",age:"전체",week:false,sort:fR.sort||"진행순"};
+    fD={owner:who,score:"전체",gender:"전체",age:"전체",week:false};
+  }
+  Q=""; searchOpen=""; shownR=shownD=PAGE;
+  if(o.status) fR.status=o.status;
+  if(o.score)  fD.score=o.score;
+  if(o.week){ fR.week=true; fD.week=true; }
+  tab=o.tab||(tab==="league"||tab==="dex"?"road":tab); store("tab",tab);
+  render(); window.scrollTo(0,0);
+}
 var PIX={
  road:["..........",".########.","..........",".########.","..........",".########.","..........",".#####....","..........",".........."],
  db:["...####...","..#....#..","..#....#..","...####...","..........",".########.","#........#","#........#","#........#","##########"],
@@ -1975,19 +2091,23 @@ function buildStats(){
   if(tab!=="db"){
     var king=OWNERS.map(function(o){return [o,weekPts(o)];}).sort(function(a,b){return b[1]-a[1];})[0];
     var RB=S.road.filter(function(r){ return who==="전체"||r.owner===who; });
-    out=[["전체",RB.length,0],
-         ["진행중",RB.filter(function(r){return LIVE[r.status];}).length,1],
-         [king&&king[1]>0?"1위 "+king[0]:"이번주",king&&king[1]>0?king[1]+"P":S.road.filter(function(r){return (r.date||"")>=wk;}).length,3]];
+    out=[["전체",RB.length,0,function(){ jump({tab:"road"}); }],
+         ["진행중",RB.filter(function(r){return LIVE[r.status];}).length,1,function(){ jump({tab:"road",status:"진행중"}); }],
+         [king&&king[1]>0?"1위 "+king[0]:"이번주",king&&king[1]>0?king[1]+"P":S.road.filter(function(r){return (r.date||"")>=wk;}).length,3,
+          function(){ setTab("league"); window.scrollTo(0,0); }]];
   } else {
     var DB=S.db.filter(function(r){ return who==="전체"||r.owner===who; });
     var sc=DB.filter(function(r){ return (parseInt(r.score,10)||0)>=4; }).length;
-    out=[["전체",DB.length,0],["4점 이상",sc,1],
-         ["이번주",DB.filter(function(r){return (r.date||"")>=wk;}).length,0]];
+    out=[["전체",DB.length,0,function(){ jump({tab:"db"}); }],
+         ["4점 이상",sc,1,function(){ jump({tab:"db",score:"4점↑"}); }],
+         ["이번주",DB.filter(function(r){return (r.date||"")>=wk;}).length,0,function(){ jump({tab:"db",week:true}); }]];
   }
   out.forEach(function(x){
     var d=document.createElement("div"); d.className="stat"+(x[2]===1?" on":"")+(x[2]===2&&x[1]?" alert":"");
     d.innerHTML='<b class="mono">'+x[1]+'</b><span>'+x[0]+'</span>';
-    if(x[2]===3){ d.style.cursor="pointer"; d.title="성과"; d.onclick=function(){ setTab("league"); }; }
+    if(x[3]){ d.className+=" tap"; d.setAttribute("role","button"); d.tabIndex=0;
+      d.onclick=x[3];
+      d.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); x[3](); } }; }
     h.appendChild(d);
   });
 
@@ -2170,16 +2290,16 @@ el("r-date").value=today();
 /* 위쪽 이름 = 메인 컨트롤. 고르면 아래 목록·LV·등록 기본값이 전부 그 사람 기준으로 바뀝니다. '팀 전체'는 모두 보기. */
 var meSel=el("me");
 ["전체"].concat(OWNERS).forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=(o==="전체"?"팀 전체":o); meSel.appendChild(op); });
-var who=store("who")||OWNERS[0];
+var who=store("who")||ME||OWNERS[0];
 if(who!=="전체"&&OWNERS.indexOf(who)<0) who=OWNERS[0];
 var me=(who==="전체")?(store("me")||OWNERS[0]):who;     /* 등록 기본 담당자·응원 멘트용 */
 function setWho(v){
   who=v; store("who",v); meSel.value=v; meSel.classList.toggle("all",v==="전체");
   if(v!=="전체"){ me=v; store("me",v); R.owner=v; D.owner=v; }
-  choices(el("r-owner"),OWNERS,R,"owner"); choices(el("d-owner"),OWNERS,D,"owner");
+  choices(el("r-owner"),[R.owner],R,"owner"); choices(el("d-owner"),[D.owner],D,"owner");
   /* 담당자 바꾸면 성별·상태 같은 세부 조건은 전부 풀고 그 사람 것 전부 */
-  fR={owner:v,status:"전체",gender:"전체",platform:"전체",age:"전체",sort:fR.sort||"진행순"};
-  fD={owner:v,score:"전체",gender:"전체",age:"전체"}; shownR=shownD=PAGE;
+  fR={owner:v,status:"전체",gender:"전체",platform:"전체",age:"전체",week:false,sort:fR.sort||"진행순"};
+  fD={owner:v,score:"전체",gender:"전체",age:"전체",week:false}; shownR=shownD=PAGE;
 }
 meSel.onchange=function(){ SFX.play("tab"); setWho(meSel.value); render(); window.scrollTo(0,0); };
 setWho(who);
@@ -2293,6 +2413,100 @@ function hintQuick(){
 }
 document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible") hintQuick(); });
 
+/* ── PIN 잠금화면 ─────────────────────────────────────── */
+var lkName=ME||"", lkPin="", lkBusy=false;
+function lockOpen(msg){
+  var L=el("lock"); if(!L) return;
+  lkPin=""; lkBusy=false; L.classList.remove("busy");
+  el("lock-msg").textContent=msg||"이름을 고르고 PIN 4자리를 눌러주세요";
+  el("lock-err").hidden=true;
+  el("lock-sp").innerHTML=sprite(0);
+  lkWho(); lkDots(); lkPad();
+  L.hidden=false; document.body.style.overflow="hidden";
+}
+function lockClose(){ var L=el("lock"); if(!L) return; L.hidden=true; document.body.style.overflow=""; }
+function lkWho(){
+  var h=el("lock-who"); h.innerHTML="";
+  OWNERS.forEach(function(o){
+    var b=document.createElement("button"); b.type="button"; b.textContent=o;
+    b.setAttribute("aria-pressed",String(o===lkName));
+    b.onclick=function(){ SFX.play("chip"); lkName=o; lkPin=""; el("lock-err").hidden=true; lkWho(); lkDots(); };
+    h.appendChild(b);
+  });
+}
+function lkDots(){
+  Array.prototype.forEach.call(el("lock-dots").children,function(d,i){ d.classList.toggle("on",i<lkPin.length); });
+}
+function lkPad(){
+  var h=el("lock-pad"); h.innerHTML="";
+  ["1","2","3","4","5","6","7","8","9","x","0","<"].forEach(function(k){
+    var b=document.createElement("button"); b.type="button";
+    if(k==="x"){ b.className="blank"; b.disabled=true; }
+    else if(k==="<"){ b.className="fn"; b.textContent="지움"; b.onclick=function(){ SFX.play("back"); lkPin=lkPin.slice(0,-1); lkDots(); }; }
+    else { b.textContent=k; b.onclick=function(){ lkTap(k); }; }
+    h.appendChild(b);
+  });
+}
+function lkTap(d){
+  if(lkBusy) return;
+  if(!lkName){ lkErr("이름을 먼저 골라주세요."); return; }
+  if(lkPin.length>=4) return;
+  SFX.play("blip"); lkPin+=d; lkDots();
+  if(lkPin.length===4) setTimeout(lkGo,120);
+}
+function lkErr(m){ var e=el("lock-err"); e.textContent=m; e.hidden=false; SFX.play("err"); lkPin=""; lkDots(); }
+function lkGo(){
+  lkBusy=true; el("lock").classList.add("busy");
+  el("lock-msg").textContent="확인 중…";
+  apiLogin(lkName,lkPin).then(function(res){
+    lkBusy=false; el("lock").classList.remove("busy");
+    el("lock-msg").textContent="이름을 고르고 PIN 4자리를 눌러주세요";
+    if(!res||res.error){ lkErr((res&&res.error)||"확인하지 못했습니다."); return; }
+    TK=res.tk; ME=res.name; store("tk",TK); store("nm",ME);
+    SFX.play("levelUp",3);
+    lockClose();
+    setWho(ME); render();
+    call("getAll",[]);
+  }).catch(function(){
+    lkBusy=false; el("lock").classList.remove("busy");
+    el("lock-msg").textContent="이름을 고르고 PIN 4자리를 눌러주세요";
+    lkErr("서버와 통신하지 못했습니다. 잠시 뒤 다시 시도해주세요.");
+  });
+}
+/* 내 계정 카드 */
+function bindAccount(){
+  el("ac-me").textContent=ME||"(로그인 전)";
+  var isAdmin=(ME===OWNERS[OWNERS.length-1]||ME==="전석환");
+  el("ac-admin").hidden=!isAdmin;
+  if(isAdmin&&!el("ac-tgt").options.length)
+    OWNERS.forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=o; el("ac-tgt").appendChild(op); });
+  el("ac-out").onclick=function(){
+    SFX.play("back");
+    apiGet({action:"logout"}).catch(function(){});
+    TK=""; ME=""; store("tk",""); store("nm","");
+    S={road:[],db:[],cm:[]}; render(); lockOpen("로그아웃했습니다");
+  };
+  el("ac-pin").onclick=function(){
+    var np=prompt("새 PIN 4자리를 입력하세요");
+    if(np===null) return;
+    np=String(np).trim();
+    if(!/^\d{4}$/.test(np)){ alert("숫자 4자리로 입력해주세요."); return; }
+    apiPost({action:"mypin",pin:np}).then(function(res){
+      if(res&&res.error){ alert(res.error); return; }
+      SFX.play("save"); toast(2,"PIN 변경","다음부터 새 PIN 으로 들어오세요");
+    }).catch(function(){ alert("바꾸지 못했습니다."); });
+  };
+  el("ac-reset").onclick=function(){
+    var tgt=el("ac-tgt").value, np=String(el("ac-newpin").value||"").trim();
+    if(!/^\d{4}$/.test(np)){ alert("새 PIN 을 숫자 4자리로 입력해주세요."); return; }
+    apiPost({action:"resetpin",name:tgt,pin:np}).then(function(res){
+      if(res&&res.error){ alert(res.error); return; }
+      el("ac-newpin").value=""; SFX.play("save"); toast(2,"초기화 완료",tgt+" 님 PIN 을 새로 정했습니다");
+    }).catch(function(){ alert("바꾸지 못했습니다."); });
+  };
+}
+bindAccount();
+
 tab=store("tab")||"road";
 if(!TABS.some(function(t){return t[0]===tab;})) tab="road";
 render();
@@ -2303,6 +2517,7 @@ Promise.all([IDB.get("thumbs"),IDB.get("snap")]).then(function(v){
   if(v[0]&&typeof v[0]==="object") THUMBS=v[0];
   if(v[1]&&v[1].road){ S={road:v[1].road,db:v[1].db||[],cm:v[1].cm||[]}; absorbPhotos(); tryFocus(); render(); scrollFocus(); }
 }).catch(function(){}).then(function(){ if(navigator.onLine) call("getAll",[]); else pullThumbs(); });
+setTimeout(function(){ if(!TK&&document.getElementById("lock")) lockOpen(); },300);
 var lastScroll=0; window.addEventListener("scroll",function(){ lastScroll=Date.now(); },{passive:true});
 setInterval(function(){ if(!busy&&navigator.onLine&&lockY===null&&document.visibilityState==="visible"&&Date.now()-lastSync>50000&&Date.now()-lastScroll>3000) call("getAll",[]); },60000);
 var hiddenAt=0;
