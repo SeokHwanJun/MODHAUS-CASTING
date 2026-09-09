@@ -1825,9 +1825,11 @@ function call(fn,args,okMsg,msgEl,mutating){
   if(mutating) setBusy(true);
   var done=false, t0=Date.now();
   var slow=setTimeout(function(){ if(done)return; el("banner").hidden=false;
-    el("banner").textContent="서버가 깨어나는 중입니다… 조금만 기다려주세요 ("+(fn==="getAll"?"불러오기":"저장")+")"; },8000);
+    el("banner").textContent="서버가 깨어나는 중입니다… 조금만 기다려주세요 ("+(fn==="getAll"?"불러오기":"저장")+")"; },12000);
   var wd=setTimeout(function(){ if(done)return; done=true; freeSig(); if(mutating){ setBusy(false); restorePending(); }
-    el("banner").hidden=false; el("banner").textContent="서버 응답이 60초 넘게 없습니다. 새로고침을 눌러 다시 시도해주세요.";
+    el("banner").hidden=false; el("banner").textContent=(fn==="getAll"
+      ? "불러오기가 오래 걸립니다. 잠시 뒤 다시 시도합니다 — 화면 내용은 마지막으로 받은 것입니다."
+      : "저장 확인이 늦어지고 있습니다. 목록을 새로고침해서 저장됐는지 확인해주세요.");
     if(fn==="getAll"&&!call._retried){ call._retried=true; setTimeout(function(){ call("getAll",[]); },3000); } },60000);
   p.then(function(data){
     var late=done; done=true; clearTimeout(slow); clearTimeout(wd); freeSig(); if(mutating) setBusy(false);
