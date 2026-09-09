@@ -933,6 +933,7 @@ var IDB=(function(){
   };
 })();
 var THUMBS={};                       /* id → 썸네일 data URL (기기에 저장) */
+var lastSync=0, lastMs=0;
 var thumbSaveT=null;
 function saveThumbs(){ clearTimeout(thumbSaveT); thumbSaveT=setTimeout(function(){ IDB.set("thumbs",THUMBS); },400); }
 
@@ -981,11 +982,16 @@ function call(fn,args,okMsg,msgEl,mutating){
   else if(fn==="deleteItem")   p=apiPost({action:"delete",k:args[0],id:args[1]});
   else return;
   if(mutating) setBusy(true);
-  var done=false;
-  var wd=setTimeout(function(){ if(done)return; done=true; fail("서버 응답이 없습니다. 인터넷 연결을 확인하고 다시 눌러주세요."); },25000);
+  var done=false, t0=Date.now();
+  var slow=setTimeout(function(){ if(done)return; el("banner").hidden=false;
+    el("banner").textContent="서버가 깨어나는 중입니다… 조금만 기다려주세요 ("+(fn==="getAll"?"불러오기":"저장")+")"; },8000);
+  var wd=setTimeout(function(){ if(done)return; done=true; if(mutating) setBusy(false);
+    el("banner").hidden=false; el("banner").textContent="서버 응답이 60초 넘게 없습니다. 새로고침을 눌러 다시 시도해주세요.";
+    if(fn==="getAll"&&!call._retried){ call._retried=true; setTimeout(function(){ call("getAll",[]); },3000); } },60000);
   p.then(function(data){
-    if(done) return; done=true; clearTimeout(wd); if(mutating) setBusy(false);
-    if(!data||data.error){ fail("저장하지 못했습니다. ("+(data&&data.error?data.error:"응답 오류")+")"); return; }
+    var late=done; done=true; clearTimeout(slow); clearTimeout(wd); if(mutating) setBusy(false);
+    if(!data||data.error){ fail((fn==="getAll"?"불러오지":"저장하지")+" 못했습니다. ("+(data&&data.error?data.error:"응답 오류")+")"); return; }
+    call._retried=false; lastSync=Date.now(); lastMs=Date.now()-t0;
     /* 방금 올린 사진은 서버에 다시 안 물어보고 바로 저장 */
     if(fn==="addItem"&&data.id&&args[1]&&args[1].photo){ THUMBS[data.id]=args[1].photo; saveThumbs(); }
     if(fn==="editItem"&&args[2]&&args[2].photo!==undefined){ if(args[2].photo) THUMBS[args[1]]=args[2].photo; else delete THUMBS[args[1]]; saveThumbs(); }
@@ -993,8 +999,10 @@ function call(fn,args,okMsg,msgEl,mutating){
     absorb(data); el("banner").hidden=true; tryFocus(); render(); scrollFocus(); pullThumbs();
     if(okMsg) note(msgEl,okMsg);
   }).catch(function(e){
-    if(done) return; done=true; clearTimeout(wd); if(mutating) setBusy(false);
-    fail(navigator.onLine?"서버와 통신하지 못했습니다. ("+(e&&e.message?e.message:"오류")+")":"오프라인입니다. 연결되면 다시 시도해주세요.");
+    if(done) return; done=true; clearTimeout(slow); clearTimeout(wd); if(mutating) setBusy(false);
+    var m=String(e&&e.message||"오류");
+    if(/expected pattern|Unexpected token|JSON/i.test(m)) m="서버가 앱용으로 아직 배포되지 않았습니다 (Code.gs 새 버전 배포 필요)";
+    fail(navigator.onLine?"서버와 통신하지 못했습니다. ("+m+")":"오프라인입니다. 연결되면 다시 시도해주세요.");
   });
 }
 function fetchFull(fileId){ return apiGet({action:"full",file:fileId}).then(function(x){ return x&&x.photo||""; }); }
@@ -1524,8 +1532,8 @@ Promise.all([IDB.get("thumbs"),IDB.get("snap")]).then(function(v){
   if(v[0]&&typeof v[0]==="object") THUMBS=v[0];
   if(v[1]&&v[1].road){ S={road:v[1].road,db:v[1].db||[]}; absorbPhotos(); tryFocus(); render(); scrollFocus(); }
 }).catch(function(){}).then(function(){ if(navigator.onLine) call("getAll",[]); else pullThumbs(); });
-setInterval(function(){ if(!busy&&navigator.onLine&&!lb.classList.contains("open")&&document.visibilityState==="visible") call("getAll",[]); },60000);
-document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible"&&navigator.onLine&&!busy) call("getAll",[]); });
+setInterval(function(){ if(!busy&&navigator.onLine&&!lb.classList.contains("open")&&document.visibilityState==="visible"&&Date.now()-lastSync>50000) call("getAll",[]); },60000);
+document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible"&&navigator.onLine&&!busy&&Date.now()-lastSync>30000) call("getAll",[]); });
 
 /* 오프라인 표시 */
 function paintOnline(){ el("offline").classList.toggle("show",!navigator.onLine); }
