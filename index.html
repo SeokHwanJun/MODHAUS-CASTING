@@ -498,7 +498,7 @@ select.status{padding:5px 9px; font-size:12px}
   <section id="v-league" hidden>
     <div class="card">
       <h3 id="lg-title">이번주 리그</h3>
-      <p class="hint" style="margin:-6px 0 12px">월요일 0시에 리셋 · 등록 +1 · 회신 +3 · 1차 +5 · 2차 +8 · 최종 +15 (이번주에 그 상태가 된 건만)</p>
+      <p class="hint" style="margin:-6px 0 12px">월요일 0시에 리셋 · 등록 +1 · 회신 +3 · 1차 +5 · 2차 +8 · 최종 +10 · 최종합격 +20 (이번주에 그 상태가 된 건만)</p>
       <div id="lg-board"></div>
     </div>
     <div class="card">
@@ -516,7 +516,7 @@ select.status{padding:5px 9px; font-size:12px}
   <!-- 도감 -->
   <section id="v-dex" hidden>
     <div class="card">
-      <h3>도감 · 최종까지 간 인원</h3>
+      <h3>도감 · 최종 합격 인원</h3>
       <div class="dex" id="dex-grid"></div>
     </div>
     <div class="card">
@@ -639,9 +639,10 @@ select.status{padding:5px 9px; font-size:12px}
 <script>
 var OWNERS   = ["김소연","김나희","김담희","염진경","전석환"];
 var PLATFORMS= ["로드","인스타","틱톡","기타"];
-var STATUSES = ["로드","DM발송","회신","1차","2차","최종","보류","거절"];
-var TONE = {"로드":"mute","DM발송":"warn","회신":"warn","1차":"accent","2차":"accent","최종":"ok","보류":"off","거절":"off"};
-var LIVE = {"로드":1,"DM발송":1,"회신":1,"1차":1,"2차":1};
+var STATUSES = ["DM발송","회신","1차","2차","최종","최종합격","보류","거절"];
+var LEGACY_STATUS = {"로드":"DM발송"};   /* 예전 기록 표시용 */
+var TONE = {"DM발송":"warn","회신":"warn","1차":"accent","2차":"accent","최종":"accent","최종합격":"ok","보류":"off","거절":"off"};
+var LIVE = {"DM발송":1,"회신":1,"1차":1,"2차":1,"최종":1};
 var SCORES = ["-","1","2","3","4","5"];
 var SORTS  = ["점수순","최신순","이름순"];
 var GENDERS = ["여","남"];
@@ -649,7 +650,7 @@ var POSITIONS = ["보컬","댄스","랩","비주얼","연기","올라운드"];
 var NATIONS = ["한국","일본","중국","기타"];
 var GFILTER = ["전체","여","남"];
 var TABS = [["road","SNS/로드"],["db","개인DB (학원, 그외)"],["league","리그"],["dex","도감"]];
-var PTS={등록:1,회신:3,"1차":5,"2차":8,최종:15};
+var PTS={등록:1,회신:3,"1차":5,"2차":8,최종:10,최종합격:20};
 var STALE_DAYS=7;
 /* ===== 설정 — 이 두 줄만 회사 것에 맞추면 됩니다 ===== */
 var API = "https://script.google.com/macros/s/AKfycbxYMA-AhEg1UUsHrqSkVygcjMIgPlKsavJHJOeJuEO9CFJHkA9ucUUarn6kWvuTBEB1YQ/exec";
@@ -775,7 +776,7 @@ var SFX=(function(){
 })();
 
 /* ---------- 픽셀 펫 · 성장 단계 ---------- */
-var STAGE={"로드":0,"DM발송":1,"회신":2,"1차":3,"2차":4,"최종":5};
+var STAGE={"로드":0,"DM발송":1,"회신":2,"1차":3,"2차":4,"최종":4,"최종합격":5};
 var SPR=[
  ["...####...","..#....#..",".#......#.",".#..#...#.","#........#","#........#","#........#",".#......#.",".#......#.","..#....#..","...####..."],
  ["...####...","..#..#.#..",".#..#...#.",".#...#..#.","#...#....#","#....#...#","#...#....#",".#......#.",".#......#.","..#....#..","...####..."],
@@ -811,7 +812,7 @@ function weekPts(owner){
   return pts;
 }
 function weekCounts(owner){
-  var ws=weekStart(), c={등록:0,회신:0,"1차":0,"2차":0,최종:0};
+  var ws=weekStart(), c={등록:0,회신:0,"1차":0,"2차":0,최종:0,최종합격:0};
   allRecs().forEach(function(r){
     if(r.owner!==owner) return;
     if((Number(r.createdAt)||0)>=ws) c.등록++;
@@ -824,7 +825,7 @@ function replyRate(owner){
   S.road.forEach(function(r){
     if(owner&&r.owner!==owner) return;
     if(r.status==="DM발송"){ sent++; }
-    else if(r.status==="회신"||r.status==="1차"||r.status==="2차"||r.status==="최종"){ sent++; got++; }
+    else if(r.status==="회신"||r.status==="1차"||r.status==="2차"||r.status==="최종"||r.status==="최종합격"){ sent++; got++; }
   });
   return {sent:sent,got:got,rate:sent?got/sent:0};
 }
@@ -836,7 +837,7 @@ var BADGES=[
   ["인스타 헌터","인스타 10건",function(o){return S.road.filter(function(r){return r.owner===o&&r.platform==="인스타";}).length>=10;},"var(--accent)"],
   ["길거리의 눈","로드 10건",function(o){return S.road.filter(function(r){return r.owner===o&&r.platform==="로드";}).length>=10;},"var(--sun)"],
   ["틱톡커","틱톡 10건",function(o){return S.road.filter(function(r){return r.owner===o&&r.platform==="틱톡";}).length>=10;},"var(--lav)"],
-  ["안목","최종 1명",function(o){return allRecs().some(function(r){return r.owner===o&&r.status==="최종";});},"var(--rose)"],
+  ["안목","최종합격 1명",function(o){return allRecs().some(function(r){return r.owner===o&&r.status==="최종합격";});},"var(--rose)"],
   ["스나이퍼","회신율 40%↑ (DM 10건↑)",function(o){var x=replyRate(o); return x.sent>=10&&x.rate>=0.4;},"var(--mint)"],
   ["개근","이번달 5일 이상 등록",function(o){var m=new Date(); var mm=m.getFullYear()+"-"+String(m.getMonth()+1).padStart(2,"0");
      var days={}; allRecs().forEach(function(r){ if(r.owner===o&&String(r.date||"").indexOf(mm)===0) days[r.date]=1; }); return Object.keys(days).length>=5;},"var(--pumpkin)"],
@@ -844,7 +845,7 @@ var BADGES=[
 ];
 function badgesOf(o){ return BADGES.filter(function(b){ try{ return b[2](o); }catch(e){ return false; } }); }
 function dexList(){
-  return allRecs().filter(function(r){return r.status==="최종";})
+  return allRecs().filter(function(r){return r.status==="최종합격";})
     .sort(function(a,b){ return statusAtOf(b)-statusAtOf(a); });
 }
 
@@ -858,7 +859,7 @@ function renderLeague(){
   rows.forEach(function(x,i){
     var c=x.c, det=[];
     if(c.등록)det.push("등록 "+c.등록); if(c.회신)det.push("회신 "+c.회신); if(c["1차"])det.push("1차 "+c["1차"]);
-    if(c["2차"])det.push("2차 "+c["2차"]); if(c.최종)det.push("최종 "+c.최종);
+    if(c["2차"])det.push("2차 "+c["2차"]); if(c.최종)det.push("최종 "+c.최종); if(c.최종합격)det.push("합격 "+c.최종합격);
     h+='<div class="lgrow'+(i===0&&x.pts>0?" top":"")+(x.o===me?" me":"")+'">'+
        '<div class="rk">'+(i===0&&x.pts>0?"1":i+1)+'</div><div class="tsp">'+sprite(x.lv.stage)+'</div>'+
        '<div class="nm">'+esc(x.o)+(i===0&&x.pts>0?' <span class="tag" style="background:#000;color:#fff">KING</span>':'')+
@@ -905,7 +906,7 @@ function renderDex(){
        '<b>'+esc(nameOf(r)||"이름 미입력")+'</b><small>NO.'+String(list.length-i).padStart(3,"0")+'</small>'+
        '<small style="font-family:inherit;font-size:11px">'+esc(r.owner)+' · '+esc((r.date||"").slice(2))+(isDb?" · DB":"")+'</small></div>';
   });
-  el("dex-grid").innerHTML=h||'<div class="empty">아직 최종까지 간 인원이 없습니다. 첫 번째 칸을 채워보세요.</div>';
+  el("dex-grid").innerHTML=h||'<div class="empty">아직 최종 합격 인원이 없습니다. 첫 번째 칸을 채워보세요.</div>';
   Array.prototype.forEach.call(el("dex-grid").querySelectorAll(".ph"),function(p){
     p.onclick=function(){ var r=list[+p.getAttribute("data-i")]; if(r.photo) openLB(r,S.db.indexOf(r)>=0); };
   });
@@ -1156,11 +1157,13 @@ function statusSelect(key,r){
   var tone=TONE[r.status]||"mute";
   var sel=document.createElement("select"); sel.className="status t-"+tone;
   sel.setAttribute("aria-label","상태");
-  STATUSES.forEach(function(s){ var o=document.createElement("option"); o.value=s; o.textContent=s;
+  var opts=STATUSES.indexOf(r.status)<0&&r.status?[r.status].concat(STATUSES):STATUSES;
+  opts.forEach(function(s){ var o=document.createElement("option"); o.value=s; o.textContent=s;
     if(s===r.status)o.selected=true; sel.appendChild(o); });
   sel.onchange=function(){
     var v=sel.value, nm=nameOf(r)||r.name||"", oi=STATUSES.indexOf(r.status), ni=STATUSES.indexOf(v);
-    if(v==="최종"){ SFX.play("final"); toast(5,"★ FINAL ★",(nm||"이름 미입력")+" 최종 합격!"); }
+    if(v==="최종합격"){ SFX.play("final"); toast(5,"★ PASS ★",(nm||"이름 미입력")+" 최종 합격!"); }
+    else if(v==="최종"){ SFX.play("levelUp",5); toast(4,"FINAL ROUND",(nm||"이름 미입력")+" 최종 단계 진입"); }
     else if(v==="보류"||v==="거절"){ SFX.play("sad"); toast(6,v==="보류"?"HOLD...":"BYE...",(nm||"이름 미입력")+" "+v); }
     else if(ni>oi){ SFX.play("levelUp",STAGE[v]); toast(STAGE[v],"LEVEL UP!",(nm||"이름 미입력")+" → "+v); }
     else SFX.play("back");

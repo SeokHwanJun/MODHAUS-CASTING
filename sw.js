@@ -1,5 +1,5 @@
 /* 캐스팅 보드 — 화면 파일만 기기에 저장. 데이터(Apps Script)는 항상 네트워크. */
-var VERSION = "casting-v3";
+var VERSION = "casting-v4";
 var SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
 
 self.addEventListener("install", function (e) {
