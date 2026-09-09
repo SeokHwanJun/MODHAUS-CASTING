@@ -478,6 +478,21 @@ main{padding-top:10px}
 .fcard .row-btns .btn{width:auto; flex:1}
 .fcard .two{gap:0 10px}
 
+/* 8비트 스크롤 막대 (오른쪽) */
+html{scrollbar-width:none}
+body::-webkit-scrollbar{width:0; height:0}
+.pxbar{position:fixed; right:5px; z-index:44; width:15px; border:2px solid var(--edge); border-radius:2px;
+  background:repeating-linear-gradient(180deg,var(--lcd) 0 7px,rgba(0,0,0,.12) 7px 8px);
+  box-shadow:2px 2px 0 rgba(0,0,0,.3); opacity:0; transition:opacity .28s ease; pointer-events:none}
+.pxbar.on{opacity:1}
+/* 손잡이도 픽셀 덩어리로 — 한 칸씩 뚝뚝 움직입니다 */
+.pxbar i{position:absolute; left:0; width:100%; display:block;
+  background:repeating-linear-gradient(180deg,var(--edge) 0 6px,rgba(255,255,255,.5) 6px 8px)}
+/* 안쪽 스크롤 영역(성과표 등)도 같은 느낌으로 */
+.scroll::-webkit-scrollbar{width:10px; height:10px}
+.scroll::-webkit-scrollbar-track{background:var(--lcd); border:2px solid var(--edge); border-radius:2px}
+.scroll::-webkit-scrollbar-thumb{background:var(--edge); border:2px solid var(--edge); border-radius:2px}
+
 /* 눌러서 이동 */
 .stat.tap,.lgrow.tap,tr.tap{cursor:pointer; touch-action:manipulation}
 .stat.tap:active{transform:translate(1px,1px)}
@@ -620,6 +635,79 @@ select.status[data-st="거절"]{background:var(--c-rej); color:#fff}
 .tag[data-st="최종합격"]{background:linear-gradient(135deg,#FFF1A8,#F7C400); color:#5A3E00; border-color:#B8860B}
 .tag[data-st="최종"]{background:var(--c-fin); color:#fff} .tag[data-st="2차"]{background:var(--c-2)} .tag[data-st="1차"]{background:var(--c-1)}
 .tag[data-st="회신"]{background:var(--c-re)} .tag[data-st="DM발송"]{background:var(--c-dm)}
+
+/* ═══════════════════════════════════════════════════════════
+   HANDHELD 테마 — 반투명 핑크 바디 · 오렌지 버튼 · 키캡 물리감
+   (8BitDo 컨트롤러 폰케이스 레퍼런스)  — 항상 맨 끝에 둡니다
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --shell:#F3CBD3; --kb:#3A2A33; --ks:#C99AA6; --ks2:#A99BE6;
+  --k1:#FFFFFF; --k2:#F2E6EA;
+  --orange:#F26A2E; --orange-2:#FF9A5C; --orange-d:#B84A1A;
+  --accent:#F26A2E; --accent-soft:#FFE1D3; --accent-line:#FFB08A; --pumpkin:#F26A2E;
+  --bar:#F3CBD3;
+  --pop-o:0 3px 0 var(--ks2), 0 5px 0 #000; --pop-o-sm:0 2px 0 var(--ks2), 0 4px 0 #000;
+}
+/* 눌리는 것들은 아래로 내려앉습니다 */
+.btn:active,.mini:active,.qc:active,.pill:active,.choice:active,.chip:active,.fclear:active{transform:translateY(3px)}
+.btn:active{box-shadow:0 0 0 var(--ks2),0 2px 0 #000} .mini:active,.qc:active,.pill:active{box-shadow:0 0 0 var(--ks2),0 2px 0 #000}
+.qc[aria-pressed="true"],.chip[aria-pressed="true"]{transform:none; box-shadow:0 1px 0 var(--ks2),0 3px 0 #000}
+.btn{background:linear-gradient(180deg,var(--orange-2),var(--orange)); border-color:var(--orange-d); color:#fff; text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.btn.ghost{background:linear-gradient(180deg,#fff,#F2E6EA); border-color:#000; color:#000; text-shadow:none}
+
+/* ── 상단 기기 판 ── */
+.hd{background:
+  radial-gradient(circle at 20% 30%, rgba(255,255,255,.35) 0 2px, transparent 3px) 0 0/22px 22px,
+  radial-gradient(circle at 70% 70%, rgba(255,255,255,.25) 0 2px, transparent 3px) 0 0/26px 26px, var(--shell)}
+.hd::before{display:none}
+.top{background:none; padding:10px 12px 6px}
+.tools{background:none; padding:2px 10px 12px; gap:7px; border-bottom:3px solid var(--kb)}
+.pill.who,.qbig,.top .ic,.tl,.nav .ic{
+  border:2px solid var(--kb); background:linear-gradient(180deg,var(--k1) 0%,var(--k2) 100%);
+  box-shadow:0 3px 0 var(--ks), 0 5px 0 var(--kb), inset 0 1px 0 rgba(255,255,255,.75), inset 0 -1px 0 rgba(0,0,0,.08);
+  transition:transform .06s, box-shadow .06s}
+.pill.who:active,.qbig:active,.top .ic:active,.tl:active,.nav button:active .ic{
+  transform:translateY(3px); box-shadow:0 0 0 var(--ks), 0 2px 0 var(--kb), inset 0 1px 0 rgba(255,255,255,.75)}
+.pill.who{border-radius:999px; font-weight:800; font-size:13.5px; color:var(--kb); padding:7px 26px 7px 14px}
+.qbig{border-radius:999px; --k1:var(--orange-2); --k2:var(--orange); --ks:var(--orange-d); padding:8px 12px}
+.qbig .i{background:#fff; border-color:var(--orange-d); border-radius:50%} .qbig .i svg{fill:var(--orange)}
+.qbig .l{color:#fff; text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.qbig.hot{animation:none; box-shadow:0 0 0 4px rgba(242,106,46,.35), 0 3px 0 var(--orange-d), 0 5px 0 var(--kb)}
+.top .ic{border-radius:50%; width:38px; height:38px}
+.tl{border-radius:14px; padding:6px 2px 5px; gap:3px}
+.tl .i{border-radius:50%; width:28px; height:28px; border:2px solid var(--kb)}
+.tl.ig .i{background:#FFD6E4} .tl.tk .i{background:#D8F4F0} .tl.kko .i{background:#FFE86B}
+.tl.map .i{background:#DDF3DF} .tl.cal .i{background:#E3E8FF} .tl.tel .i{background:var(--orange)} .tl.tel .i svg{fill:#fff}
+.tl .l{font-size:9.5px; font-weight:800; color:var(--kb); letter-spacing:0}
+
+/* ── 계기판 (연두 LCD 유지 + 키캡 두께) ── */
+.stats{border:2px solid var(--kb); border-radius:14px; background:#B7D3B0;
+  box-shadow:0 3px 0 var(--ks), 0 5px 0 var(--kb), inset 0 2px 0 rgba(255,255,255,.5)}
+.stat{border-right:2px dashed rgba(58,42,51,.3)}
+
+/* ── 하단 메뉴 ── */
+.nav{background:var(--shell); border-top:3px solid var(--kb)}
+.nav .ic{border-radius:50%}
+.nav button[aria-selected="true"] .ic{transform:translateY(3px); box-shadow:0 0 0 var(--ks),0 2px 0 var(--kb); --k1:#FFD6E4; --k2:#F5B9CC}
+.nav button.plus .ic{--k1:var(--orange-2); --k2:var(--orange); --ks:var(--orange-d); border-width:2px}
+.nav button.plus .ic svg{fill:#fff}
+.nav button.plus:active .ic{transform:translateY(3px); box-shadow:0 0 0 var(--orange-d),0 2px 0 var(--kb)}
+
+/* ── PIN 잠금화면도 같은 기기 ── */
+.pinlock{background:
+  radial-gradient(circle at 20% 30%, rgba(255,255,255,.35) 0 2px, transparent 3px) 0 0/22px 22px,
+  radial-gradient(circle at 70% 70%, rgba(255,255,255,.25) 0 2px, transparent 3px) 0 0/26px 26px, var(--shell)}
+.pinlock .pad button{border:2px solid var(--kb); border-radius:18px; background:linear-gradient(180deg,var(--k1),var(--k2));
+  box-shadow:0 4px 0 var(--ks), 0 6px 0 var(--kb), inset 0 1px 0 rgba(255,255,255,.75)}
+.pinlock .pad button:active{transform:translateY(4px); box-shadow:0 0 0 var(--ks),0 2px 0 var(--kb)}
+.pinlock .pad button.fn{background:linear-gradient(180deg,#FFD6E4,#F5B9CC)}
+.pinlock .dots i{border-color:var(--kb)} .pinlock .dots i.on{background:var(--orange); border-color:var(--orange-d)}
+.lockwho button{box-shadow:0 2px 0 var(--ks),0 4px 0 var(--kb)}
+.lockwho button[aria-pressed="true"]{background:var(--orange); color:#fff; transform:translateY(2px); box-shadow:0 0 0 var(--ks),0 2px 0 var(--kb)}
+.lockp{color:#6B4B58}
+
+/* ── 당겨서 새로고침 · 토스트도 같은 톤 ── */
+.ptr{box-shadow:0 3px 0 var(--ks2),0 5px 0 #000}
 </style>
 </head>
 <body>
@@ -647,6 +735,7 @@ select.status[data-st="거절"]{background:var(--c-rej); color:#fff}
   <div><b id="install-h">홈 화면에 추가하면 앱처럼 열립니다</b><span id="install-t">공유 버튼 → 「홈 화면에 추가」</span></div>
   <div class="sp"></div><button class="mini" id="install-go" type="button" hidden>설치</button><button class="del" id="install-x" type="button">&times;</button></div>
 <div class="offline" id="offline">OFFLINE</div>
+<div class="pxbar" id="pxbar" aria-hidden="true"><i id="pxthumb"></i></div>
 <div class="ptr" id="ptr"><span class="spark"></span><div class="tsp" id="ptr-sp"></div><span id="ptr-t">당겨서 새로고침</span></div>
 
 <div class="pinlock" id="lock">
@@ -2554,6 +2643,33 @@ document.addEventListener("visibilitychange",function(){
 /* 고정 헤더 높이만큼 본문 내림 */
 function fitHead(){ document.body.style.paddingTop=el("tabs").parentNode.offsetHeight+"px"; }
 window.addEventListener("resize",fitHead); setTimeout(fitHead,50); setTimeout(fitHead,600);
+/* ── 8비트 스크롤 막대 ── */
+(function(){
+  var bar=el("pxbar"), th=el("pxthumb"), hideT=null, STEP=8, MIN=24;
+  function place(){
+    var top=el("tabs").parentNode.offsetHeight+8;
+    var bot=(document.querySelector(".nav")?document.querySelector(".nav").offsetHeight:64)+10;
+    bar.style.top=top+"px"; bar.style.bottom=bot+"px";
+    return Math.max(40,window.innerHeight-top-bot);
+  }
+  function draw(){
+    var doc=document.documentElement.scrollHeight, vh=window.innerHeight;
+    if(doc<=vh+8){ bar.classList.remove("on"); return; }
+    var H=place();
+    var ratio=vh/doc;
+    var h=Math.max(MIN,Math.round(H*ratio/STEP)*STEP);
+    var max=H-h-4;
+    var y=Math.round((window.scrollY||0)/(doc-vh)*max/STEP)*STEP;
+    th.style.height=h+"px"; th.style.top=Math.max(0,Math.min(max,y))+"px";
+    bar.classList.add("on");
+    clearTimeout(hideT); hideT=setTimeout(function(){ bar.classList.remove("on"); },900);
+  }
+  window.addEventListener("scroll",draw,{passive:true});
+  window.addEventListener("resize",function(){ place(); draw(); });
+  setTimeout(function(){ place(); },200);
+  window.pxDraw=draw;
+})();
+
 /* ── 당겨서 새로고침 (알이 흔들리고, 두 번째엔 깨집니다) ── */
 var ptrPulls=0, ptrLast=0;
 (function(){
