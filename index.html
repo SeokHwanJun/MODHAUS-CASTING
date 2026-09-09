@@ -438,7 +438,8 @@ select.status{padding:5px 9px; font-size:12px}
 
 /* 상세 (크게 보기) — 폰에선 아래에서 올라오는 시트 */
 .lb-act{display:flex; flex-wrap:wrap; gap:7px; align-items:center; padding:8px 0 10px; border-bottom:2px dashed var(--line-2)}
-.lb-act .del{margin-left:auto}
+.lb-act .danger{margin-left:auto; background:var(--accent-soft); color:var(--rose)}
+.fcard .btn.danger{background:#fff; color:var(--rose); border-color:var(--rose); box-shadow:none; flex:0 0 auto}
 @media (max-width:759px){
   .lb{align-items:flex-end; padding:0}
   .lb-box{max-width:100%; width:100%; max-height:92dvh; border-radius:24px 24px 0 0; border-bottom:0; padding:14px 14px calc(16px + env(safe-area-inset-bottom))}
@@ -589,6 +590,7 @@ select.status{padding:5px 9px; font-size:12px}
     <div class="row-btns">
       <button class="btn" id="r-add">보드에 추가</button>
       <button class="btn ghost sm" id="r-clear">지우기</button>
+      <button class="btn sm danger" id="r-del" hidden>삭제</button>
     </div>
     <div class="msg" id="r-msg"></div>
   </div>
@@ -651,6 +653,7 @@ select.status{padding:5px 9px; font-size:12px}
           <div class="row-btns">
             <button class="btn" id="d-add">DB에 등록</button>
             <button class="btn ghost sm" id="d-clear">지우기</button>
+            <button class="btn sm danger" id="d-del" hidden>삭제</button>
           </div>
           <div class="msg" id="d-msg"></div>
         </div>
@@ -1376,7 +1379,7 @@ function startEdit(key,r){
     choices(el("r-status"),STATUSES,R,"status"); choices(el("r-gender"),GENDERS,R,"gender");
     rPhoto.set(r.photo||"",""); rPhoto.clean();
     el("r-title").textContent="수정 중 · "+(nameOf(r)||"이름 미입력"); el("r-title").classList.add("editing");
-    el("r-add").textContent="저장"; el("r-clear").textContent="취소";
+    el("r-add").textContent="저장"; el("r-clear").textContent="취소"; el("r-del").hidden=false;
     setTab("road"); closeLB(); openForm("r"); note("r-msg","내용을 고친 뒤 저장을 누르세요.");
   } else {
     ["name","birth","height","weight","academy","region","language","agency","url","link","note","contact"]
@@ -1390,12 +1393,12 @@ function startEdit(key,r){
     choices(el("d-nationality"),NATIONS,D,"nationality"); choices(el("d-score"),SCORES,D,"score");
     dPhoto.set(r.photo||"",""); dPhoto.clean();
     el("d-title").textContent="수정 중 · "+(r.name||"이름 없음"); el("d-title").classList.add("editing");
-    el("d-add").textContent="저장"; el("d-clear").textContent="취소";
+    el("d-add").textContent="저장"; el("d-clear").textContent="취소"; el("d-del").hidden=false;
     setTab("db"); closeLB(); openForm("d"); note("d-msg","내용을 고친 뒤 저장을 누르세요.");
   }
 }
 function cancelEdit(){
-  editing=null;
+  editing=null; el("r-del").hidden=true; el("d-del").hidden=true;
   R.platform=PLATFORMS[0]; R.status=STATUSES[0]; R.gender=GENDERS[0];
   choices(el("r-platform"),PLATFORMS,R,"platform"); choices(el("r-status"),STATUSES,R,"status"); choices(el("r-gender"),GENDERS,R,"gender");
   D.status=STATUSES[0]; D.score=SCORES[0]; D.gender=GENDERS[0]; D.position=POSITIONS[0]; D.nationality=NATIONS[0];
@@ -1496,7 +1499,8 @@ function openLB(r,isDb){
     if(!isDb) act.appendChild(miniBtn("DB로 →",function(){ promote(r); },"개인 DB로 옮겨 담기"));
     if(!isDb&&isStale(r)) act.appendChild(miniBtn("재발송",function(){ SFX.play("save"); closeLB(); toast(1,"RESEND",(nm||"이름 미입력")+" 다시 DM 보냄");
       call("updateItem",["road",r.id,{status:"DM발송"}],"재발송으로 기록했습니다.","r-msg",true); }));
-    var d=delBtn(key,r.id,(nm||"이 건")+"을(를)"); var od=d.onclick; d.onclick=function(){ closeLB(); od(); }; act.appendChild(d);
+    var d=miniBtn("삭제",function(){ if(confirm((nm||"이 건")+"을(를) 삭제할까요? 되돌릴 수 없습니다.")){ SFX.play("del"); toast(6,"POOF","삭제됨"); closeLB(); call("deleteItem",[key,r.id],"삭제했습니다.",key==="road"?"r-msg":"d-msg",true); } });
+    d.classList.add("danger"); act.appendChild(d);
     lbBox.appendChild(act);
     lbBox.appendChild(m);
   }
@@ -1791,6 +1795,8 @@ el("r-add").onclick=function(){
 };
 el("r-clear").onclick=function(){ clearRoad(); cancelEdit(); note("r-msg",""); };
 el("r-close").onclick=function(){ clearRoad(); cancelEdit(); closeForm(); };
+el("r-del").onclick=function(){ if(!editing) return; var id=editing.id; if(confirm("이 기록을 삭제할까요? 되돌릴 수 없습니다.")){ SFX.play("del"); toast(6,"POOF","삭제됨"); cancelEdit(); clearRoad(); closeForm(); call("deleteItem",["road",id],"삭제했습니다.","r-msg",true); } };
+el("d-del").onclick=function(){ if(!editing) return; var id=editing.id; if(confirm("이 인원을 삭제할까요? 되돌릴 수 없습니다.")){ SFX.play("del"); toast(6,"POOF","삭제됨"); cancelEdit(); clearDb(); closeForm(); call("deleteItem",["db",id],"삭제했습니다.","d-msg",true); } };
 el("f-close").onclick=closeFilter; el("f-apply").onclick=function(){ SFX.play("tab"); closeFilter(); };
 el("f-reset").onclick=function(){ SFX.play("chip"); resetF(); buildFilter(); render(); };
 el("sheet-f").addEventListener("click",function(e){ if(e.target===el("sheet-f")) closeFilter(); });
