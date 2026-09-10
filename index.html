@@ -1807,12 +1807,24 @@ function note(id,t){ var n=el(id); if(!n) return; n.textContent=t||"";
 function qs(o){ return Object.keys(o).map(function(k){ return encodeURIComponent(k)+"="+encodeURIComponent(o[k]); }).join("&"); }
 function wait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
 /* 아이폰(저전력 모드·5G)에서 첫 요청이 끊기는 일이 잦아 두 번까지 조용히 다시 시도합니다 */
+/* 서버 답을 JSON 으로. 웹페이지가 돌아오면 = Code.gs 가 배포 안 된 상태입니다 */
+function asJson(r){
+  return r.text().then(function(t){
+    var x=String(t||"").replace(/^\uFEFF/,"").trim();
+    if(x.charAt(0)!=="{"&&x.charAt(0)!=="["){
+      var err=new Error("서버(Code.gs)가 배포되지 않았습니다");
+      err.notDeployed=true; throw err;
+    }
+    return JSON.parse(x);
+  });
+}
 function tryFetch(url,opt,left){
   var isPost=opt&&opt.method==="POST";
   return fetch(url,opt).then(function(r){
     if(!r.ok&&left>0&&!isPost) return wait(1200).then(function(){ return tryFetch(url,opt,left-1); });
-    return r.json();
+    return asJson(r);
   }).catch(function(e){
+    if(e&&e.notDeployed) throw e;              /* 배포 문제는 다시 보내도 소용없습니다 */
     /* 저장 요청은 다시 보내지 않습니다 — 두 번 저장되는 사고를 막기 위해 */
     if(left>0&&!isPost) return wait(1200).then(function(){ return tryFetch(url,opt,left-1); });
     throw e;
@@ -1844,7 +1856,7 @@ function apiLogin(name,pin,left){
     body:JSON.stringify({action:"login",name:name,pin:pin})})
     .then(function(r){
       if(!r.ok&&left>0) return wait(1200).then(function(){ return apiLogin(name,pin,left-1); });
-      return r.json();
+      return asJson(r);
     })
     .catch(function(e){
       /* 로그인은 다시 보내도 아무것도 안 망가집니다 — 조용히 한 번 더 */
@@ -1945,7 +1957,9 @@ function call(fn,args,okMsg,msgEl,mutating){
     if(done) return; done=true; clearTimeout(slow); clearTimeout(wd); freeSig(); if(mutating) setBusy(false);
     var m=String(e&&e.message||"오류");
     if(mutating) restorePending();
-    if(/expected pattern|Unexpected token|JSON/i.test(m)) fail("서버가 앱용으로 배포되지 않았습니다. Code.gs 새 버전 배포가 필요합니다.");
+    if(e&&e.auth){ el("banner").hidden=true; return; }   /* 로그인 필요 = 잠금화면이 안내합니다 */
+    if((e&&e.notDeployed)||/expected pattern|Unexpected token|JSON|NOTDEPLOYED/i.test(m))
+      fail("서버(Code.gs)가 배포되지 않았습니다. 팀장에게 알려주세요 — 배포 관리에서 새 버전 배포가 필요합니다.");
     else if(!navigator.onLine) fail("오프라인입니다. 연결되면 자동으로 다시 불러옵니다.");
     else fail("연결이 불안정합니다. 화면 내용은 마지막으로 받은 것입니다. 새로고침을 눌러보세요.");
   });
@@ -2911,8 +2925,12 @@ function lkGo(){
     if(!VIEW){ me=ME; store("me",ME); R.owner=ME; D.owner=ME; }
     setWho("전체"); fR.sort="최신순"; render(); bindAccount();
     call("getAll",["fresh"]);
-  }).catch(function(){
+  }).catch(function(e){
     done();
+    if(e&&e.notDeployed){
+      lkErr("서버(Code.gs)가 배포되지 않았습니다. 팀장에게 알려주세요.",true);
+      return;
+    }
     /* 번호는 그대로 두고, 누르면 바로 다시 보냅니다 (다시 입력 안 하셔도 됩니다) */
     lkErr("연결이 잠깐 끊겼습니다. 아래 확인을 눌러주세요.",true);
     lkRetry(true);
