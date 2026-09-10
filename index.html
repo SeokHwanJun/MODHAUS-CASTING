@@ -346,7 +346,8 @@ select.status.t-ok{background:var(--mint); color:#000}
                    linear-gradient(90deg,rgba(42,45,33,.10) 1px,transparent 1px);
   background-size:9px 9px; box-shadow:inset 0 2px 8px rgba(42,45,33,.25)}
 .tama-lcd img{display:block; margin:0 auto; max-width:100%; max-height:54vh; object-fit:contain;
-  border-radius:0; background:transparent}
+  border-radius:0; background:transparent; transition:filter .25s}
+.tama-lcd img.lo{filter:blur(1.5px) contrast(.97)}   /* 큰 사진 오기 전 작은 사진 */
 /* 아래 이름판 */
 .tama-nm{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:9px;
   border:2px solid var(--lcd-ink); border-radius:7px; background:var(--lcd-bg); padding:5px 10px}
@@ -1778,8 +1779,10 @@ function openById(id){
   var r=null,isDb=false;
   (S.road||[]).forEach(function(x){ if(x.id===id) r=x; });
   if(!r) (S.db||[]).forEach(function(x){ if(x.id===id){ r=x; isDb=true; } });
-  if(!r){ focusId=id; call("getAll",["fresh"]); return; }
-  setTab(isDb?"db":"road"); openLB(r,isDb);
+  if(!r){ focusId=id; focusDone=false; scrolled=false; call("getAll",["fresh"]); return; }
+  focusId=id; focusDone=false; scrolled=false;
+  tryFocus(); render(); scrollFocus();
+  if(!scrolled) openLB(r,isDb);   /* 목록에 안 보이더라도 상세는 바로 엽니다 */
 }
 var ICONS={
   cal:[".########.",".#.#.#.#.#","##########","#........#","#.##.##..#","#........#","#.##.##..#","#........#","#.##.....#","##########"],
@@ -2545,8 +2548,16 @@ function openLB(r,isDb,keep){
     lbBox.appendChild(commentBlock(r,key));
   }
   if(r.photoFile&&fullCache[r.photoFile]){ show(fullCache[r.photoFile]); return; }
-  if(!r.photoFile||!navigator.onLine){ show(r.photo); return; }
-  fetchFull(r.photoFile).then(function(f){ if(f) fullCache[r.photoFile]=f; show(f||r.photo); }).catch(function(){ show(r.photo); });
+  /* 게임처럼: 갖고 있는 작은 사진으로 즉시 열고, 큰 사진은 뒤에서 받아와 바꿔 끼웁니다 */
+  show(r.photo);
+  if(!r.photoFile||!navigator.onLine) return;
+  var im=lbBox.querySelector(".tama-lcd img"); if(im) im.classList.add("lo");
+  fetchFull(r.photoFile).then(function(f){
+    if(!f) return; fullCache[r.photoFile]=f;
+    if(lbRec!==r) return;                                   /* 그새 다른 카드를 열었으면 그만 */
+    var cur=lbBox.querySelector(".tama-lcd img"); if(!cur) return;
+    var pre=new Image(); pre.onload=function(){ cur.src=f; cur.classList.remove("lo"); }; pre.src=f;
+  }).catch(function(){ if(im) im.classList.remove("lo"); });
 }
 
 /* ---------- 로드캐스팅 → 개인 DB 승격 ---------- */
@@ -2826,8 +2837,12 @@ function tryFocus(){
   var inDb=!inRoad&&S.db.some(function(r){return r.id===focusId;});
   if(!inRoad&&!inDb) return;
   focusDone=true;
-  if(inRoad){ tab="road"; fR={owner:"전체",status:"전체",gender:"전체"}; }
-  else { tab="db"; fD={owner:"전체",score:"전체",gender:"전체"}; }
+  /* 필터를 '전체'로 완전히 풀어야 그 카드가 목록에 보입니다 (빠진 키가 있으면 전부 걸러져서 빈 화면이 됩니다) */
+  Q=""; searchOpen=""; shownR=shownD=PAGE;
+  if(typeof who!=="undefined"&&who!=="전체"){ try{ setWho("전체"); }catch(e){ who="전체"; } }
+  fR={owner:"전체",status:"전체",gender:"전체",platform:"전체",age:"전체",week:false,sort:(fR&&fR.sort)||"최근 등록순"};
+  fD={owner:"전체",score:"전체",gender:"전체",age:"전체",week:false};
+  tab=inRoad?"road":"db";
 }
 var scrolled=false;
 function scrollFocus(){
@@ -3131,7 +3146,7 @@ function pushOn(){
         return apiPost({action:"pushtoken",token:tk,ua:navigator.userAgent}).then(function(res){
           if(res&&res.error) throw new Error(res.error);
           if(!res||!res.ok) throw new Error("서버가 등록을 확인해주지 않았습니다");
-          store("pushtok",tk); pushBusy=false;
+          store("pushtok",tk); store("pushchk",String(Date.now())); pushBusy=false;
           SFX.play("save"); toast(2,"ALARM ON","이제 의견이 달리면 알려드립니다");
           buildPush(); pushMsg("등록 완료. 이 폰으로 알림을 받습니다.");
         });
@@ -3148,17 +3163,17 @@ function pushOff(){
 }
 /* 앱을 열 때마다 '이 폰 등록됐나' 확인하고, 빠졌으면 조용히 다시 넣습니다.
    (한 번 실패해도 다음 실행에 저절로 복구됩니다) */
-function pushSync(){
+function pushSync(force){
   if(!pushReady()||VIEW||!TK) return;
   if(!("Notification" in window)||Notification.permission!=="granted") return;
   var tk=store("pushtok");
-  if(tk){                                   /* 기기키가 있으면 그냥 다시 등록 (가벼움) */
-    apiPost({action:"pushtoken",token:tk,ua:navigator.userAgent}).then(function(res){
-      if(res&&res.error) store("pushtok","");
-    }).catch(function(){});
+  var lastChk=parseInt(store("pushchk")||"0",10)||0;
+  var stale=(Date.now()-lastChk)>6*3600000;        /* 6시간마다 진짜 기기키를 다시 확인 */
+  if(tk&&!stale&&!force){                          /* 그 사이엔 가볍게 다시 등록만 */
+    apiPost({action:"pushtoken",token:tk,ua:navigator.userAgent}).catch(function(){});
     return;
   }
-  /* 허락은 했는데 기기키가 없으면 조용히 다시 받아옵니다 */
+  /* 아이폰이 기기키를 바꿨을 수 있으니 지금 것을 새로 받아옵니다 */
   loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
     .then(function(){ return loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"); })
     .then(function(){ return navigator.serviceWorker.register(swQuery()); })
@@ -3172,6 +3187,10 @@ function pushSync(){
     })
     .then(function(tk2){
       if(!tk2) return;
+      store("pushchk",String(Date.now()));
+      if(tk2===tk) return apiPost({action:"pushtoken",token:tk2,ua:navigator.userAgent}).catch(function(){});
+      /* 바뀌었으면 옛날 것은 지우고 새 것으로 */
+      if(tk) apiPost({action:"pushoff",token:tk}).catch(function(){});
       return apiPost({action:"pushtoken",token:tk2,ua:navigator.userAgent}).then(function(res){
         if(!(res&&res.error)){ store("pushtok",tk2); buildPush(); }
       });
@@ -3192,6 +3211,15 @@ function pushForeground(){
     }
   }catch(e){}
 }
+
+/* 앱이 이미 켜져 있을 때 알림을 누르면, 알림 일꾼이 "이 카드 열어" 하고 말을 걸어옵니다 */
+try{
+  if(navigator.serviceWorker) navigator.serviceWorker.addEventListener("message",function(e){
+    var d=e.data||{}; if(d.type!=="open"||!d.id) return;
+    try{ SFX.play("alarm"); }catch(x){}
+    openById(String(d.id));
+  });
+}catch(e){}
 
 /* ── 스킨 ── */
 var SKINS=[["","기본",["#F3CBD3","#FFFFFF","#F26A2E"]],
@@ -3302,6 +3330,7 @@ document.addEventListener("visibilitychange",function(){
   if(document.visibilityState!=="visible"){ hiddenAt=Date.now(); return; }
   if(hiddenAt&&Date.now()-hiddenAt>300000){ resetF(); render(); }
   if(navigator.onLine&&!busy&&Date.now()-lastSync>30000) call("getAll",[]);
+  if(navigator.onLine) setTimeout(pushSync,1200);
 });
 
 /* 고정 헤더 높이만큼 본문 내림 */

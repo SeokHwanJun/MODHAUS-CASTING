@@ -23,21 +23,28 @@ if (cfg.apiKey && cfg.projectId) {
       badge: 'icon-192.png',
       tag: 'cast-' + ((payload.data && payload.data.id) || 'x'),
       renotify: true,
-      data: { url: (payload.data && payload.data.url) || (payload.fcmOptions && payload.fcmOptions.link) || './' }
+      data: {
+        id: (payload.data && payload.data.id) || '',
+        url: (payload.data && payload.data.url) || (payload.fcmOptions && payload.fcmOptions.link) || './'
+      }
     });
   });
 }
 
-/* 알림을 누르면 앱을 엽니다 (이미 열려 있으면 그 창으로) */
+/* 알림을 누르면 그 카드로 갑니다.
+   앱이 이미 켜져 있으면 새로 고치지 않고 "이 카드 열어" 라고 말만 건넵니다 (빠르고, 아이폰에서도 됨).
+   꺼져 있으면 ?id= 주소로 새로 엽니다. */
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
-  var url = (e.notification.data && e.notification.data.url) || './';
+  var d = e.notification.data || {};
+  var url = d.url || './';
+  var id = d.id || (function () { try { return new URL(url, self.location).searchParams.get('id') || ''; } catch (err) { return ''; } })();
   e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
     for (var i = 0; i < list.length; i++) {
-      if (list[i].url.indexOf(self.location.origin) === 0 && 'focus' in list[i]) {
-        if ('navigate' in list[i]) { try { list[i].navigate(url); } catch (err) {} }
-        return list[i].focus();
-      }
+      var c = list[i];
+      if (c.url.indexOf(self.location.origin) !== 0) continue;
+      try { c.postMessage({ type: 'open', id: id }); } catch (err) {}
+      if ('focus' in c) return c.focus();
     }
     if (clients.openWindow) return clients.openWindow(url);
   }));
