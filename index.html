@@ -1009,8 +1009,20 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
       </div>
       <div id="ac-pushbox" hidden style="margin-top:14px; padding-top:14px; border-top:2px dashed var(--line-2)">
         <p class="hint" style="margin:0 0 10px">내 카드에 의견이 달리면 이 폰으로 알림이 옵니다.</p>
-        <button type="button" class="btn ghost" id="ac-push">알림 켜기</button>
-        <p class="hint" id="ac-pushmsg" style="margin:10px 0 0"></p>
+        <div class="row-btns" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn ghost" id="ac-push">알림 켜기</button>
+          <button type="button" class="btn ghost" id="ac-push-repair">알림 복구</button>
+        </div>
+        <details style="margin-top:14px">
+          <summary style="min-height:44px;cursor:pointer">알림이 안 올 때 확인하기</summary>
+          <div class="row-btns" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <button type="button" class="btn ghost" id="ac-push-local">① 폰 표시 테스트</button>
+            <button type="button" class="btn ghost" id="ac-push-test">② 전송 테스트</button>
+            <button type="button" class="btn ghost" id="ac-push-diag">연결 상태 확인</button>
+          </div>
+          <pre id="ac-pushdiag" hidden style="white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.7 monospace;background:var(--surface-3);padding:12px;border-radius:12px"></pre>
+        </details>
+        <p class="hint" id="ac-pushmsg" role="status" aria-live="polite" style="margin:10px 0 0;overflow-wrap:anywhere"></p>
       </div>
       <div style="margin-top:14px; padding-top:14px; border-top:2px dashed var(--line-2)">
         <p class="hint" style="margin:0 0 10px">앱 스킨 · 이 기기에만 적용됩니다</p>
@@ -3096,140 +3108,212 @@ function lkRetry(on){
   }
   b.hidden=false;
 }
-/* ── 폰 알림 ── */
-var pushBusy=false;
-function pushMsg(t){ var n=el("ac-pushmsg"); if(n) n.textContent=t||""; }
-function loadScript(src){
-  return new Promise(function(ok,no){
-    if(document.querySelector('script[src="'+src+'"]')) return ok();
-    var s=document.createElement("script"); s.src=src; s.onload=function(){ ok(); }; s.onerror=function(){ no(new Error("불러오지 못했습니다")); };
-    document.head.appendChild(s);
+/* ── 폰 알림 · v55-push1 ────────────────────────────────
+   등록은 sw.js 하나만 사용합니다. Firebase에도 같은 등록을 명시합니다.
+   on/off는 사용자의 선택, pushtok는 서버가 확인한 기기키입니다.
+ */
+var PUSH_BUILD='v55-push1', pushBusy=false, pushError='', pushScripts={}, appWorkerPromise=null;
+var pushMessaging=null, pushUnsubscribe=null, pushMemoryId='';
+function pushMsg(t){ var n=el('ac-pushmsg'); if(n) n.textContent=t||''; }
+function pushTimeout(p,ms,label){
+  return new Promise(function(resolve,reject){
+    var t=setTimeout(function(){reject(new Error(label+' 시간이 초과됐습니다. 연결을 확인하고 다시 시도해주세요.'));},ms);
+    Promise.resolve(p).then(function(v){clearTimeout(t);resolve(v);},function(e){clearTimeout(t);reject(e);});
   });
 }
-function swQuery(){
-  return "firebase-messaging-sw.js?k="+encodeURIComponent(PUSH.apiKey)+
-         "&p="+encodeURIComponent(PUSH.projectId)+
-         "&s="+encodeURIComponent(PUSH.senderId)+
-         "&a="+encodeURIComponent(PUSH.appId);
+function loadScript(src){
+  if(pushScripts[src]) return pushScripts[src];
+  pushScripts[src]=new Promise(function(resolve,reject){
+    var s=document.createElement('script'),timer;
+    function fail(){clearTimeout(timer);s.remove();delete pushScripts[src];reject(new Error('Firebase 파일을 불러오지 못했습니다. 네트워크를 확인해주세요.'));}
+    s.src=src;s.onload=function(){clearTimeout(timer);resolve();};s.onerror=fail;
+    timer=setTimeout(fail,20000);document.head.appendChild(s);
+  });
+  return pushScripts[src];
+}
+function appBase(){return new URL('./',location.href);}
+function workerHealth(reg){
+  return new Promise(function(resolve,reject){
+    if(!reg.active) return reject(new Error('워커가 아직 활성화되지 않았습니다.'));
+    var ch=new MessageChannel(),timer=setTimeout(function(){ch.port1.close();reject(new Error('워커 응답 없음'));},1200);
+    ch.port1.onmessage=function(e){clearTimeout(timer);ch.port1.close();resolve(e.data||{});};
+    reg.active.postMessage({type:'CASTING_PUSH_HEALTH'},[ch.port2]);
+  });
+}
+function ensureAppWorker(){
+  if(appWorkerPromise) return appWorkerPromise;
+  if(!('serviceWorker' in navigator)||!window.isSecureContext) return Promise.reject(new Error('HTTPS 주소에서 열어주세요.'));
+  var base=appBase();
+  appWorkerPromise=navigator.serviceWorker.register(new URL('sw.js',base).href,{scope:base.href,updateViaCache:'none'})
+    .then(function(reg){
+      var until=Date.now()+25000;
+      function ready(){
+        return workerHealth(reg).then(function(h){
+          if(h.build!==PUSH_BUILD) throw new Error('예전 워커가 실행 중입니다.');
+          return reg;
+        }).catch(function(e){
+          if(Date.now()>until) throw new Error('새 워커가 준비되지 않았습니다. sw.js와 firebase-messaging-sw.js를 함께 올렸는지 확인해주세요.');
+          return wait(300).then(ready);
+        });
+      }
+      return ready();
+    }).catch(function(e){appWorkerPromise=null;throw e;});
+  return appWorkerPromise;
+}
+function pushEnvironment(){
+  if(!pushReady()) return 'Firebase 설정이 비어 있습니다.';
+  if(!window.isSecureContext) return 'HTTPS 앱 주소에서 열어주세요.';
+  var ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  var standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+  if(ios&&!standalone) return '아이폰은 홈 화면에 추가한 앱에서 알림을 켜주세요. 카톡 안이나 일반 사파리 탭에서는 신청할 수 없습니다.';
+  if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)) return '이 브라우저에서는 웹 푸시를 사용할 수 없습니다. 최신 Safari 또는 Chrome에서 확인해주세요.';
+  return '';
+}
+function pushDeviceId(){
+  if(pushMemoryId) return pushMemoryId;
+  pushMemoryId=store('pushdevice')||'';
+  if(!pushMemoryId){
+    var bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+    pushMemoryId=Array.prototype.map.call(bytes,function(b){return b.toString(16).padStart(2,'0');}).join('');
+    store('pushdevice',pushMemoryId);
+  }
+  return pushMemoryId;
+}
+function ensureMessaging(){
+  return Promise.all([ensureAppWorker(),loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js')
+    .then(function(){return loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');})])
+    .then(function(parts){
+      var reg=parts[0];
+      return Promise.resolve(firebase.messaging.isSupported()).then(function(supported){
+        if(!supported) throw new Error('이 브라우저에서 Firebase 푸시를 사용할 수 없습니다.');
+        return workerHealth(reg);
+      }).then(function(h){
+        if(!h.pushReady) throw new Error('알림 워커의 Firebase 초기화 실패: '+(h.error||'푸시 파일을 다시 올려주세요.'));
+        if(!firebase.apps.length) firebase.initializeApp({apiKey:PUSH.apiKey,projectId:PUSH.projectId,
+          messagingSenderId:PUSH.senderId,appId:PUSH.appId,authDomain:PUSH.projectId+'.firebaseapp.com'});
+        pushMessaging=firebase.messaging();pushForeground();return {reg:reg,messaging:pushMessaging};
+      });
+    });
+}
+function pushApi(body){
+  return pushTimeout(apiPost(body),30000,'알림 서버 연결').then(function(res){
+    if(!res||res.error) throw new Error(res&&(res.msg||res.error)||'서버 응답이 비어 있습니다.');
+    return res;
+  });
+}
+function registerThisDevice(repair){
+  var old=store('pushtok')||'', account=ME, session=TK;
+  function stillHere(){if(TK!==session||ME!==account||!TK) throw new Error('계정이 바뀌었습니다. 로그인 후 다시 눌러주세요.');}
+  return ensureMessaging().then(function(x){
+    stillHere();
+    var options={vapidKey:PUSH.vapidKey,serviceWorkerRegistration:x.reg};
+    var token=pushTimeout(x.messaging.getToken(options),25000,'기기키 확인');
+    if(repair) token=token.then(function(){return x.messaging.deleteToken();}).then(function(){return pushTimeout(x.messaging.getToken(options),25000,'기기키 재발급');});
+    return token;
+  }).then(function(tk){
+    stillHere();if(!tk) throw new Error('기기키를 받지 못했습니다.');
+    return pushApi({action:'pushtoken',token:tk,old:old,deviceId:pushDeviceId(),ua:navigator.userAgent}).then(function(res){
+      if(!res.ok) throw new Error('서버에 기기를 등록하지 못했습니다.');
+      stillHere();store('pushtok',tk);store('pushenabled','1');store('pushowner',ME);store('pushchk',String(Date.now()));return tk;
+    });
+  });
 }
 function buildPush(){
-  var box=el("ac-pushbox"); if(!box) return;
-  var can=pushReady()&&("Notification" in window)&&("serviceWorker" in navigator)&&!VIEW;
-  box.hidden=!can;
-  if(!can) return;
-  var on=store("pushtok")&&Notification.permission==="granted";
-  el("ac-push").textContent=on?"알림 끄기":"알림 켜기";
-  pushMsg(on?"이 폰으로 알림을 받고 있습니다."
-           :(Notification.permission==="denied"
-             ?"폰 설정에서 이 앱의 알림이 꺼져 있습니다. 설정 → 알림에서 켜주세요."
-             :""));
-  el("ac-push").onclick=function(){ on?pushOff():pushOn(); };
+  var box=el('ac-pushbox');if(!box)return;box.hidden=VIEW||!TK;if(box.hidden)return;
+  var reason=pushEnvironment(),on=!!store('pushtok');
+  ['ac-push','ac-push-repair','ac-push-local','ac-push-test'].forEach(function(id){el(id).disabled=pushBusy||!!reason;});
+  el('ac-push').textContent=on?'알림 끄기':'알림 켜기';
+  el('ac-push').onclick=function(){if(on)pushOff();else pushOn(false);};
+  el('ac-push-repair').onclick=function(){pushOn(true);};
+  el('ac-push-local').onclick=pushLocalTest;el('ac-push-test').onclick=pushRemoteTest;
+  el('ac-push-diag').onclick=pushDiagnose;el('ac-push-diag').disabled=pushBusy;
+  if(!pushBusy) pushMsg(pushError||reason||(on?'이 기기가 등록되어 있습니다. 아래 테스트로 수신을 확인할 수 있습니다.':
+    ('Notification' in window&&Notification.permission==='denied'?'폰 설정에서 이 앱의 알림을 허용한 뒤 알림 복구를 눌러주세요.':'이 기기에서 알림을 받을지 선택해주세요.')));
 }
-/* 알림을 아직 안 켠 사람에게 딱 한 번 물어봅니다. 거절하면 다시 안 묻습니다. */
+function pushRun(label,operation){
+  if(pushBusy)return Promise.resolve(false);
+  pushBusy=true;pushError='';buildPush();pushMsg(label);
+  return Promise.resolve().then(operation).then(function(message){
+    pushBusy=false;buildPush();if(message)pushMsg(message);return true;
+  }).catch(function(e){pushBusy=false;pushError=String(e&&e.message||e);buildPush();return false;});
+}
 function askPush(){
-  if(!pushReady()||VIEW||!TK) return;
-  if(!("Notification" in window)||!("serviceWorker" in navigator)) return;
-  if(Notification.permission!=="default") return;      /* 이미 허용했거나 거부한 사람은 건너뜀 */
-  if(store("pushtok")||store("pushask")) return;
-  store("pushask","1");
-  setTimeout(function(){
-    toast(2,"ALARM","내 후보에 의견이 달리면 알려드릴까요? 누르면 켜집니다",function(){ pushOn(); });
-  },2200);
+  if(pushEnvironment()||VIEW||!TK||Notification.permission!=='default'||store('pushtok')||store('pushask'))return;
+  store('pushask','1');setTimeout(function(){toast(2,'ALARM','내 후보에 의견이 달리면 알려드릴까요? 누르면 켜집니다',function(){pushOn(false);});},2200);
 }
-function pushOn(){
-  if(pushBusy) return; pushBusy=true; pushMsg("켜는 중…");
-  Notification.requestPermission().then(function(perm){
-    if(perm!=="granted"){ pushBusy=false; pushMsg("알림이 허용되지 않았습니다."); buildPush(); return; }
-    return loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
-      .then(function(){ return loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"); })
-      .then(function(){ return navigator.serviceWorker.register(swQuery()); })
-      .then(function(reg){
-        if(!firebase.apps.length) firebase.initializeApp({
-          apiKey:PUSH.apiKey, projectId:PUSH.projectId,
-          messagingSenderId:PUSH.senderId, appId:PUSH.appId,
-          authDomain:PUSH.projectId+".firebaseapp.com"
-        });
-        return firebase.messaging().getToken({vapidKey:PUSH.vapidKey, serviceWorkerRegistration:reg});
-      })
-      .then(function(tk){
-        if(!tk) throw new Error("기기키를 받지 못했습니다");
-        pushMsg("서버에 등록 중…");
-        return apiPost({action:"pushtoken",token:tk,ua:navigator.userAgent}).then(function(res){
-          if(res&&res.error) throw new Error(res.error);
-          if(!res||!res.ok) throw new Error("서버가 등록을 확인해주지 않았습니다");
-          store("pushtok",tk); store("pushchk",String(Date.now())); pushBusy=false;
-          SFX.play("save"); toast(2,"ALARM ON","이제 의견이 달리면 알려드립니다");
-          buildPush(); pushMsg("등록 완료. 이 폰으로 알림을 받습니다.");
-        });
-      });
-  }).catch(function(e){
-    pushBusy=false; pushMsg("켜지 못했습니다: "+(e&&e.message||"오류")); buildPush();
+function pushOn(repair){
+  if(pushBusy)return Promise.resolve(false);
+  var reason=pushEnvironment();if(reason){pushError=reason;buildPush();return Promise.resolve(false);}
+  // 권한 요청은 버튼 터치 안에서 즉시 실행합니다. SDK 다운로드 뒤로 미루지 않습니다.
+  var permission=Notification.permission==='granted'?Promise.resolve('granted'):Notification.requestPermission();
+  return pushRun(repair?'알림 연결을 복구하는 중…':'이 기기에 알림을 연결하는 중…',function(){
+    return permission.then(function(p){if(p!=='granted')throw new Error('알림이 허용되지 않았습니다. 폰 설정에서 허용해주세요.');return registerThisDevice(!!repair);})
+      .then(function(){SFX.play('save');return '등록 완료. 앱을 보고 있을 때는 토스트, 홈으로 나가 있으면 시스템 알림으로 받습니다.';});
   });
 }
 function pushOff(){
-  var tk=store("pushtok")||"";
-  store("pushtok","");
-  if(tk) apiPost({action:"pushoff",token:tk}).catch(function(){});
-  SFX.play("back"); pushMsg("이 폰 알림을 껐습니다."); buildPush();
-}
-/* 앱을 열 때마다 '이 폰 등록됐나' 확인하고, 빠졌으면 조용히 다시 넣습니다.
-   (한 번 실패해도 다음 실행에 저절로 복구됩니다) */
-function pushSync(force){
-  if(!pushReady()||VIEW||!TK) return;
-  if(!("Notification" in window)||Notification.permission!=="granted") return;
-  var tk=store("pushtok");
-  var lastChk=parseInt(store("pushchk")||"0",10)||0;
-  var stale=(Date.now()-lastChk)>6*3600000;        /* 6시간마다 진짜 기기키를 다시 확인 */
-  if(tk&&!stale&&!force){                          /* 그 사이엔 가볍게 다시 등록만 */
-    apiPost({action:"pushtoken",token:tk,ua:navigator.userAgent}).catch(function(){});
-    return;
-  }
-  /* 아이폰이 기기키를 바꿨을 수 있으니 지금 것을 새로 받아옵니다 */
-  loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
-    .then(function(){ return loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"); })
-    .then(function(){ return navigator.serviceWorker.register(swQuery()); })
-    .then(function(reg){
-      if(!firebase.apps.length) firebase.initializeApp({
-        apiKey:PUSH.apiKey, projectId:PUSH.projectId,
-        messagingSenderId:PUSH.senderId, appId:PUSH.appId,
-        authDomain:PUSH.projectId+".firebaseapp.com"
+  return pushRun('이 기기 알림을 끄는 중…',function(){
+    var tk=store('pushtok')||'';
+    // 껐다는 선택을 먼저 기억해 자동 동기화가 다시 켜지 않게 합니다.
+    store('pushenabled','0');
+    return (tk?pushApi({action:'pushoff',token:tk}):Promise.resolve({ok:true})).then(function(res){
+      if(!res.ok)throw new Error('서버의 알림 해제를 확인하지 못했습니다. 다시 눌러주세요.');
+      return navigator.serviceWorker.getRegistration(appBase().href);
+    }).then(function(reg){return reg?reg.pushManager.getSubscription():null;})
+      .then(function(sub){return sub?sub.unsubscribe():true;}).then(function(){
+        store('pushtok','');store('pushowner','');store('pushchk','');SFX.play('back');return '이 기기 알림을 껐습니다.';
       });
-      return firebase.messaging().getToken({vapidKey:PUSH.vapidKey, serviceWorkerRegistration:reg});
-    })
-    .then(function(tk2){
-      if(!tk2) return;
-      store("pushchk",String(Date.now()));
-      if(tk2===tk) return apiPost({action:"pushtoken",token:tk2,ua:navigator.userAgent}).catch(function(){});
-      /* 바뀌었으면 옛날 것은 같이 알려서 지우게 합니다 */
-      return apiPost({action:"pushtoken",token:tk2,old:tk||"",ua:navigator.userAgent}).then(function(res){
-        if(!(res&&res.error)){ store("pushtok",tk2); buildPush(); }
-      });
-    }).catch(function(){});
-}
-
-/* 앱이 열려 있을 때 온 알림은 화면 위 토스트로 */
-function pushForeground(){
-  if(!pushReady()||!store("pushtok")) return;
-  try{
-    if(window.firebase&&firebase.apps&&firebase.apps.length){
-      firebase.messaging().onMessage(function(p){
-        var n=(p&&p.notification)||{}, d=(p&&p.data)||{};
-        SFX.play("alarm");
-        toast(2,d.title||n.title||"새 의견",d.body||n.body||"", d.id?function(){ openById(d.id); }:null);
-        if(!busy) call("getAll",["fresh"]);
-      });
-    }
-  }catch(e){}
-}
-
-/* 앱이 이미 켜져 있을 때 알림을 누르면, 알림 일꾼이 "이 카드 열어" 하고 말을 걸어옵니다 */
-try{
-  if(navigator.serviceWorker) navigator.serviceWorker.addEventListener("message",function(e){
-    var d=e.data||{}; if(d.type!=="open"||!d.id) return;
-    try{ SFX.play("alarm"); }catch(x){}
-    openById(String(d.id));
   });
-}catch(e){}
+}
+function pushSync(){
+  // 명시적으로 켠 기기만 동기화. 매 실행마다 실제 워커와 토큰, 전경 수신을 함께 확인합니다.
+  if(pushBusy||VIEW||!TK||pushEnvironment()||Notification.permission!=='granted'||!store('pushtok')||store('pushenabled')==='0')return;
+  return pushRun('알림 연결 확인 중…',function(){return registerThisDevice(false).then(function(){return '알림 연결을 확인했습니다.';});});
+}
+function pushForeground(){
+  if(pushUnsubscribe||!pushMessaging)return;
+  pushUnsubscribe=pushMessaging.onMessage(function(p){
+    if(!TK||VIEW||store('pushenabled')==='0'||store('pushowner')!==ME)return;
+    var n=p.notification||{},d=p.data||{};
+    SFX.play('alarm');toast(2,d.title||n.title||'새 의견',d.body||n.body||'',d.id?function(){openById(d.id);}:null);
+    pushMsg('방금 이 앱에서 알림을 받았습니다.');
+    if(!busy)call('getAll',['fresh']);
+  });
+}
+function pushLocalTest(){
+  return pushRun('이 폰의 알림 표시 확인 중…',function(){
+    if(Notification.permission!=='granted')throw new Error('알림 켜기를 먼저 눌러주세요.');
+    return ensureAppWorker().then(function(reg){return reg.showNotification('캐스팅 · 표시 확인',{
+      body:'폰 자체 알림 표시 테스트입니다. Firebase 전송과는 별개입니다.',
+      icon:new URL('icon-192.png',appBase()).href,tag:'casting-local-'+Date.now()
+    });}).then(function(){return 'OS에 표시를 요청했습니다. 실제 알림이 보이는지 알림 센터도 확인해주세요.';});
+  });
+}
+function pushRemoteTest(){
+  return pushRun('Firebase로 이 기기에 시험 알림을 보내는 중…',function(){
+    if(Notification.permission!=='granted'||!store('pushtok')||store('pushenabled')==='0')throw new Error('알림 켜기를 먼저 눌러주세요.');
+    return registerThisDevice(false).then(function(tk){return pushApi({action:'pushtest',token:tk});}).then(function(res){
+      var detail=(res.results||[]).filter(function(r){return !r.accepted;})[0];
+      if(!res.sent)throw new Error('전송 실패: '+(detail?detail.status+' · '+(detail.message||''):'서버 응답을 확인해주세요.'));
+      return 'Firebase가 이 기기의 시험 알림을 접수했습니다. 앱이 열려 있으면 토스트로 옵니다. 잠금 화면 테스트는 Apps Script에서 pushToMe를 실행해주세요.';
+    });
+  });
+}
+function pushDiagnose(){
+  return pushRun('알림 연결 상태 확인 중…',function(){
+    var lines=['화면 버전: '+PUSH_BUILD,'홈 화면 실행: '+(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true?'예':'아니요'),
+      '알림 권한: '+('Notification' in window?Notification.permission:'지원 안 함'),'기기키 저장: '+(store('pushtok')?'있음':'없음')];
+    var inspect=('serviceWorker' in navigator?navigator.serviceWorker.getRegistration(appBase().href):Promise.resolve(null))
+      .then(function(reg){if(!reg){lines.push('워커: 미등록');return;}lines.push('실행 워커: '+(reg.active?new URL(reg.active.scriptURL).pathname:'활성화 중'));
+        return workerHealth(reg).then(function(h){lines.push('워커 버전: '+h.build,'워커 Firebase: '+(h.pushReady?'준비됨':h.error||'실패'));});})
+      .catch(function(e){lines.push('워커 확인: '+e.message);});
+    return inspect.then(function(){return pushApi({action:'pushdiag',token:store('pushtok')||''});}).then(function(res){
+      lines.push('서버 버전: '+res.build,'프로젝트: '+res.projectId,'이 기기 서버 등록: '+(res.registered?'예':'아니요'),'내 등록 기기: '+res.devices+'대');
+    }).catch(function(e){lines.push('서버 확인: '+e.message);}).then(function(){
+      var n=el('ac-pushdiag');n.hidden=false;n.textContent=lines.join('\n');return '아래 결과를 캡처하면 어느 단계인지 확인할 수 있습니다. 기기키·PIN은 표시하지 않습니다.';
+    });
+  });
+}
 
 /* ── 스킨 ── */
 var SKINS=[["","기본",["#F3CBD3","#FFFFFF","#F26A2E"]],
@@ -3269,7 +3353,9 @@ function bindAccount(){
   el("ac-admin").hidden=!ADMIN;
   if(ADMIN&&!el("ac-tgt").options.length)
     OWNERS.forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=o; el("ac-tgt").appendChild(op); });
-  el("ac-out").onclick=function(){
+  el("ac-out").onclick=async function(){
+    if(pushBusy){pushMsg('알림 연결 작업이 끝난 뒤 로그아웃해주세요.');return;}
+    if(store('pushtok') && !await pushOff()) return;
     SFX.play("back");
     apiGet({action:"logout"}).catch(function(){});
     TK=""; ME=""; ADMIN=false; VIEW=false; store("tk",""); store("nm",""); store("adm",""); store("vw",""); applyView();
@@ -3468,14 +3554,14 @@ window.addEventListener("offline",paintOnline); paintOnline();
   if(ios){ el("install-t").textContent="사파리 아래 공유(□↑) → 「홈 화면에 추가」"; box.classList.add("show"); }
 })();
 
-/* 서비스 워커: 화면 파일을 기기에 저장 → 다음부턴 0.5초 */
-if("serviceWorker" in navigator){
-  window.addEventListener("load",function(){ navigator.serviceWorker.register("sw.js").then(function(reg){ setInterval(function(){ try{ reg.update(); }catch(e){} },30*60*1000); }).catch(function(){}); });
-  var reloading=false;
-  navigator.serviceWorker.addEventListener("controllerchange",function(){
-    if(reloading) return; reloading=true;
-    if(anySheetOpen()||lb.classList.contains("open")){ toast(1,"UPDATE","새 화면이 준비됐어요. 다음에 열 때 적용"); return; }
-    toast(1,"UPDATE","새 화면으로 바꾸는 중…"); setTimeout(function(){ location.reload(); },900);
+/* 단일 워커. 업데이트 때문에 입력 중인 화면을 강제 새로고침하지 않습니다. */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    ensureAppWorker().catch(function(e){pushError=e.message;buildPush();});
+  });
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    // 현재 파일을 그대로 사용하고, 다음 실행 때 새 화면을 받습니다.
+    buildPush();
   });
 }
 
