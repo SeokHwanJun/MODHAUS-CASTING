@@ -12,9 +12,11 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Silkscreen&display=swap">
+<!-- 한글 웹폰트는 뺐습니다(용량이 큽니다). 아이폰 기본 글꼴을 씁니다.
+     픽셀 숫자용 Silkscreen 만 받아오되, 화면 그리는 걸 막지 않게 나중에 붙입니다. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap"
+      media="print" onload="this.media='all'">
 <style>
 :root{
   /* 스티커시트 팔레트 */
@@ -38,10 +40,10 @@ html,body{margin:0; padding:0; color-scheme:light; width:100%; max-width:100%; o
 button,a,select,input,textarea{touch-action:manipulation}
 main,section,.item,.fbar,.stats,.card{max-width:100%}
 body{background:var(--ground); color:var(--ink); font-size:15px; line-height:1.55;
-  font-family:"IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
   -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
   background-image:radial-gradient(rgba(0,0,0,.07) 1.2px, transparent 1.2px); background-size:16px 16px}
-.mono,.pix{font-family:"Silkscreen","IBM Plex Mono","SFMono-Regular",Menlo,monospace; font-variant-numeric:tabular-nums}
+.mono,.pix{font-family:"Silkscreen",ui-monospace,"SFMono-Regular",Menlo,monospace; font-variant-numeric:tabular-nums}
 
 /* ── 상단 기기 바 ── */
 .hd{position:fixed; top:0; left:0; right:0; width:100%; z-index:20; padding-top:env(safe-area-inset-top); background:var(--bar); transform:translateZ(0); will-change:transform}
@@ -107,7 +109,7 @@ body{padding-top:64px}
   .pill.who{max-width:108px} .qbig .l{font-size:12px} }
 /* 댓글·별점 */
 .tag.star{background:var(--sun); color:#000; border-color:transparent} .tag.star small{font-size:9px; opacity:.7}
-.tag.age{background:var(--lav); color:#2A1E3F; border-color:transparent; font-family:"IBM Plex Mono",monospace; font-size:10.5px}
+.tag.age{background:var(--lav); color:#2A1E3F; border-color:transparent; font-family:ui-monospace,"SFMono-Regular",Menlo,monospace; font-size:10.5px}
 .cmts{margin-top:12px; padding-top:10px; border-top:2px dashed var(--line-2)}
 .cmh{display:flex; align-items:center; gap:8px; margin-bottom:8px} .cmh b{font-size:13px}
 .cmavg{font-size:12px; color:var(--rose); font-weight:700} .cmavg i{font-style:normal; font-family:"Silkscreen",monospace; font-size:10px} .cmavg.dim{color:var(--ink-3); font-weight:500}
@@ -176,7 +178,7 @@ section[hidden]{display:none}
 input[type=text],input[type=date],textarea{
   width:100%; padding:11px 12px; background:var(--surface-2); border:2px solid var(--line-2);
   border-radius:12px; color:var(--ink); font:inherit; font-size:15px; -webkit-appearance:none}
-input[type=date]{font-family:"IBM Plex Mono",monospace}
+input[type=date]{font-family:ui-monospace,"SFMono-Regular",Menlo,monospace}
 textarea{resize:vertical; min-height:76px; line-height:1.5}
 input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible{
   outline:2px solid var(--accent); outline-offset:2px}
@@ -254,9 +256,9 @@ input[type=text]:focus,input[type=date]:focus,textarea:focus{border-color:var(--
 .note{font-size:13.5px; color:var(--ink-2); overflow-wrap:anywhere; white-space:pre-wrap}
 .sub2{font-size:12px; color:var(--ink-3); overflow-wrap:anywhere}
 .spec{display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; color:var(--ink-2);
-  font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+  font-family:ui-monospace,"SFMono-Regular",Menlo,monospace; font-variant-numeric:tabular-nums}
 .spec i{font-style:normal; color:var(--ink-3); font-size:10.5px; letter-spacing:.04em; margin-right:3px}
-.link{color:var(--accent); font-family:"IBM Plex Mono",monospace; font-size:12px;
+.link{color:var(--accent); font-family:ui-monospace,"SFMono-Regular",Menlo,monospace; font-size:12px;
   text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block}
 .link:hover{text-decoration:underline}
 .tag{display:inline-block; font-size:11px; font-weight:700; padding:1px 8px; border-radius:7px;
@@ -1244,7 +1246,7 @@ var R = {owner:OWNERS[0], platform:PLATFORMS[0], status:STATUSES[0], gender:GEND
 var D = {owner:OWNERS[0], status:STATUSES[0], score:SCORES[0], sort:"진행순", gender:GENDERS[0], position:POSITIONS[0], nationality:NATIONS[0]};
 var fR = {owner:"전체", status:"전체", gender:"전체", platform:"전체", sort:"진행순"};   /* owner 는 위쪽 이름이 정함 */
 var Q="";           /* 검색어 */
-var PAGE=30, shownR=PAGE, shownD=PAGE;   /* 목록은 30장씩 보여주고 스크롤하면 더 */
+var PAGE=20, shownR=PAGE, shownD=PAGE;   /* 목록은 30장씩 보여주고 스크롤하면 더 */
 var fD = {owner:"전체", score:"전체", gender:"전체"};
 function resetF(){ Q=""; searchOpen=""; shownR=shownD=PAGE; var w=(typeof who==="undefined")?"전체":who; fR={owner:w,status:"전체",gender:"전체",platform:"전체",age:"전체",week:false,sort:fR.sort||"진행순"}; fD={owner:w,score:"전체",gender:"전체",age:"전체",week:false}; }
 function fCountR(){ return (fR.status!=="전체")+(fR.gender!=="전체")+(fR.platform!=="전체")+(fR.age!=="전체")+(!!fR.week); }
@@ -1957,18 +1959,47 @@ function absorb(data){
 }
 /* 화면에 있는 카드 중 썸네일이 아직 없는 것만 24장씩 받아옵니다 */
 var thumbBusy=false;
-function pullThumbs(){
+/* 화면에 들어오는 카드의 사진을 먼저 줄 세웁니다 (게임의 '보이는 것부터 로딩'과 같은 방식) */
+var wantQ=[], wantSeen={}, wantIO=null, wantT=null;
+function wantWatch(node){
+  if(!window.IntersectionObserver){ var id0=node.getAttribute("data-want"); if(id0) wantPush(id0); return; }
+  if(!wantIO) wantIO=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return;
+      wantIO.unobserve(e.target);
+      var id=e.target.getAttribute("data-want"); if(id) wantPush(id);
+    });
+  },{rootMargin:"700px 0px"});                       /* 화면 아래 700px 까지 미리 */
+  wantIO.observe(node);
+}
+function wantPush(id){
+  if(wantSeen[id]||THUMBS[id]) return;
+  wantSeen[id]=1; wantQ.push(id);
+  clearTimeout(wantT); wantT=setTimeout(pullThumbs,80);   /* 짧게 모아서 한 번에 */
+}
+function pullThumbs(bg){
   if(thumbBusy||!navigator.onLine) return;
-  var key=tab==="db"?"db":"road", list=(S[key]||[]).filter(function(r){ return r.hasPhoto&&!THUMBS[r.id]&&!r._noThumb; });
-  if(!list.length){ var other=key==="db"?"road":"db"; list=(S[other]||[]).filter(function(r){ return r.hasPhoto&&!THUMBS[r.id]&&!r._noThumb; }); key=other; }
-  if(!list.length) return;
-  var ids=list.slice(0,24).map(function(r){ return r.id; });
+  var key=tab==="db"?"db":"road", ids=[];
+  /* ① 지금 보이는(또는 곧 보일) 것 먼저 */
+  while(wantQ.length&&ids.length<24){ var w=wantQ.shift(); if(!THUMBS[w]) ids.push(w); }
+  /* ② 그것도 없으면 나머지를 천천히 */
+  if(!ids.length){
+    var list=(S[key]||[]).filter(function(r){ return r.hasPhoto&&!THUMBS[r.id]&&!r._noThumb; });
+    if(!list.length){ var other=key==="db"?"road":"db"; list=(S[other]||[]).filter(function(r){ return r.hasPhoto&&!THUMBS[r.id]&&!r._noThumb; }); key=other; }
+    if(!list.length) return;
+    ids=list.slice(0,12).map(function(r){ return r.id; });
+    bg=true;
+  }
+  if(!ids.length) return;
   thumbBusy=true;
   apiGet({action:"thumbs",k:key,ids:ids.join(",")}).then(function(res){
     thumbBusy=false;
     (res.thumbs||[]).forEach(function(t){ if(t.photo) THUMBS[t.id]=t.photo; });
     ids.forEach(function(id){ if(!THUMBS[id]) (S[key]||[]).forEach(function(r){ if(r.id===id) r._noThumb=true; }); });
-    saveThumbs(); absorbPhotos(); applyThumbs(ids); pullThumbs();
+    saveThumbs(); absorbPhotos(); applyThumbs(ids);
+    /* 보이는 건 바로 이어서, 안 보이는 건 한 박자 쉬고 (스크롤 끊기지 않게) */
+    if(wantQ.length) pullThumbs();
+    else setTimeout(function(){ pullThumbs(true); }, bg?1500:400);
   }).catch(function(){ thumbBusy=false; });
 }
 /* 도착한 썸네일만 그 자리에 끼워 넣음 (전체를 다시 그리지 않음) */
@@ -1977,7 +2008,8 @@ function applyThumbs(ids){
     var src=THUMBS[id]; if(!src) return;
     Array.prototype.forEach.call(document.querySelectorAll('[data-id="'+id+'"] .thumb'),function(th){
       if(th.querySelector("img")) return;
-      th.innerHTML=""; var img=document.createElement("img"); img.src=src; img.alt=""; th.appendChild(img); th.classList.add("clickable");
+      th.innerHTML=""; var img=document.createElement("img"); img.src=src; img.alt="";
+      img.loading="lazy"; img.decoding="async"; th.appendChild(img); th.classList.add("clickable"); th.removeAttribute("data-want");
     });
   });
 }
@@ -2206,8 +2238,10 @@ function chips(host,values,current,counts,onPick){
 }
 function thumbOf(r,onOpen){
   var th=document.createElement("div"); th.className="thumb";
+  if(!r.photo&&r.hasPhoto){ th.setAttribute("data-want",r.id); wantWatch(th); }   /* 화면에 가까워지면 그때 받아옵니다 */
   if(r.photo){
     var img=document.createElement("img"); img.src=r.photo; img.alt="사진 크게 보기";
+    img.loading="lazy"; img.decoding="async";
     img.onerror=function(){ th.innerHTML='<span class="ph">사진</span>'; };
     th.appendChild(img);
     th.classList.add("clickable"); th.tabIndex=0; th.setAttribute("role","button");
@@ -2316,8 +2350,8 @@ function photoInput(p){
     if(!f||f.type.indexOf("image/")!==0) return;
     var fr=new FileReader();
     fr.onload=function(){ var im=new Image();
-      im.onload=function(){ var t=draw(im,200,0.7,44000);
-        set(t.length>48000?"":t, draw(im,1400,0.82,900000)); st.dirty=true; };
+      im.onload=function(){ var t=draw(im,160,0.62,26000);
+        set(t.length>30000?"":t, draw(im,1200,0.78,420000)); st.dirty=true; };
       im.src=fr.result; };
     fr.readAsDataURL(f); }
   dz.addEventListener("click",function(e){ if(e.target!==x) file.click(); });
@@ -2646,6 +2680,7 @@ function renderRoad(){
   if(shownR>PAGE&&shownR>view.length) shownR=Math.max(PAGE,view.length);
   var sm=fR.sort||"진행순";
   var byDate=(!Q)&&(sm==="최근 등록순"||sm==="오래된 등록순"), lastD=null;
+  var frag=document.createDocumentFragment(), host0=host; host=frag;
   view.slice(0,shownR).forEach(function(r){
     if(byDate){
       var dd=regDate(r);
@@ -2683,6 +2718,7 @@ function renderRoad(){
     it.onclick=function(e){ if(e.target.closest("select,button,a")) return; SFX.play("open"); openLB(r,false); };
     host.appendChild(it);
   });
+  host=host0; host.appendChild(frag);
   more(host,view.length,shownR,function(){ shownR+=PAGE; renderRoad(); });
   markDates();
 }
@@ -3181,7 +3217,18 @@ Promise.all([IDB.get("thumbs"),IDB.get("snap")]).then(function(v){
 }).catch(function(){}).then(function(){ if(navigator.onLine) call("getAll",[]); else pullThumbs(); });
 if(!TK) lockOpen(); else lockClose();
 var lastScroll=0; window.addEventListener("scroll",function(){ lastScroll=Date.now(); },{passive:true});
-setInterval(function(){ if(!busy&&navigator.onLine&&lockY===null&&document.visibilityState==="visible"&&Date.now()-lastSync>50000&&Date.now()-lastScroll>3000) call("getAll",[]); },60000);
+/* 가만히 두면 점점 뜸하게 확인합니다 (1분 → 최대 8분). 만지면 다시 1분으로 */
+var idleStep=60000;
+setInterval(function(){
+  if(busy||!navigator.onLine||lockY!==null||document.visibilityState!=="visible") return;
+  if(Date.now()-lastScroll<3000) return;
+  if(Date.now()-lastSync<idleStep) return;
+  call("getAll",[]);
+  idleStep=Math.min(idleStep*2,480000);
+},20000);
+["pointerdown","keydown"].forEach(function(ev){
+  document.addEventListener(ev,function(){ idleStep=60000; },{passive:true,capture:true});
+});
 var hiddenAt=0;
 document.addEventListener("visibilitychange",function(){
   if(document.visibilityState!=="visible"){ hiddenAt=Date.now(); return; }
