@@ -831,6 +831,56 @@ select.status[data-st="거절"]{background:var(--c-rej); color:#fff}
 
 /* ── 당겨서 새로고침 · 토스트도 같은 톤 ── */
 .ptr{box-shadow:0 3px 0 var(--ks2),0 5px 0 #000}
+
+/* ═══════════ 스킨 ═══════════
+   기본(핸드헬드)은 위에서 이미 적용됨. 아래는 갈아끼우는 색만.  */
+body[data-skin="famicom"]{
+  --shell:#E9E2D2; --kb:#2A1C1A; --ks:#B9AE9A; --k1:#FBF8F1; --k2:#E3DCCB;
+  --orange:#B3271C; --orange-2:#D8433A; --orange-d:#7E1219;
+  --accent:#B3271C; --accent-soft:#F6E3E0; --accent-line:#D89A94; --pumpkin:#B3271C;
+  --ground:#D9D2C1; --bar:#E9E2D2; --sun:#E3C88A;
+  --pop-o:0 3px 0 #B9AE9A, 0 5px 0 #2A1C1A; --pop-o-sm:0 2px 0 #B9AE9A, 0 4px 0 #2A1C1A;
+}
+body[data-skin="nes"]{
+  --shell:#DCDCD8; --kb:#1E1E22; --ks:#8C8C92; --k1:#F4F4F2; --k2:#DADAD6;
+  --orange:#C4291F; --orange-2:#F0453A; --orange-d:#7E1710;
+  --accent:#C4291F; --accent-soft:#FADEDC; --accent-line:#E0938C; --pumpkin:#C4291F;
+  --ground:#C9C9C5; --bar:#DCDCD8; --sun:#E8E8E4;
+  --pop-o:0 3px 0 #8C8C92, 0 5px 0 #1E1E22; --pop-o-sm:0 2px 0 #8C8C92, 0 4px 0 #1E1E22;
+}
+/* 파미컴·NES 는 계기판이 검정 LED */
+body[data-skin="famicom"] .hd, body[data-skin="nes"] .hd{ background:var(--shell) }
+body[data-skin="famicom"] .stats, body[data-skin="nes"] .stats{
+  flex-wrap:wrap; background:#15120F; border:3px solid #2B2622; border-radius:8px;
+  box-shadow:inset 0 0 0 2px #000, 0 3px 0 #000, inset 0 10px 24px rgba(0,0,0,.6)}
+body[data-skin="famicom"] .stats::before, body[data-skin="nes"] .stats::before{
+  content:"MODHAUS \00B7 CASTING \00B7 POWER \25A0"; flex:1 0 100%; order:-1; margin:4px 6px 0;
+  padding:1px 6px; font-family:"Silkscreen",monospace; font-size:6.5px; letter-spacing:.14em; color:#15120F;
+  background:linear-gradient(90deg,#E8382A,#B6261B); border-radius:2px; text-align:right}
+body[data-skin="famicom"] .stat, body[data-skin="nes"] .stat{border-right:2px solid #2B2622; padding:6px 4px 8px}
+body[data-skin="famicom"] .stat b, body[data-skin="nes"] .stat b{
+  color:#FF3B2C; text-shadow:0 0 7px rgba(255,59,44,.75); font-size:16px}
+body[data-skin="famicom"] .stat span, body[data-skin="nes"] .stat span{
+  color:#FF3B2C; opacity:.55; font-family:"Silkscreen",monospace; font-size:7px; letter-spacing:.06em}
+body[data-skin="famicom"] .stat.tap::after, body[data-skin="nes"] .stat.tap::after{color:#6B322C}
+body[data-skin="famicom"] .stat.lv .tsp svg, body[data-skin="nes"] .stat.lv .tsp svg{
+  fill:#FF3B2C; filter:drop-shadow(0 0 4px rgba(255,59,44,.7))}
+body[data-skin="famicom"] .stat.lv b, body[data-skin="nes"] .stat.lv b{font-size:11px}
+/* 파미컴은 상단이 와인색 패널 */
+body[data-skin="famicom"] .top{background:linear-gradient(180deg,#7E1F2A,#66161F); margin:0 8px;
+  border-radius:7px 7px 0 0; padding:9px 10px 7px}
+body[data-skin="famicom"] .tools{background:var(--shell); margin:0 8px; padding:9px 8px 11px;
+  border:2px solid var(--kb); border-top:0; border-radius:0 0 7px 7px}
+body[data-skin="famicom"] .top .pill.who{color:#7E1F2A}
+/* 스킨 고르기 */
+.skins{display:flex; gap:8px; flex-wrap:wrap}
+.skinb{border:2px solid var(--kb); border-radius:12px; background:var(--surface); cursor:pointer;
+  padding:7px 9px 8px; font:inherit; display:flex; flex-direction:column; align-items:center; gap:6px;
+  box-shadow:0 2px 0 var(--ks); touch-action:manipulation}
+.skinb[aria-pressed="true"]{box-shadow:0 0 0 3px var(--orange), 0 2px 0 var(--ks)}
+.skinb .sw{display:flex; border:2px solid var(--kb); border-radius:5px; overflow:hidden}
+.skinb .sw i{width:15px; height:20px; display:block}
+.skinb span{font-size:11.5px; font-weight:800; color:var(--kb)}
 </style>
 </head>
 <body>
@@ -952,6 +1002,15 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
       <div class="row-btns" style="display:flex; gap:8px; flex-wrap:wrap">
         <button type="button" class="btn ghost" id="ac-pin">내 PIN 바꾸기</button>
         <button type="button" class="btn ghost" id="ac-out">로그아웃</button>
+      </div>
+      <div id="ac-pushbox" hidden style="margin-top:14px; padding-top:14px; border-top:2px dashed var(--line-2)">
+        <p class="hint" style="margin:0 0 10px">내 카드에 의견이 달리면 이 폰으로 알림이 옵니다.</p>
+        <button type="button" class="btn ghost" id="ac-push">알림 켜기</button>
+        <p class="hint" id="ac-pushmsg" style="margin:10px 0 0"></p>
+      </div>
+      <div style="margin-top:14px; padding-top:14px; border-top:2px dashed var(--line-2)">
+        <p class="hint" style="margin:0 0 10px">앱 스킨 · 이 기기에만 적용됩니다</p>
+        <div class="skins" id="ac-skin"></div>
       </div>
       <div id="ac-admin" hidden style="margin-top:14px; padding-top:14px; border-top:2px dashed var(--line-2)">
         <p class="hint" style="margin:0 0 10px"><b>팀장 전용</b> · 팀원이 PIN 을 잊었을 때 새로 정해주세요.</p>
@@ -1108,8 +1167,8 @@ var LEGACY_STATUS = {"로드":"DM발송"};   /* 예전 기록 표시용 */
 var TONE = {"DM발송":"warn","회신":"warn","1차":"accent","2차":"accent","최종":"accent","최종합격":"ok","보류":"off","거절":"off"};
 var LIVE = {"DM발송":1,"회신":1,"1차":1,"2차":1,"최종":1};
 var SCORES = ["-","1","2","3","4","5"];
-var SORTS  = ["진행순","점수순","최신순","이름순"];
-var SORTS_R = ["진행순","최신순","오래된순","이름순"];
+var SORTS  = ["진행순","점수순","최근 등록순","이름순"];
+var SORTS_R = ["진행순","최근 등록순","오래된 등록순","이름순"];
 /* 진행순: 많이 진행된 후보부터 → 대기 → 끝난 것. (배고픈 알은 순서에 영향 없음, 표시만) */
 function rankOf(r){
   var st=r.status;
@@ -1134,13 +1193,20 @@ function dateLabel(d){
 function dateShort(d){ d=String(d||""); if(!d) return "—";
   if(d===today()) return "오늘"; var p=d.split("-"); return p.length===3?(+p[1])+"/"+(+p[2]):d; }
 
+/* 앱에 '등록한 시각'. 예전에 본 사람이라도 오늘 넣으면 오늘 것으로 봅니다. */
+function regAt(r){
+  var c=Number(r&&r.createdAt)||0; if(c) return c;
+  var p=String(r&&r.date||"").split("-");                 /* 옛날 기록은 일시로 대신 */
+  return p.length===3?new Date(+p[0],+p[1]-1,+p[2]).getTime():0;
+}
+function regDate(r){ var t=regAt(r); if(!t) return ""; var d=new Date(t); return toISO(d); }
 function cmpRoad(a,b){
   if(a.id===focusId) return -1; if(b.id===focusId) return 1;
   var m=fR.sort||"진행순";
   if(m==="진행순"){ var d=rankOf(a)-rankOf(b); if(d) return d; return statusAtOf(b)-statusAtOf(a); }
-  if(m==="오래된순") return (a.date||"").localeCompare(b.date||"")||(a.createdAt||0)-(b.createdAt||0);
+  if(m==="오래된 등록순") return regAt(a)-regAt(b);
   if(m==="이름순"){ var c=String(nameOf(a)||"힣").localeCompare(String(nameOf(b)||"힣")); if(c) return c; }
-  return (b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0);
+  return regAt(b)-regAt(a);                               /* 최근 등록순 */
 }
 var GENDERS = ["여","남"];
 var POSITIONS = ["보컬","댄스","랩","비주얼","연기","올라운드"];
@@ -1152,6 +1218,18 @@ var STALE_DAYS=7;
 /* ===== 설정 — 이 두 줄만 회사 것에 맞추면 됩니다 ===== */
 var API = "https://script.google.com/macros/s/AKfycbxYMA-AhEg1UUsHrqSkVygcjMIgPlKsavJHJOeJuEO9CFJHkA9ucUUarn6kWvuTBEB1YQ/exec";
 var TEAM_KEY = "modhaus-nd";
+
+/* ═══ 폰 알림 설정 ═══════════════════════════════════════
+   Firebase 콘솔에서 복사한 값을 따옴표 사이에만 넣으세요.
+   하나라도 비어 있으면 알림 기능은 그냥 숨겨집니다.        */
+var PUSH = {
+  apiKey  : "AIzaSyBoo4WBmmLCR4act4PVaJVVp0jYLBl3bsc",
+  projectId: "modhauscasting-6ffd7",
+  senderId: "415782452395",
+  appId   : "1:415782452395:web:280a54e772fae715eecbee",
+  vapidKey: "BKO2j0D4Y38JUxHId2xYlmJ6q_FshL7j9mNzfYtd9DSAlTE6q-bR1JegU6oVnc6Mi5NuHlpBeJL4U62vvxKFpRs"
+};
+function pushReady(){ return !!(PUSH.apiKey&&PUSH.projectId&&PUSH.senderId&&PUSH.appId&&PUSH.vapidKey); }
 var TK = store("tk")||"", ME = store("nm")||"";   /* 로그인 열쇠 · 로그인한 사람 */
 var ADMIN = store("adm")==="1";                   /* 팀장이면 성과표까지 보입니다 */
 var VIEW  = store("vw")==="1";                    /* 대표님·이사님 열람 모드 (읽기 전용) */
@@ -2566,18 +2644,19 @@ function renderRoad(){
     return;
   }
   if(shownR>PAGE&&shownR>view.length) shownR=Math.max(PAGE,view.length);
-  var byDate=(!Q)&&((fR.sort||"진행순")==="최신순"||(fR.sort||"")==="오래된순"), lastD=null;
+  var sm=fR.sort||"진행순";
+  var byDate=(!Q)&&(sm==="최근 등록순"||sm==="오래된 등록순"), lastD=null;
   view.slice(0,shownR).forEach(function(r){
     if(byDate){
-      var dd=String(r.date||"");
+      var dd=regDate(r);
       if(dd!==lastD){ lastD=dd;
         var sep=document.createElement("div"); sep.className="dsep"; sep.setAttribute("data-d",dd);
-        sep.innerHTML='<span>'+esc(dateLabel(dd))+'</span>';
+        sep.innerHTML='<span>'+esc(dateLabel(dd))+' 등록</span>';
         host.appendChild(sep);
       }
     }
     var tone=TONE[r.status]||"mute";
-    var it=document.createElement("div"); it.className="item t-"+tone+(r.id===focusId?" focus":""); it.setAttribute("data-id",r.id); it.setAttribute("data-st",r.status||""); it.setAttribute("data-d",String(r.date||""));
+    var it=document.createElement("div"); it.className="item t-"+tone+(r.id===focusId?" focus":""); it.setAttribute("data-id",r.id); it.setAttribute("data-st",r.status||""); it.setAttribute("data-d",regDate(r));
     it.appendChild(thumbOf(r,function(){ openLB(r,false); }));
     var b=document.createElement("div"); b.className="body";
     var nm=nameOf(r), av=scoreAvg(r.id), by=birthLabel(r);
@@ -2634,7 +2713,7 @@ function renderDb(){
       if(D.sort==="진행순"){ var d=rankOf(a)-rankOf(b); if(d) return d; if(sb!==sa) return sb-sa; return statusAtOf(b)-statusAtOf(a); }
       if(D.sort==="점수순"){ if(sb!==sa) return sb-sa; }
       else if(D.sort==="이름순"){ var c=String(a.name||"").localeCompare(String(b.name||"")); if(c) return c; }
-      return (b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0);
+      return regAt(b)-regAt(a);                       /* 개인DB도 등록한 순서 */
     });
   var host=el("d-list"); host.innerHTML="";
   var doo=(searchOpen==="d"||!!Q); el("d-srow").classList.toggle("open",doo); el("d-qhost").classList.toggle("hide",doo);
@@ -2727,7 +2806,7 @@ el("r-date").value=today();
 var meSel=el("me");
 ["전체"].concat(OWNERS).forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=(o==="전체"?"팀 전체":o); meSel.appendChild(op); });
 var who="전체";                     /* 앱을 열 때는 늘 팀 전체부터 봅니다 */
-if(fR) fR.sort="최신순";
+if(fR) fR.sort="최근 등록순";
 var me=ME||store("me")||OWNERS[0];                      /* 등록 기본 담당자·응원 멘트용 */
 function setWho(v){
   who=v; store("who",v); meSel.value=v; meSel.classList.toggle("all",v==="전체");
@@ -2923,7 +3002,7 @@ function lkGo(){
     SFX.play("levelUp",3);
     lockClose(); applyView();
     if(!VIEW){ me=ME; store("me",ME); R.owner=ME; D.owner=ME; }
-    setWho("전체"); fR.sort="최신순"; render(); bindAccount();
+    setWho("전체"); fR.sort="최근 등록순"; render(); bindAccount();
     call("getAll",["fresh"]);
   }).catch(function(e){
     done();
@@ -2947,6 +3026,105 @@ function lkRetry(on){
   }
   b.hidden=false;
 }
+/* ── 폰 알림 ── */
+var pushBusy=false;
+function pushMsg(t){ var n=el("ac-pushmsg"); if(n) n.textContent=t||""; }
+function loadScript(src){
+  return new Promise(function(ok,no){
+    if(document.querySelector('script[src="'+src+'"]')) return ok();
+    var s=document.createElement("script"); s.src=src; s.onload=function(){ ok(); }; s.onerror=function(){ no(new Error("불러오지 못했습니다")); };
+    document.head.appendChild(s);
+  });
+}
+function swQuery(){
+  return "firebase-messaging-sw.js?k="+encodeURIComponent(PUSH.apiKey)+
+         "&p="+encodeURIComponent(PUSH.projectId)+
+         "&s="+encodeURIComponent(PUSH.senderId)+
+         "&a="+encodeURIComponent(PUSH.appId);
+}
+function buildPush(){
+  var box=el("ac-pushbox"); if(!box) return;
+  var can=pushReady()&&("Notification" in window)&&("serviceWorker" in navigator)&&!VIEW;
+  box.hidden=!can;
+  if(!can) return;
+  var on=store("pushtok")&&Notification.permission==="granted";
+  el("ac-push").textContent=on?"알림 끄기":"알림 켜기";
+  pushMsg(on?"이 폰으로 알림을 받고 있습니다."
+           :(Notification.permission==="denied"
+             ?"폰 설정에서 이 앱의 알림이 꺼져 있습니다. 설정 → 알림에서 켜주세요."
+             :""));
+  el("ac-push").onclick=function(){ on?pushOff():pushOn(); };
+}
+function pushOn(){
+  if(pushBusy) return; pushBusy=true; pushMsg("켜는 중…");
+  Notification.requestPermission().then(function(perm){
+    if(perm!=="granted"){ pushBusy=false; pushMsg("알림이 허용되지 않았습니다."); buildPush(); return; }
+    return loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
+      .then(function(){ return loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"); })
+      .then(function(){ return navigator.serviceWorker.register(swQuery()); })
+      .then(function(reg){
+        if(!firebase.apps.length) firebase.initializeApp({
+          apiKey:PUSH.apiKey, projectId:PUSH.projectId,
+          messagingSenderId:PUSH.senderId, appId:PUSH.appId,
+          authDomain:PUSH.projectId+".firebaseapp.com"
+        });
+        return firebase.messaging().getToken({vapidKey:PUSH.vapidKey, serviceWorkerRegistration:reg});
+      })
+      .then(function(tk){
+        if(!tk) throw new Error("기기키를 받지 못했습니다");
+        return apiPost({action:"pushtoken",token:tk,ua:navigator.userAgent}).then(function(res){
+          if(res&&res.error) throw new Error(res.error);
+          store("pushtok",tk); pushBusy=false;
+          SFX.play("save"); toast(2,"ALARM ON","이제 의견이 달리면 알려드립니다");
+          buildPush();
+        });
+      });
+  }).catch(function(e){
+    pushBusy=false; pushMsg("켜지 못했습니다: "+(e&&e.message||"오류")); buildPush();
+  });
+}
+function pushOff(){
+  var tk=store("pushtok")||"";
+  store("pushtok","");
+  if(tk) apiPost({action:"pushoff",token:tk}).catch(function(){});
+  SFX.play("back"); pushMsg("이 폰 알림을 껐습니다."); buildPush();
+}
+/* 앱이 열려 있을 때 온 알림은 화면 위 토스트로 */
+function pushForeground(){
+  if(!pushReady()||!store("pushtok")) return;
+  try{
+    if(window.firebase&&firebase.apps&&firebase.apps.length){
+      firebase.messaging().onMessage(function(p){
+        var n=(p&&p.notification)||{};
+        SFX.play("blip"); toast(2,n.title||"새 의견",n.body||"");
+        if(!busy) call("getAll",["fresh"]);
+      });
+    }
+  }catch(e){}
+}
+
+/* ── 스킨 ── */
+var SKINS=[["","기본",["#F3CBD3","#FFFFFF","#F26A2E"]],
+           ["famicom","파미컴",["#E9E2D2","#7E1F2A","#B3271C"]],
+           ["nes","NES",["#DCDCD8","#43444B","#C4291F"]]];
+function skinNow(){ return store("skin")||""; }
+function applySkin(v){
+  if(v) document.body.setAttribute("data-skin",v); else document.body.removeAttribute("data-skin");
+  store("skin",v||"");
+  var th=document.querySelector('meta[name="theme-color"]');
+  if(th) th.setAttribute("content", v==="famicom"?"#E9E2D2":v==="nes"?"#DCDCD8":"#F3CBD3");
+}
+function buildSkins(){
+  var h=el("ac-skin"); if(!h) return; h.innerHTML="";
+  SKINS.forEach(function(k){
+    var b=document.createElement("button"); b.type="button"; b.className="skinb";
+    b.setAttribute("aria-pressed",String(skinNow()===k[0]));
+    b.innerHTML='<span class="sw">'+k[2].map(function(c){ return '<i style="background:'+c+'"></i>'; }).join("")+'</span><span>'+esc(k[1])+'</span>';
+    b.onclick=function(){ SFX.play("chip"); applySkin(k[0]); buildSkins(); };
+    h.appendChild(b);
+  });
+}
+
 /* 관람(대표님·이사님) 모드: 쓰기 버튼을 전부 감춥니다 */
 function applyView(){
   document.body.classList.toggle("viewing",!!VIEW);
@@ -2958,6 +3136,8 @@ function applyView(){
 /* 내 계정 카드 */
 function bindAccount(){
   el("ac-me").textContent=ME||"(로그인 전)";
+  buildSkins();
+  buildPush();
   el("ac-admin").hidden=!ADMIN;
   if(ADMIN&&!el("ac-tgt").options.length)
     OWNERS.forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=o; el("ac-tgt").appendChild(op); });
@@ -2986,6 +3166,7 @@ function bindAccount(){
     }).catch(function(){ alert("바꾸지 못했습니다."); });
   };
 }
+applySkin(skinNow());
 bindAccount();
 applyView();
 
