@@ -702,6 +702,7 @@ select.status{padding:5px 9px; font-size:12px}
 }
 
 /* ── 펫 토스트 ── */
+.toast.tapable{cursor:pointer}
 .toast{position:fixed; left:50%; bottom:calc(100px + env(safe-area-inset-bottom)); transform:translate(-50%,24px); opacity:0; z-index:95;
   display:flex; align-items:center; gap:12px; background:var(--lcd); border:3px solid #000; border-radius:14px;
   padding:10px 18px 10px 12px; box-shadow:var(--pop-o); pointer-events:none; max-width:min(92vw,440px);
@@ -1357,6 +1358,13 @@ var SFX=(function(){
       mel([["E6",.4],["G6",.4],["C7",.8]],360,"triangle",0.045,0.42);
     },
     /* 레벨 업 — 단계가 올라갈수록 조가 올라감 */
+    /* 새 의견 알림 — 다마고치가 부르는 소리 (삐용삐용 + 통통) */
+    alarm:function(){
+      hit(0,0.05,0.04);
+      mel([["E5",.5],["G5",.5],["E5",.5],["C6",1.0]],320,"square",0.075);
+      mel([["C4",.5],["E4",.5],["C4",.5],["G4",1.0]],320,"triangle",0.05);
+      mel([["G6",.4],["C7",.9]],380,"triangle",0.04,0.55);
+    },
     levelUp:function(stage){
       var tr=Math.max(0,(stage||1)-1)*2;
       hit(0,0.06,0.05);
@@ -1756,11 +1764,22 @@ function celebrate(rec,key){
   else SFX.play("add");
   toast(c.stage,c.head,c.text);
 }
-function toast(stage,head,text){
+function toast(stage,head,text,onTap){
   var t=el("toast"); el("toast-sp").innerHTML=sprite(stage);
   el("toast-h").textContent=head; el("toast-t").textContent=text||"";
+  t.classList.toggle("tapable",!!onTap);
+  t.onclick=onTap?function(){ t.classList.remove("show"); onTap(); }:null;
   t.classList.add("show"); clearTimeout(toastT);
-  toastT=setTimeout(function(){ t.classList.remove("show"); }, stage===5?3600:3000);
+  toastT=setTimeout(function(){ t.classList.remove("show"); }, onTap?6000:(stage===5?3600:3000));
+}
+/* id 로 그 후보 카드 열기 (알림에서 들어올 때) */
+function openById(id){
+  id=String(id||""); if(!id) return;
+  var r=null,isDb=false;
+  (S.road||[]).forEach(function(x){ if(x.id===id) r=x; });
+  if(!r) (S.db||[]).forEach(function(x){ if(x.id===id){ r=x; isDb=true; } });
+  if(!r){ focusId=id; call("getAll",["fresh"]); return; }
+  setTab(isDb?"db":"road"); openLB(r,isDb);
 }
 var ICONS={
   cal:[".########.",".#.#.#.#.#","##########","#........#","#.##.##..#","#........#","#.##.##..#","#........#","#.##.....#","##########"],
@@ -3165,8 +3184,9 @@ function pushForeground(){
   try{
     if(window.firebase&&firebase.apps&&firebase.apps.length){
       firebase.messaging().onMessage(function(p){
-        var n=(p&&p.notification)||{};
-        SFX.play("blip"); toast(2,n.title||"새 의견",n.body||"");
+        var n=(p&&p.notification)||{}, d=(p&&p.data)||{};
+        SFX.play("alarm");
+        toast(2,n.title||"새 의견",n.body||"", d.id?function(){ openById(d.id); }:null);
         if(!busy) call("getAll",["fresh"]);
       });
     }
@@ -3242,7 +3262,21 @@ applyView();
 
 tab="road";                          /* 첫 화면은 항상 로드 목록 */
 render();
-(function(){ try{ var id=new URLSearchParams(location.search).get("id"); if(id) focusId=String(id); }catch(e){} })();
+var fromAlarm=false;
+(function(){ try{
+  var q=new URLSearchParams(location.search), id=q.get("id");
+  if(id){ focusId=String(id); fromAlarm=true; }
+}catch(e){} })();
+/* 알림 눌러서 열린 거면 다마고치 소리로 맞이합니다.
+   (아이폰은 화면을 만지기 전엔 소리를 막아서, 첫 터치 때 울리기도 합니다) */
+function alarmChime(){
+  if(!fromAlarm) return; fromAlarm=false;
+  try{ SFX.play("alarm"); }catch(e){}
+}
+setTimeout(alarmChime,600);
+document.addEventListener("pointerdown",function once(){
+  document.removeEventListener("pointerdown",once); setTimeout(alarmChime,60);
+},{passive:true,once:true});
 
 /* 1) 기기에 저장된 것부터 바로 보여주고 → 2) 서버에서 최신으로 */
 Promise.all([IDB.get("thumbs"),IDB.get("snap")]).then(function(v){

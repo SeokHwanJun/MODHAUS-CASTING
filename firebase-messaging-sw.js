@@ -21,7 +21,9 @@ if (cfg.apiKey && cfg.projectId) {
       body: n.body || '',
       icon: 'icon-192.png',
       badge: 'icon-192.png',
-      data: { url: (payload.fcmOptions && payload.fcmOptions.link) || './' }
+      tag: 'cast-' + ((payload.data && payload.data.id) || 'x'),
+      renotify: true,
+      data: { url: (payload.data && payload.data.url) || (payload.fcmOptions && payload.fcmOptions.link) || './' }
     });
   });
 }
