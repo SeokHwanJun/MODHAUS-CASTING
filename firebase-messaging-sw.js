@@ -15,18 +15,21 @@ var cfg = {
 if (cfg.apiKey && cfg.projectId) {
   firebase.initializeApp(cfg);
   var messaging = firebase.messaging();
+  /* 서버는 data 만 보냅니다. 알림을 띄우는 건 오직 여기 한 곳뿐입니다.
+     (notification 을 같이 보내면 파이어베이스가 자기도 띄워서 두 개가 됩니다) */
   messaging.onBackgroundMessage(function (payload) {
-    var n = (payload && payload.notification) || {};
-    self.registration.showNotification(n.title || '신개팀 캐스팅', {
-      body: n.body || '',
+    var d = (payload && payload.data) || {};
+    var n = (payload && payload.notification) || {};   /* 옛 방식으로 온 알림도 처리 */
+    self.registration.showNotification(d.title || n.title || '신개팀 캐스팅', {
+      body: d.body || n.body || '',
       icon: 'icon-192.png',
       badge: 'icon-192.png',
       /* 이름표를 매번 다르게 — 같으면 아이폰이 소리 없이 바꿔치기만 합니다 */
-      tag: 'cast-' + ((payload.data && payload.data.id) || 'x') + '-' + Date.now(),
+      tag: d.tag || ('cast-' + (d.id || 'x') + '-' + Date.now()),
       renotify: true,
       data: {
-        id: (payload.data && payload.data.id) || '',
-        url: (payload.data && payload.data.url) || (payload.fcmOptions && payload.fcmOptions.link) || './'
+        id: d.id || '',
+        url: d.url || (payload.fcmOptions && payload.fcmOptions.link) || './'
       }
     });
   });

@@ -3125,6 +3125,17 @@ function buildPush(){
              :""));
   el("ac-push").onclick=function(){ on?pushOff():pushOn(); };
 }
+/* 알림을 아직 안 켠 사람에게 딱 한 번 물어봅니다. 거절하면 다시 안 묻습니다. */
+function askPush(){
+  if(!pushReady()||VIEW||!TK) return;
+  if(!("Notification" in window)||!("serviceWorker" in navigator)) return;
+  if(Notification.permission!=="default") return;      /* 이미 허용했거나 거부한 사람은 건너뜀 */
+  if(store("pushtok")||store("pushask")) return;
+  store("pushask","1");
+  setTimeout(function(){
+    toast(2,"ALARM","내 후보에 의견이 달리면 알려드릴까요? 누르면 켜집니다",function(){ pushOn(); });
+  },2200);
+}
 function pushOn(){
   if(pushBusy) return; pushBusy=true; pushMsg("켜는 중…");
   Notification.requestPermission().then(function(perm){
@@ -3204,7 +3215,7 @@ function pushForeground(){
       firebase.messaging().onMessage(function(p){
         var n=(p&&p.notification)||{}, d=(p&&p.data)||{};
         SFX.play("alarm");
-        toast(2,n.title||"새 의견",n.body||"", d.id?function(){ openById(d.id); }:null);
+        toast(2,d.title||n.title||"새 의견",d.body||n.body||"", d.id?function(){ openById(d.id); }:null);
         if(!busy) call("getAll",["fresh"]);
       });
     }
@@ -3309,7 +3320,7 @@ document.addEventListener("pointerdown",function once(){
 Promise.all([IDB.get("thumbs"),IDB.get("snap")]).then(function(v){
   if(v[0]&&typeof v[0]==="object") THUMBS=v[0];
   if(v[1]&&v[1].road){ S={road:v[1].road,db:v[1].db||[],cm:v[1].cm||[]}; absorbPhotos(); tryFocus(); render(); scrollFocus(); }
-}).catch(function(){}).then(function(){ if(navigator.onLine){ call("getAll",[]); setTimeout(pushSync,2500); } else pullThumbs(); });
+}).catch(function(){}).then(function(){ if(navigator.onLine){ call("getAll",[]); setTimeout(pushSync,2500); setTimeout(askPush,3000); } else pullThumbs(); });
 if(!TK) lockOpen(); else lockClose();
 var lastScroll=0; window.addEventListener("scroll",function(){ lastScroll=Date.now(); },{passive:true});
 /* 가만히 두면 점점 뜸하게 확인합니다 (1분 → 최대 8분). 만지면 다시 1분으로 */
