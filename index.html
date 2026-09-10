@@ -3189,9 +3189,8 @@ function pushSync(force){
       if(!tk2) return;
       store("pushchk",String(Date.now()));
       if(tk2===tk) return apiPost({action:"pushtoken",token:tk2,ua:navigator.userAgent}).catch(function(){});
-      /* 바뀌었으면 옛날 것은 지우고 새 것으로 */
-      if(tk) apiPost({action:"pushoff",token:tk}).catch(function(){});
-      return apiPost({action:"pushtoken",token:tk2,ua:navigator.userAgent}).then(function(res){
+      /* 바뀌었으면 옛날 것은 같이 알려서 지우게 합니다 */
+      return apiPost({action:"pushtoken",token:tk2,old:tk||"",ua:navigator.userAgent}).then(function(res){
         if(!(res&&res.error)){ store("pushtok",tk2); buildPush(); }
       });
     }).catch(function(){});

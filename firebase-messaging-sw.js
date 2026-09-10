@@ -21,7 +21,8 @@ if (cfg.apiKey && cfg.projectId) {
       body: n.body || '',
       icon: 'icon-192.png',
       badge: 'icon-192.png',
-      tag: 'cast-' + ((payload.data && payload.data.id) || 'x'),
+      /* 이름표를 매번 다르게 — 같으면 아이폰이 소리 없이 바꿔치기만 합니다 */
+      tag: 'cast-' + ((payload.data && payload.data.id) || 'x') + '-' + Date.now(),
       renotify: true,
       data: {
         id: (payload.data && payload.data.id) || '',
