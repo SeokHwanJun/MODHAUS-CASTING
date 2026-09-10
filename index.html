@@ -320,6 +320,40 @@ select.status.t-ok{background:var(--mint); color:#000}
   background:var(--surface); border:2px solid var(--edge); border-radius:18px; padding:13px; overflow:auto; box-shadow:var(--pop)}
 .lb-box img{max-width:100%; max-height:60vh; object-fit:contain; border-radius:12px;
   display:block; margin:0 auto; background:var(--surface-3)}
+/* 다마고치 액정 프레임 */
+.tama{--lcd-bg:#C9D0B6; --lcd-ink:#2A2D21;
+  align-self:center; max-width:100%; padding:10px; border-radius:14px;
+  background:linear-gradient(180deg,#DDE2CE,#C2C9AC); border:3px solid var(--lcd-ink);
+  box-shadow:0 4px 0 rgba(42,45,33,.35), 0 7px 0 var(--lcd-ink), inset 0 2px 0 rgba(255,255,255,.5)}
+/* 위쪽 상태바 줄 */
+.tama-st{display:flex; border:2px solid var(--lcd-ink); border-radius:7px; overflow:hidden;
+  background:var(--lcd-bg); margin-bottom:9px}
+.tama-st .ts{flex:1; min-width:0; padding:5px 4px 6px; text-align:center; border-right:2px solid var(--lcd-ink)}
+.tama-st .ts:last-child{border-right:0}
+.tama-st b{display:block; font-family:"Silkscreen",monospace; font-size:8px; font-weight:400;
+  letter-spacing:.08em; color:var(--lcd-ink); white-space:nowrap}
+.tama-st .v{display:block; margin-top:3px; font-family:"Silkscreen",monospace; font-size:12px;
+  color:var(--lcd-ink); line-height:1}
+.tama-st .mtr{display:block; margin-top:5px; height:8px; border:2px solid var(--lcd-ink); border-radius:999px;
+  background:transparent; overflow:hidden}
+.tama-st .mtr i{display:block; height:100%; background:var(--lcd-ink)}
+/* 액정 */
+.tama-lcd{position:relative; border:2px solid var(--lcd-ink); border-radius:8px; overflow:hidden;
+  background-color:var(--lcd-bg); line-height:0;
+  background-image:linear-gradient(rgba(42,45,33,.10) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(42,45,33,.10) 1px,transparent 1px);
+  background-size:9px 9px; box-shadow:inset 0 2px 8px rgba(42,45,33,.25)}
+.tama-lcd img{display:block; margin:0 auto; max-width:100%; max-height:54vh; object-fit:contain;
+  border-radius:0; background:transparent}
+/* 아래 이름판 */
+.tama-nm{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:9px;
+  border:2px solid var(--lcd-ink); border-radius:7px; background:var(--lcd-bg); padding:5px 10px}
+.tama-nm b{font-size:14.5px; color:var(--lcd-ink); letter-spacing:-.02em}
+.tama-nm span{font-family:"Silkscreen",monospace; font-size:9px; color:var(--lcd-bg);
+  background:var(--lcd-ink); border-radius:999px; padding:3px 8px}
+@media (max-width:420px){
+  .tama{padding:8px} .tama-st b{font-size:7px} .tama-st .v{font-size:11px}
+}
 .lb-load{padding:56px 20px; text-align:center; color:var(--ink-3); font-size:13px}
 .lb-x{position:fixed; top:16px; right:18px; width:40px; height:40px; border-radius:50%;
   border:2px solid #000; background:#fff; color:#000; font-size:21px; cursor:pointer; box-shadow:var(--pop-o-sm)}
@@ -479,6 +513,23 @@ main{padding-top:10px}
 .fcard .row-btns .btn{width:auto; flex:1}
 .fcard .two{gap:0 10px}
 
+/* 목록 날짜 구분선 */
+.dsep{display:flex; align-items:center; gap:8px; margin:14px 2px 8px}
+.dsep:first-child{margin-top:2px}
+.dsep span{font-family:"Silkscreen",monospace; font-size:9.5px; letter-spacing:.06em; color:var(--kb);
+  background:var(--surface); border:2px solid var(--kb); border-radius:999px; padding:3px 10px;
+  box-shadow:0 2px 0 var(--ks); white-space:nowrap}
+.dsep::after{content:""; flex:1; height:2px; background:repeating-linear-gradient(90deg,var(--kb) 0 4px,transparent 4px 8px); opacity:.35}
+
+/* 스크롤할 때 옆에 붙는 날짜 */
+.pxdate{position:fixed; right:20px; z-index:44; opacity:0; pointer-events:none;
+  transition:opacity .28s ease; display:flex; flex-direction:column; align-items:center; gap:1px;
+  background:rgba(58,42,51,.5); color:#fff; border-radius:5px; padding:5px 4px;
+  -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
+  font-family:"Silkscreen",monospace; font-size:9.5px; line-height:1.15}
+.pxdate.on{opacity:.85}
+.pxdate b{font-weight:400; font-size:10px}
+
 /* 8비트 스크롤 막대 (오른쪽) */
 html{scrollbar-width:none}
 body::-webkit-scrollbar{width:0; height:0}
@@ -571,6 +622,12 @@ tr.tap:active td{background:var(--surface-2)}
 .pinlock .pad button.fn{font-family:inherit; font-size:13px; font-weight:700; background:var(--surface-2)}
 .pinlock .pad button.blank{border:0; background:none; box-shadow:none; pointer-events:none}
 .lockerr{margin:16px 0 0; font-size:13px; font-weight:700; color:#C0392B}
+.lockswap{margin:20px auto 0; display:block; border:0; background:none; font:inherit; font-size:12.5px;
+  font-weight:700; color:#6B4B58; text-decoration:underline; text-underline-offset:3px; cursor:pointer; padding:6px}
+.pinlock.view .lockwho{display:none}
+.viewtag{display:inline-block; background:var(--kb); color:#fff; border-radius:5px; padding:2px 7px;
+  font-size:10px; font-weight:700; margin-left:6px; vertical-align:middle}
+body.viewing .item .side select.status{pointer-events:none}
 .pinlock.busy .pad{opacity:.45; pointer-events:none}
 
 /* 필터 바 */
@@ -801,6 +858,7 @@ select.status[data-st="거절"]{background:var(--c-rej); color:#fff}
   <div><b id="install-h">홈 화면에 추가하면 앱처럼 열립니다</b><span id="install-t">공유 버튼 → 「홈 화면에 추가」</span></div>
   <div class="sp"></div><button class="mini" id="install-go" type="button" hidden>설치</button><button class="del" id="install-x" type="button">&times;</button></div>
 <div class="offline" id="offline">OFFLINE</div>
+<div class="pxdate" id="pxdate" aria-hidden="true"></div>
 <div class="pxbar" id="pxbar" aria-hidden="true"><i id="pxthumb"></i></div>
 <div class="ptr" id="ptr"><span class="spark"></span><div class="tsp" id="ptr-sp"></div><span id="ptr-t">당겨서 새로고침</span></div>
 
@@ -813,6 +871,7 @@ select.status[data-st="거절"]{background:var(--c-rej); color:#fff}
     <div class="dots" id="lock-dots"><i></i><i></i><i></i><i></i></div>
     <div class="pad" id="lock-pad"></div>
     <p class="lockerr" id="lock-err" hidden></p>
+    <button type="button" class="lockswap" id="lock-swap">외부 열람 코드로 보기</button>
   </div>
 </div>
 <script>/* 로그인되어 있으면 화면이 그려지기 전에 바로 걷어냅니다 (내용이 잠깐 보이던 문제) */
@@ -1060,6 +1119,21 @@ function rankOf(r){
   if(st==="보류") return 6; if(st==="거절") return 7;
   return 4;
 }
+var WD=["일","월","화","수","목","금","토"];
+function dateLabel(d){
+  d=String(d||""); if(!d) return "날짜 없음";
+  var t=today();
+  if(d===t) return "오늘";
+  var y=new Date(); y.setDate(y.getDate()-1);
+  if(d===toISO(y)) return "어제";
+  var p=d.split("-"); if(p.length!==3) return d;
+  var dt=new Date(+p[0],+p[1]-1,+p[2]);
+  var thisYear=(+p[0])===(new Date()).getFullYear();
+  return (thisYear?"":p[0].slice(2)+"년 ")+(+p[1])+"월 "+(+p[2])+"일 ("+WD[dt.getDay()]+")";
+}
+function dateShort(d){ d=String(d||""); if(!d) return "—";
+  if(d===today()) return "오늘"; var p=d.split("-"); return p.length===3?(+p[1])+"/"+(+p[2]):d; }
+
 function cmpRoad(a,b){
   if(a.id===focusId) return -1; if(b.id===focusId) return 1;
   var m=fR.sort||"진행순";
@@ -1080,7 +1154,9 @@ var API = "https://script.google.com/macros/s/AKfycbxYMA-AhEg1UUsHrqSkVygcjMIgPl
 var TEAM_KEY = "modhaus-nd";
 var TK = store("tk")||"", ME = store("nm")||"";   /* 로그인 열쇠 · 로그인한 사람 */
 var ADMIN = store("adm")==="1";                   /* 팀장이면 성과표까지 보입니다 */
-function isAdmin(){ return ADMIN; }          /* Code.gs 의 TEAM_KEY 와 같아야 합니다 */
+var VIEW  = store("vw")==="1";                    /* 대표님·이사님 열람 모드 (읽기 전용) */
+function isAdmin(){ return ADMIN&&!VIEW; }
+function isView(){ return VIEW; }          /* Code.gs 의 TEAM_KEY 와 같아야 합니다 */
 var APP_URL = location.origin + location.pathname;
 var editing = null, focusId = "", focusDone = false;
 
@@ -2188,6 +2264,7 @@ function refreshLB(){ if(!lbRec) return; var id=lbRec.id, list=lbIsDb?S.db:S.roa
   list.forEach(function(x){ if(x.id===id) r=x; }); if(r){ var y=lbBox.scrollTop; openLB(r,lbIsDb,true); setTimeout(function(){ lbBox.scrollTop=y; },30); } else closeLB(); }
 var cmEdit=null;   /* 지금 고치고 있는 의견 id */
 function commentBlock(r,key){
+  var __view=VIEW;
   var wrap=document.createElement("div"); wrap.className="cmts";
   var list=cmOf(r.id), av=scoreAvg(r.id);
   var h='<div class="cmh"><b>팀 의견</b>'+(av?'<span class="cmavg">'+stars(Math.round(av.avg))+' <i>'+av.avg+'</i> · '+av.n+'명</span>':'<span class="cmavg dim">아직 의견 없음</span>')+'</div>';
@@ -2195,11 +2272,12 @@ function commentBlock(r,key){
     var d=new Date(Number(c.createdAt)||0), when=(d.getMonth()+1)+"/"+d.getDate();
     h+='<div class="cm'+(c.id===cmEdit?" editing":"")+'" data-id="'+esc(c.id)+'">'+
        '<div class="cma"><b>'+esc(c.author)+'</b>'+(c.score?'<span class="cms">'+stars(parseInt(c.score,10))+'</span>':'')+'<span class="cmd">'+when+'</span>'+
-       (String(c.id).indexOf("tmp")===0?'<span class="cmb wait">저장 중…</span>':
+       (__view?'':(String(c.id).indexOf("tmp")===0?'<span class="cmb wait">저장 중…</span>':
         '<button type="button" class="cmb" data-act="edit" data-id="'+esc(c.id)+'">수정</button>'+
-        '<button type="button" class="cmb del" data-act="del" data-id="'+esc(c.id)+'">삭제</button>')+'</div>'+
+        '<button type="button" class="cmb del" data-act="del" data-id="'+esc(c.id)+'">삭제</button>'))+'</div>'+
        (c.text?'<div class="cmt">'+esc(c.text)+'</div>':'')+'</div>';
   });
+  if(__view){ wrap.innerHTML=h+'<p class="hint" style="margin:10px 0 0">열람 전용이라 의견은 남길 수 없습니다.</p>'; return wrap; }
   var cur=null; list.forEach(function(c){ if(c.id===cmEdit) cur=c; });
   var author=cur?cur.author:(store("me")||OWNERS[0]);
   var pick=cur?(parseInt(cur.score,10)||0):0;
@@ -2257,7 +2335,28 @@ function openLB(r,isDb,keep){
   if(!keep) lbBox.innerHTML='<div class="lb-load">사진을 불러오는 중…</div>';
   function show(src){
     lbBox.innerHTML="";
-    var i=document.createElement("img"); i.src=src||""; i.alt=""; lbBox.appendChild(i);
+    var fr=document.createElement("div"); fr.className="tama";
+
+    /* 위쪽 상태바 — 다마고치 HUNGER/HAPPY 자리에 우리 정보를 넣습니다 */
+    var by=birthLabel(r), ht=String(r.height||"").replace(/[^\d.]/g,"");
+    var si=STATUSES.indexOf(r.status), stg=(si>=0&&si<=5)?(si+1):0;   /* DM발송~최종합격 = 1~6 */
+    var avg=scoreAvg(r.id), sc=avg?avg.avg:(parseInt(r.score,10)||0);
+    var cells=[];
+    cells.push('<div class="ts"><b>BIRTH</b><span class="v">'+esc(by?by.replace("년생",""):"--")+'</span></div>');
+    cells.push('<div class="ts"><b>HEIGHT</b><span class="v">'+esc(ht||"--")+'</span></div>');
+    cells.push('<div class="ts"><b>STAGE</b><span class="mtr"><i style="width:'+Math.round(stg/6*100)+'%"></i></span></div>');
+    cells.push('<div class="ts"><b>SCORE</b><span class="mtr"><i style="width:'+Math.round((sc||0)/5*100)+'%"></i></span></div>');
+    var st=document.createElement("div"); st.className="tama-st"; st.innerHTML=cells.join("");
+    fr.appendChild(st);
+
+    var win=document.createElement("div"); win.className="tama-lcd";
+    var i=document.createElement("img"); i.src=src||""; i.alt="";
+    win.appendChild(i); fr.appendChild(win);
+
+    var pl=document.createElement("div"); pl.className="tama-nm";
+    pl.innerHTML='<b>'+(nameOf(r)?esc(nameOf(r)):"이름 미입력")+'</b><span>'+esc(r.status||"")+'</span>';
+    fr.appendChild(pl);
+    lbBox.appendChild(fr);
     var sc=parseInt(r.score,10)||0;
     var m=document.createElement("div");
     m.innerHTML='<div class="line1">'+(sc?'<span class="score '+sTone(sc)+'">'+sc+'</span>':'')+
@@ -2279,6 +2378,13 @@ function openLB(r,isDb,keep){
       (r.contact?'<div class="sub2">'+contactHtml(r.contact,r.platform)+'</div>':'');
     var key=isDb?"db":"road", nm=nameOf(r)||r.name||"";
     var act=document.createElement("div"); act.className="lb-act";
+    if(VIEW){
+      act.innerHTML='<span class="viewtag">열람 전용</span>';
+      act.appendChild(miniBtn("링크",function(b){ copyLink(r.id,b); }));
+      lbBox.appendChild(act); lbBox.appendChild(m);
+      lbBox.appendChild(commentBlock(r,key));
+      return;
+    }
     act.appendChild(statusSelect(key,r));
     act.appendChild(miniBtn("수정",function(){ startEdit(key,r); }));
     act.appendChild(miniBtn("링크",function(b){ copyLink(r.id,b); }));
@@ -2353,10 +2459,14 @@ function pix(rows){ var o=""; for(var y=0;y<rows.length;y++) for(var x=0;x<rows[
 var NAVL={road:"로드",db:"개인DB",league:"성과",dex:"도감"};
 function buildNav(){
   var n=el("nav"); n.innerHTML="";
-  [TABS[0],TABS[1],null,TABS[2],TABS[3]].forEach(function(t){
+  var TB=VIEW?[TABS[0],TABS[1],null,null,TABS[3]]:[TABS[0],TABS[1],null,TABS[2],TABS[3]];
+  TB.forEach(function(t){
     var b=document.createElement("button"); b.type="button";
-    if(!t){ b.className="plus"; b.innerHTML='<span class="ic">'+pix(PIX.plus)+'</span><span class="l">등록</span>';
-      b.onclick=function(){ SFX.play("blip"); openForm(tab==="db"?"d":"r"); }; n.appendChild(b); return; }
+    if(!t){ if(VIEW&&n.children.length>=2&&n.children.length<4){ return; }
+      b.className="plus"; b.innerHTML='<span class="ic">'+pix(PIX.plus)+'</span><span class="l">등록</span>';
+      b.onclick=function(){ SFX.play("blip"); openForm(tab==="db"?"d":"r"); };
+      if(VIEW) b.hidden=true;
+      n.appendChild(b); return; }
     var cnt=(t[0]==="road"||t[0]==="db")?(S[t[0]]||[]).length:(t[0]==="league"?(teamWeek()+"/"+teamGoal()):dexList().length);
     b.setAttribute("aria-selected",String(tab===t[0]));
     b.innerHTML='<span class="ic">'+pix(PIX[t[0]])+'<i class="cnt">'+cnt+'</i></span><span class="l">'+NAVL[t[0]]+'</span>';
@@ -2377,7 +2487,7 @@ function anySheetOpen(){ return ["sheet-r","sheet-d","sheet-f"].some(function(i)
 function buildTabs(){
   buildNav();
   var n=el("tabs"); n.innerHTML="";
-  TABS.forEach(function(t){
+  (VIEW?TABS.filter(function(t){return t[0]!=="league";}):TABS).forEach(function(t){
     var b=document.createElement("button");
     b.type="button"; b.setAttribute("role","tab");
     b.setAttribute("aria-selected",String(tab===t[0]));
@@ -2442,9 +2552,18 @@ function renderRoad(){
     return;
   }
   if(shownR>PAGE&&shownR>view.length) shownR=Math.max(PAGE,view.length);
+  var byDate=(!Q)&&((fR.sort||"진행순")==="최신순"||(fR.sort||"")==="오래된순"), lastD=null;
   view.slice(0,shownR).forEach(function(r){
+    if(byDate){
+      var dd=String(r.date||"");
+      if(dd!==lastD){ lastD=dd;
+        var sep=document.createElement("div"); sep.className="dsep"; sep.setAttribute("data-d",dd);
+        sep.innerHTML='<span>'+esc(dateLabel(dd))+'</span>';
+        host.appendChild(sep);
+      }
+    }
     var tone=TONE[r.status]||"mute";
-    var it=document.createElement("div"); it.className="item t-"+tone+(r.id===focusId?" focus":""); it.setAttribute("data-id",r.id); it.setAttribute("data-st",r.status||"");
+    var it=document.createElement("div"); it.className="item t-"+tone+(r.id===focusId?" focus":""); it.setAttribute("data-id",r.id); it.setAttribute("data-st",r.status||""); it.setAttribute("data-d",String(r.date||""));
     it.appendChild(thumbOf(r,function(){ openLB(r,false); }));
     var b=document.createElement("div"); b.className="body";
     var nm=nameOf(r), av=scoreAvg(r.id), by=birthLabel(r);
@@ -2472,6 +2591,7 @@ function renderRoad(){
     host.appendChild(it);
   });
   more(host,view.length,shownR,function(){ shownR+=PAGE; renderRoad(); });
+  markDates();
 }
 /* 남은 건이 있으면 아래에 '더 보기' — 스크롤이 닿으면 저절로 열립니다 */
 function more(host,total,shown,onMore){
@@ -2592,9 +2712,9 @@ el("r-date").value=today();
 /* 위쪽 이름 = 메인 컨트롤. 고르면 아래 목록·LV·등록 기본값이 전부 그 사람 기준으로 바뀝니다. '팀 전체'는 모두 보기. */
 var meSel=el("me");
 ["전체"].concat(OWNERS).forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=(o==="전체"?"팀 전체":o); meSel.appendChild(op); });
-var who=store("who")||ME||OWNERS[0];
-if(who!=="전체"&&OWNERS.indexOf(who)<0) who=OWNERS[0];
-var me=(who==="전체")?(store("me")||OWNERS[0]):who;     /* 등록 기본 담당자·응원 멘트용 */
+var who="전체";                     /* 앱을 열 때는 늘 팀 전체부터 봅니다 */
+if(fR) fR.sort="최신순";
+var me=ME||store("me")||OWNERS[0];                      /* 등록 기본 담당자·응원 멘트용 */
 function setWho(v){
   who=v; store("who",v); meSel.value=v; meSel.classList.toggle("all",v==="전체");
   if(v!=="전체"){ me=v; store("me",v); R.owner=v; D.owner=v; }
@@ -2716,14 +2836,16 @@ function hintQuick(){
 document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible") hintQuick(); });
 
 /* ── PIN 잠금화면 ─────────────────────────────────────── */
-var lkName=ME||"", lkPin="", lkBusy=false;
+var lkName=ME||"", lkPin="", lkBusy=false, lkView=false;
+function lkLen(){ return lkView?6:4; }
 function lockOpen(msg){
   var L=el("lock"); if(!L) return;
   lkPin=""; lkBusy=false; L.classList.remove("busy");
-  el("lock-msg").textContent=msg||"이름을 고르고 PIN 4자리를 눌러주세요";
+  el("lock-msg").textContent=msg||lkHint();
   el("lock-err").hidden=true;
   el("lock-sp").innerHTML=sprite(0);
-  lkWho(); lkDots(); lkPad();
+  L.classList.toggle("view",lkView);
+  lkWho(); lkDots(); lkPad(); lkSwap();
   L.hidden=false; document.body.style.overflow="hidden";
   warmUp();
 }
@@ -2737,8 +2859,20 @@ function lkWho(){
     h.appendChild(b);
   });
 }
+function lkHint(){ return lkView?"받으신 열람 코드 6자리를 눌러주세요":"이름을 고르고 PIN 4자리를 눌러주세요"; }
+function lkSwap(){
+  var b=el("lock-swap"); if(!b) return;
+  b.textContent=lkView?"팀원 로그인으로 돌아가기":"외부 열람 코드로 보기";
+  b.onclick=function(){ SFX.play("chip"); lkView=!lkView; lkPin=""; lkName=lkView?"관람":(ME||"");
+    el("lock-err").hidden=true; lkRetry(false);
+    el("lock").classList.toggle("view",lkView);
+    el("lock-msg").textContent=lkHint(); lkWho(); lkDots(); lkSwap(); };
+}
 function lkDots(){
-  Array.prototype.forEach.call(el("lock-dots").children,function(d,i){ d.classList.toggle("on",i<lkPin.length); });
+  var h=el("lock-dots"), need=lkLen();
+  while(h.children.length<need) h.appendChild(document.createElement("i"));
+  while(h.children.length>need) h.removeChild(h.lastChild);
+  Array.prototype.forEach.call(h.children,function(d,i){ d.classList.toggle("on",i<lkPin.length); });
 }
 function lkPad(){
   var h=el("lock-pad"); h.innerHTML="";
@@ -2753,9 +2887,9 @@ function lkPad(){
 function lkTap(d){
   if(lkBusy) return;
   if(!lkName){ lkErr("이름을 먼저 골라주세요."); return; }
-  if(lkPin.length>=4) return;
+  if(lkPin.length>=lkLen()) return;
   lkRetry(false); SFX.play("blip"); lkPin+=d; lkDots();
-  if(lkPin.length===4) setTimeout(lkGo,120);
+  if(lkPin.length===lkLen()) setTimeout(lkGo,120);
 }
 function lkErr(m,keep){ var e=el("lock-err"); e.textContent=m; e.hidden=false; SFX.play("err");
   if(!keep){ lkPin=""; lkDots(); } }
@@ -2766,14 +2900,16 @@ function lkGo(){
   /* 아침 첫 접속이면 서버 깨우는 데 몇 초 걸립니다 — 기다리는 중이라고 알려줍니다 */
   var slow=setTimeout(function(){ if(lkBusy) el("lock-msg").textContent="서버를 깨우는 중… 잠시만요"; },3500);
   function done(){ lkBusy=false; clearTimeout(slow); el("lock").classList.remove("busy");
-    el("lock-msg").textContent="이름을 고르고 PIN 4자리를 눌러주세요"; }
+    el("lock-msg").textContent=lkHint(); }
   apiLogin(lkName,lkPin).then(function(res){
     done();
     if(!res||res.error){ lkErr((res&&res.error)||"확인하지 못했습니다."); return; }
-    TK=res.tk; ME=res.name; ADMIN=!!res.admin; store("tk",TK); store("nm",ME); store("adm",ADMIN?"1":"");
+    TK=res.tk; ME=res.name; ADMIN=!!res.admin; VIEW=!!res.view;
+    store("tk",TK); store("nm",ME); store("adm",ADMIN?"1":""); store("vw",VIEW?"1":"");
     SFX.play("levelUp",3);
-    lockClose();
-    setWho(ME); render(); bindAccount();
+    lockClose(); applyView();
+    if(!VIEW){ me=ME; store("me",ME); R.owner=ME; D.owner=ME; }
+    setWho("전체"); fR.sort="최신순"; render(); bindAccount();
     call("getAll",["fresh"]);
   }).catch(function(){
     done();
@@ -2789,9 +2925,17 @@ function lkRetry(on){
   if(!b){ b=document.createElement("button"); b.type="button"; b.id="lock-again"; b.className="btn";
     b.style.marginTop="14px"; b.textContent="확인";
     box.parentNode.appendChild(b);
-    b.onclick=function(){ b.hidden=true; if(lkPin.length===4) lkGo(); else { el("lock-err").hidden=true; lkDots(); } };
+    b.onclick=function(){ b.hidden=true; if(lkPin.length===lkLen()) lkGo(); else { el("lock-err").hidden=true; lkDots(); } };
   }
   b.hidden=false;
+}
+/* 관람(대표님·이사님) 모드: 쓰기 버튼을 전부 감춥니다 */
+function applyView(){
+  document.body.classList.toggle("viewing",!!VIEW);
+  var plus=document.querySelector(".nav button.plus"); if(plus) plus.hidden=!!VIEW;
+  var q=el("quick"); if(q) q.hidden=!!VIEW;
+  var mesel=el("me"); if(mesel) mesel.disabled=!!VIEW;
+  buildTabs();
 }
 /* 내 계정 카드 */
 function bindAccount(){
@@ -2802,7 +2946,7 @@ function bindAccount(){
   el("ac-out").onclick=function(){
     SFX.play("back");
     apiGet({action:"logout"}).catch(function(){});
-    TK=""; ME=""; ADMIN=false; store("tk",""); store("nm",""); store("adm","");
+    TK=""; ME=""; ADMIN=false; VIEW=false; store("tk",""); store("nm",""); store("adm",""); store("vw",""); applyView();
     S={road:[],db:[],cm:[]}; render(); lockOpen("로그아웃했습니다");
   };
   el("ac-pin").onclick=function(){
@@ -2825,9 +2969,9 @@ function bindAccount(){
   };
 }
 bindAccount();
+applyView();
 
-tab=store("tab")||"road";
-if(!TABS.some(function(t){return t[0]===tab;})) tab="road";
+tab="road";                          /* 첫 화면은 항상 로드 목록 */
 render();
 (function(){ try{ var id=new URLSearchParams(location.search).get("id"); if(id) focusId=String(id); }catch(e){} })();
 
@@ -2852,15 +2996,16 @@ window.addEventListener("resize",fitHead); setTimeout(fitHead,50); setTimeout(fi
 /* ── 8비트 스크롤 막대 ── */
 (function(){
   var bar=el("pxbar"), th=el("pxthumb"), hideT=null, STEP=6, MIN=18;
+  var barTop=0;
   function place(){
-    var top=el("tabs").parentNode.offsetHeight+8;
+    var top=el("tabs").parentNode.offsetHeight+8; barTop=top;
     var bot=(document.querySelector(".nav")?document.querySelector(".nav").offsetHeight:64)+10;
     bar.style.top=top+"px"; bar.style.bottom=bot+"px";
     return Math.max(40,window.innerHeight-top-bot);
   }
   function draw(){
     var doc=document.documentElement.scrollHeight, vh=window.innerHeight;
-    if(doc<=vh+8){ bar.classList.remove("on"); return; }
+    if(doc<=vh+8){ bar.classList.remove("on"); el("pxdate").classList.remove("on"); return; }
     var H=place();
     var ratio=vh/doc;
     var h=Math.max(MIN,Math.round(H*ratio/STEP)*STEP);
@@ -2868,7 +3013,27 @@ window.addEventListener("resize",fitHead); setTimeout(fitHead,50); setTimeout(fi
     var y=Math.round((window.scrollY||0)/(doc-vh)*max/STEP)*STEP;
     th.style.height=h+"px"; th.style.top=Math.max(0,Math.min(max,y))+"px";
     bar.classList.add("on");
-    clearTimeout(hideT); hideT=setTimeout(function(){ bar.classList.remove("on"); },900);
+    showDate(barTop+y, h);
+    clearTimeout(hideT); hideT=setTimeout(function(){ bar.classList.remove("on"); el("pxdate").classList.remove("on"); },900);
+  }
+  /* 어느 날짜를 보고 있는지 — 구분선 위치를 미리 재둡니다 */
+  window.markDates=function(){
+    var marks=[];
+    Array.prototype.forEach.call(document.querySelectorAll("#r-list .dsep, #d-list .dsep"),function(n){
+      marks.push({y:n.getBoundingClientRect().top+(window.scrollY||0), d:n.getAttribute("data-d")});
+    });
+    window.__marks=marks;
+  };
+  function showDate(thumbTop,thumbH){
+    var box=el("pxdate"), marks=window.__marks||[];
+    if(!marks.length){ box.classList.remove("on"); return; }
+    var y=(window.scrollY||0)+el("tabs").parentNode.offsetHeight+40, cur=marks[0].d;
+    for(var i=0;i<marks.length;i++){ if(marks[i].y<=y) cur=marks[i].d; else break; }
+    var txt=dateShort(cur);
+    if(box.getAttribute("data-cur")!==txt){ box.setAttribute("data-cur",txt);
+      box.innerHTML=String(txt).split("").map(function(ch){ return "<b>"+esc(ch)+"</b>"; }).join(""); }
+    box.style.top=Math.round(thumbTop+thumbH/2-box.offsetHeight/2)+"px";
+    box.classList.add("on");
   }
   window.addEventListener("scroll",draw,{passive:true});
   window.addEventListener("resize",function(){ place(); draw(); });
