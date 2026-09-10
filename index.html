@@ -3038,7 +3038,7 @@ function lkGo(){
     SFX.play("levelUp",3);
     lockClose(); applyView();
     if(!VIEW){ me=ME; store("me",ME); R.owner=ME; D.owner=ME; }
-    setWho("전체"); fR.sort="최근 등록순"; render(); bindAccount();
+    setWho("전체"); fR.sort="최근 등록순"; render(); bindAccount(); pushSync();
     call("getAll",["fresh"]);
   }).catch(function(e){
     done();
@@ -3108,11 +3108,13 @@ function pushOn(){
       })
       .then(function(tk){
         if(!tk) throw new Error("기기키를 받지 못했습니다");
+        pushMsg("서버에 등록 중…");
         return apiPost({action:"pushtoken",token:tk,ua:navigator.userAgent}).then(function(res){
           if(res&&res.error) throw new Error(res.error);
+          if(!res||!res.ok) throw new Error("서버가 등록을 확인해주지 않았습니다");
           store("pushtok",tk); pushBusy=false;
           SFX.play("save"); toast(2,"ALARM ON","이제 의견이 달리면 알려드립니다");
-          buildPush();
+          buildPush(); pushMsg("등록 완료. 이 폰으로 알림을 받습니다.");
         });
       });
   }).catch(function(e){
@@ -3125,6 +3127,38 @@ function pushOff(){
   if(tk) apiPost({action:"pushoff",token:tk}).catch(function(){});
   SFX.play("back"); pushMsg("이 폰 알림을 껐습니다."); buildPush();
 }
+/* 앱을 열 때마다 '이 폰 등록됐나' 확인하고, 빠졌으면 조용히 다시 넣습니다.
+   (한 번 실패해도 다음 실행에 저절로 복구됩니다) */
+function pushSync(){
+  if(!pushReady()||VIEW||!TK) return;
+  if(!("Notification" in window)||Notification.permission!=="granted") return;
+  var tk=store("pushtok");
+  if(tk){                                   /* 기기키가 있으면 그냥 다시 등록 (가벼움) */
+    apiPost({action:"pushtoken",token:tk,ua:navigator.userAgent}).then(function(res){
+      if(res&&res.error) store("pushtok","");
+    }).catch(function(){});
+    return;
+  }
+  /* 허락은 했는데 기기키가 없으면 조용히 다시 받아옵니다 */
+  loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
+    .then(function(){ return loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"); })
+    .then(function(){ return navigator.serviceWorker.register(swQuery()); })
+    .then(function(reg){
+      if(!firebase.apps.length) firebase.initializeApp({
+        apiKey:PUSH.apiKey, projectId:PUSH.projectId,
+        messagingSenderId:PUSH.senderId, appId:PUSH.appId,
+        authDomain:PUSH.projectId+".firebaseapp.com"
+      });
+      return firebase.messaging().getToken({vapidKey:PUSH.vapidKey, serviceWorkerRegistration:reg});
+    })
+    .then(function(tk2){
+      if(!tk2) return;
+      return apiPost({action:"pushtoken",token:tk2,ua:navigator.userAgent}).then(function(res){
+        if(!(res&&res.error)){ store("pushtok",tk2); buildPush(); }
+      });
+    }).catch(function(){});
+}
+
 /* 앱이 열려 있을 때 온 알림은 화면 위 토스트로 */
 function pushForeground(){
   if(!pushReady()||!store("pushtok")) return;
@@ -3214,7 +3248,7 @@ render();
 Promise.all([IDB.get("thumbs"),IDB.get("snap")]).then(function(v){
   if(v[0]&&typeof v[0]==="object") THUMBS=v[0];
   if(v[1]&&v[1].road){ S={road:v[1].road,db:v[1].db||[],cm:v[1].cm||[]}; absorbPhotos(); tryFocus(); render(); scrollFocus(); }
-}).catch(function(){}).then(function(){ if(navigator.onLine) call("getAll",[]); else pullThumbs(); });
+}).catch(function(){}).then(function(){ if(navigator.onLine){ call("getAll",[]); setTimeout(pushSync,2500); } else pullThumbs(); });
 if(!TK) lockOpen(); else lockClose();
 var lastScroll=0; window.addEventListener("scroll",function(){ lastScroll=Date.now(); },{passive:true});
 /* 가만히 두면 점점 뜸하게 확인합니다 (1분 → 최대 8분). 만지면 다시 1분으로 */
