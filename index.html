@@ -999,6 +999,16 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,te
 @media(min-width:760px){#ac-cities{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 
+
+/* v67: visit age uses an inset outline so card size does not shift. */
+.acad.visit-none{border:3px dashed #777582}
+.acad.visit-three{border-color:#c76700;outline:2px solid #c76700;outline-offset:-3px}
+.acad.visit-six{border-color:#c63838;outline:2px solid #c63838;outline-offset:-3px}
+.acad .visit-label{display:block;font-size:12px;line-height:1.6;margin:7px 0;font-weight:700;overflow-wrap:anywhere}
+.acad.visit-three .visit-label{color:#955000}.acad.visit-six .visit-label{color:#ac2929}
+.acad-visit-key{display:flex;flex-wrap:wrap;gap:7px 12px;font-size:12px;line-height:1.7;margin:10px 0}
+.acad-visit-key span{padding:2px 7px;border:2px solid;border-radius:7px}.acad-visit-key .none{border-style:dashed;border-color:#777582}.acad-visit-key .three{border-color:#c76700}.acad-visit-key .six{border-color:#c63838}
+
 </style>
 </head>
 <body>
@@ -1166,7 +1176,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
       </div>
       <div id="ac-sched" class="sched" hidden></div>
       <p class="hint" id="ac-meta" style="margin:8px 0 6px"></p>
-      <div id="ac-list" class="acad-list"></div>
+      <div class="acad-visit-key" aria-label="학원 방문 테두리 안내"><span class="none">방문 기록 없음</span><span class="three">3~6개월</span><span class="six">6개월 이상</span></div><div id="ac-list" class="acad-list"></div>
     </div>
   </section>
   <section id="v-dex" hidden>
@@ -1328,7 +1338,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v66',SERVER_BUILD='';
+var APP_BUILD='v66',UI_BUILD='v67',SERVER_BUILD='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var WRITE_ACTIONS=['add','update','edit','delete','comment','editcomment','delcomment','toss','acadadd','acadedit','book','unbook','setcalendar'];
 var ACADEMY_LABELS={region:'권역',city:'지역',country:'국가',rating:'별점',kind:'분류',name:'학원명',contact:'연락처',insta:'인스타',address:'주소',lastVisit:'최근 방문',lastCount:'지원 인원',checked:'체크 인원',note:'비고'};
@@ -2417,6 +2427,31 @@ function acadCities(list){
 }
 function acadInCity(a,city){return city==='전체'||String(a[AI.city]||'').split(/[,·/\n]+/).some(function(x){return x.trim()===city;});}
 function acadHit(a,q){q=String(q||'').trim().toLowerCase();return !q||['name','city','country','kind','note','checked','address','contact'].some(function(k){return String(a[AI[k]]||'').toLowerCase().indexOf(q)>=0;});}
+// Dates in the existing visit field; contact/remote/planned dates are not visits.
+function academyVisitStatus(raw,now){
+  var text=String(raw==null?'':raw).trim();
+  if(!text||/^(미방문|방문\s*기록\s*없음|없음|[-–])$/.test(text))return {kind:'none',label:'방문 기록 없음'};
+  var today=new Date((now==null?Date.now():Number(now))+9*3600000);
+  var y=today.getUTCFullYear(),mo=today.getUTCMonth(),day=today.getUTCDate(),end=Date.UTC(y,mo,day),latest=null;
+  function accept(year,month,date){
+    year=Number(year);if(year<100)year+=2000;month=Number(month);date=Number(date);
+    var t=Date.UTC(year,month-1,date),d=new Date(t);
+    if(year<2000||year>y||d.getUTCFullYear()!==year||d.getUTCMonth()!==month-1||d.getUTCDate()!==date||t>end)return;
+    if(latest===null||t>latest)latest=t;
+  }
+  text.split(/\n|;/).forEach(function(line){
+    if(/연락|컨택|예정|취소|연기|보류|영상|온라인|비대면|센터|사옥|아톰/.test(line))return;
+    var re=/(?:^|[^0-9])(20\d{2}|\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})(?!\d)/g,m;
+    while((m=re.exec(line)))accept(m[1],m[2],m[3]);
+    re=/(?:^|[^0-9])((?:20)?\d{2})(\d{2})(\d{2})(?!\d)/g;
+    while((m=re.exec(line)))accept(m[1],m[2],m[3]);
+  });
+  if(latest===null)return {kind:'unknown',label:'방문일 확인 필요'};
+  function cutoff(months){var first=new Date(Date.UTC(y,mo-months,1));return Date.UTC(first.getUTCFullYear(),first.getUTCMonth(),Math.min(day,new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate()));}
+  var kind=latest<=cutoff(6)?'six':latest<=cutoff(3)?'three':'recent';
+  return {kind:kind,label:kind==='six'?'방문 후 6개월 이상':kind==='three'?'방문 후 3~6개월':'최근 3개월 이내 방문',date:new Date(latest).toISOString().slice(0,10)};
+}
+
 function renderAcad(){
   var host=el('ac-regions');host.innerHTML='';
   REGIONS.forEach(function(rg){var active=rg===acadRegion,b=qc(rg,active&&ACAD[rg]?ACAD[rg].length:null,active,function(){acadRegion=rg;acadCity='전체';acadCountry='전체';acadLimit=40;store('acreg',rg);loadAcad(rg);renderAcad();},'acad-region');b.setAttribute('role','tab');b.setAttribute('aria-selected',String(active));host.appendChild(b);});
@@ -2435,7 +2470,7 @@ function renderAcad(){
   var rows=list.filter(function(a){return academyFilterMatch(a)&&acadInCity(a,acadCity)&&acadHit(a,acadQ.trim());}).sort(compareAcademies);
   var filter=acadRegion+'|'+acadCity+'|'+acadQ+'|'+acadSort+'|'+acadKind+'|'+acadCountry;if(filter!==acadFilterKey){acadLimit=40;acadFilterKey=filter;}
   el('ac-meta').textContent=acadRegion+' · '+rows.length+'곳'+(acadBusy[acadRegion]?' · 새로 확인 중':'');box.innerHTML='';
-  rows.slice(0,acadLimit).forEach(function(a){var d=document.createElement('button');d.type='button';d.className='acad';d.innerHTML='<div class="an"><b>'+esc(a[AI.name])+'</b><span class="tag who">'+esc([a[AI.kind]||'학원',a[AI.region],a[AI.country]==='한국'?'':a[AI.country],a[AI.city]].filter(Boolean).join(' · '))+'</span></div>'+academyRatingHtml(a)+'<div class="am">'+(a[AI.lastVisit]?'방문·컨택 기록 '+esc(a[AI.lastVisit]):'방문 기록 없음')+(a[AI.lastCount]?' · 지원 '+esc(a[AI.lastCount]):'')+'</div>';d.onclick=function(){openAcad(a);};box.appendChild(d);});
+  rows.slice(0,acadLimit).forEach(function(a){var d=document.createElement('button');d.type='button';var visit=academyVisitStatus(a[AI.lastVisit]);d.className='acad visit-'+visit.kind;d.innerHTML='<div class="an"><b>'+esc(a[AI.name])+'</b><span class="tag who">'+esc([a[AI.kind]||'학원',a[AI.region],a[AI.country]==='한국'?'':a[AI.country],a[AI.city]].filter(Boolean).join(' · '))+'</span></div><div class="visit-label">'+esc(visit.label)+'</div>'+academyRatingHtml(a)+'<div class="am">'+(a[AI.lastVisit]?'방문·컨택 기록 '+esc(a[AI.lastVisit]):'방문 기록 없음')+(a[AI.lastCount]?' · 지원 '+esc(a[AI.lastCount]):'')+'</div>';d.onclick=function(){openAcad(a);};box.appendChild(d);});
   if(rows.length>acadLimit)box.appendChild(miniBtn('40곳 더 보기 ('+Math.min(acadLimit,rows.length)+' / '+rows.length+')',function(){acadLimit+=40;renderAcad();}));
   if(!rows.length)box.innerHTML='<div class="empty">조건에 맞는 학원이 없습니다.</div>';
   if(acadErrors[acadRegion]){var err=document.createElement('p');err.className='hint';err.textContent='최신 목록 확인 실패: '+acadErrors[acadRegion];box.appendChild(err);}
@@ -3462,7 +3497,7 @@ function lkRetry(on){
    등록은 sw.js 하나만 사용합니다. Firebase에도 같은 등록을 명시합니다.
    on/off는 사용자의 선택, pushtok는 서버가 확인한 기기키입니다.
  */
-var PUSH_BUILD=APP_BUILD, pushBusy=false, pushError='', pushScripts={}, appWorkerPromise=null;
+var PUSH_BUILD=UI_BUILD, pushBusy=false, pushError='', pushScripts={}, appWorkerPromise=null;
 var pushMessaging=null, pushUnsubscribe=null, pushMemoryId='';
 function pushMsg(t){ var n=el('ac-pushmsg'); if(n) n.textContent=t||''; }
 function pushTimeout(p,ms,label){
