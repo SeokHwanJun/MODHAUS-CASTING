@@ -4,7 +4,7 @@
  */
 if (!self.CASTING_PUSH_LOADED) {
   self.CASTING_PUSH_LOADED = true;
-  self.CASTING_PUSH_BUILD = 'v67';
+  self.CASTING_PUSH_BUILD = 'v68';
   // SDK보다 먼저 클릭을 처리해야 Firebase 기본 클릭 동작에 가려지지 않습니다.
   self.addEventListener('notificationclick',function(event){
     var f=(event.notification.data||{}).FCM_MSG||{},d=f.data||{},base=new URL('./',self.location.href),url;
