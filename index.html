@@ -250,6 +250,9 @@ input[type=text]:focus,input[type=date]:focus,textarea:focus{border-color:var(--
 .thumb .ph{font-size:11px; color:var(--ink-3)}
 .thumb.clickable{cursor:zoom-in}
 .thumb.clickable:hover{box-shadow:var(--pop-sm); transform:translate(-1px,-1px)}
+[data-photo-id]{position:relative}
+.photo-hint{position:absolute;inset:auto 0 0;display:block;padding:3px 2px;background:var(--surface-2);color:var(--ink-2);font:600 10px/1.35 sans-serif;text-align:center;white-space:normal;pointer-events:none}
+[data-photo-state="error"]{cursor:pointer;outline:2px solid var(--pumpkin);outline-offset:1px}
 .body{flex:1; min-width:0; display:flex; flex-direction:column; gap:4px}
 .line1{display:flex; align-items:center; gap:7px; flex-wrap:wrap}
 .line1 b{font-size:15.5px; font-weight:700; letter-spacing:-.01em}
@@ -390,6 +393,8 @@ select.status.t-ok{background:var(--mint); color:#000}
 .tama-lcd img{display:block; margin:0 auto; max-width:100%; max-height:54vh; object-fit:contain;
   border-radius:0; background:transparent; transition:filter .25s}
 .tama-lcd img.lo{filter:blur(1.5px) contrast(.97)}   /* 큰 사진 오기 전 작은 사진 */
+.detail-photo-state{padding:12px;text-align:center;font:500 12px/1.5 sans-serif;color:var(--lcd-ink);overflow-wrap:anywhere}
+.detail-photo-state button{display:block;margin:8px auto 0;min-height:44px;padding:6px 14px;font:600 12px/1.4 sans-serif}
 /* 아래 이름판 */
 .tama-nm{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:9px;
   border:2px solid var(--lcd-ink); border-radius:7px; background:var(--lcd-bg); padding:5px 10px}
@@ -1177,9 +1182,8 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
         <input type="search" id="ac-q" placeholder="학원명 · 지역 · 비고 검색" autocomplete="off">
         <button type="button" class="mini" id="ac-add">+ 학원</button>
       </div>
-      <div id="ac-sched" class="sched" hidden></div>
       <p class="hint" id="ac-meta" style="margin:8px 0 6px"></p>
-      <div class="acad-visit-key" aria-label="최근 방문 기간 안내"><span class="three">3개월 이내</span><span class="six">3~6개월</span><span class="year">6개월~1년</span><span class="older">1년 초과</span><span class="none">미방문</span><small>방문 기록 기준 · v68</small></div><div id="ac-list" class="acad-list"></div>
+      <div class="acad-visit-key" aria-label="최근 방문 기간 안내"><span class="three">3개월 이내</span><span class="six">3~6개월</span><span class="year">6개월~1년</span><span class="older">1년 초과</span><span class="none">미방문</span><small>방문 기록 기준 · v72</small></div><div id="ac-list" class="acad-list"></div>
     </div>
   </section>
   <section id="v-dex" hidden>
@@ -1341,8 +1345,9 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v66',UI_BUILD='v68',SERVER_BUILD='';
+var APP_BUILD='v72',UI_BUILD='v72',SERVER_BUILD='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadVisitFilter='전체',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
+var historyReady=false,historyPending=null,historyError='',historyTimer=null;
 var WRITE_ACTIONS=['add','update','edit','delete','comment','editcomment','delcomment','toss','acadadd','acadedit','book','unbook','setcalendar'];
 var ACADEMY_LABELS={region:'권역',city:'지역',country:'국가',rating:'별점',kind:'분류',name:'학원명',contact:'연락처',insta:'인스타',address:'주소',lastVisit:'최근 방문',lastCount:'지원 인원',checked:'체크 인원',note:'비고'};
 
@@ -1848,13 +1853,15 @@ function renderDex(){
   var list=dexList(), h="";
   list.forEach(function(r,i){
     var isDb=S.db.indexOf(r)>=0;
-    h+='<div class="dexc"><div class="ph" data-i="'+i+'">'+(r.photo?'<img src="'+r.photo+'" alt="">':'<div class="tsp">'+sprite(5)+'</div>')+'</div>'+
+    h+='<div class="dexc"><div class="ph" data-i="'+i+'"><div class="tsp">'+sprite(5)+'</div></div>'+
        '<b>'+esc(nameOf(r)||"이름 미입력")+'</b><small>NO.'+String(list.length-i).padStart(3,"0")+'</small>'+
        '<small style="font-family:inherit;font-size:11px">'+esc(r.owner)+' · '+esc((r.date||"").slice(2))+(isDb?" · DB":"")+'</small></div>';
   });
   el("dex-grid").innerHTML=h||'<div class="empty">아직 최종 합격 인원이 없습니다. 첫 번째 칸을 채워보세요.</div>';
   Array.prototype.forEach.call(el("dex-grid").querySelectorAll(".ph"),function(p){
-    p.onclick=function(){ var r=list[+p.getAttribute("data-i")]; if(r.photo) openLB(r,S.db.indexOf(r)>=0); };
+    var r=list[+p.getAttribute('data-i')];
+    // 도감은 이전 사진있음 표시가 비어 있는 카드도 보이는 것부터 확인합니다.
+    bindPhoto(p,r,function(){openLB(r,S.db.indexOf(r)>=0);},true);
   });
   var bh='<div class="badges">';
   OWNERS.forEach(function(o){
@@ -2102,14 +2109,11 @@ function nameOf(r){
   return "";
 }
 
-/* ---------- 저장소 (IndexedDB) ---------- */
-var IDB={get:function(){return Promise.resolve(undefined);},set:function(){return Promise.resolve(true);}};
+/* 개인정보는 로그인한 동안 메모리에서만 재사용합니다. 예전 평문 캐시는 제거합니다. */
 try{if(window.indexedDB)indexedDB.deleteDatabase('casting-board');}catch(ignore){}
 
-var THUMBS={};                       /* id → 썸네일 data URL (기기에 저장) */
+var THUMBS={};                       /* id → 썸네일 data URL (세션 메모리만) */
 var lastSync=0, lastMs=0, lastSig="",lastDataRev='';
-var thumbSaveT=null;
-function saveThumbs(){ clearTimeout(thumbSaveT); thumbSaveT=setTimeout(function(){ IDB.set("thumbs",THUMBS); },400); }
 
 /* ---------- 서버 (Apps Script JSON API) ---------- */
 var busyFeedback=[];
@@ -2190,15 +2194,73 @@ function absorb(data){
     });data=Object.assign({},data,merged);
   }
   if(data.profile){ME=data.profile.name;ADMIN=!!data.profile.admin;VIEW=!!data.profile.view;sessionPhone=data.profile.phone||'';paintPhone();store('nm',ME);store('adm',ADMIN?'1':'');store('vw',VIEW?'1':'');if(!VIEW){me=ME;R.owner=ME;D.owner=ME;}applyView();}
-  ['road','db'].forEach(function(k){var prev={};(S[k]||[]).forEach(function(r){prev[r.id]=r;});(data[k]||[]).forEach(function(r){var old=prev[r.id];if(old&&(old.photoFile!==r.photoFile||old.hasPhoto!==r.hasPhoto)){delete THUMBS[r.id];delete wantSeen[r.id];}});});
+  ['road','db'].forEach(function(k){var prev={};(S[k]||[]).forEach(function(r){prev[r.id]=r;});(data[k]||[]).forEach(function(r){var old=prev[r.id];if(old&&(old.photoFile!==r.photoFile||old.hasPhoto!==r.hasPhoto)){delete THUMBS[r.id];delete wantSeen[r.id];delete wantErrors[r.id];delete wantEmpty[r.id];delete wantAttempts[r.id];}});});
   cacheThumbResults(data.thumbs||[]);
   ['road','db'].forEach(function(k){(data[k]||[]).forEach(function(r){r.photo=THUMBS[r.id]||'';if(r.status==='로드')r.status='발견';});});
-  S={road:data.road||[],db:data.db||[],cm:data.cm||[],toss:data.toss||[],sched:data.sched||[]};
+  var next={};['road','db','cm','toss','sched'].forEach(function(k){next[k]=Array.isArray(data[k])?data[k]:(S[k]||[]);});S=next;
 }
-/* 화면에 있는 카드 중 썸네일이 아직 없는 것만 24장씩 받아옵니다 */
+/* 첫 화면을 먼저 보여준 뒤 댓글/토스 이력을 한 번만 받습니다. 실패는 빈 이력으로 처리하지 않습니다. */
+function scheduleHistory(){
+  if(historyReady||historyPending||historyTimer||!TK||VIEW)return;
+  historyTimer=setTimeout(function(){historyTimer=null;if(busy){scheduleHistory();return;}loadHistory();},350);
+}
+function loadHistory(){
+  if(historyReady||!TK||VIEW)return Promise.resolve(true);
+  if(historyPending)return historyPending;
+  if(busy){scheduleHistory();return Promise.resolve(false);}
+  clearTimeout(historyTimer);historyTimer=null;
+  var session=TK,epoch=dataEpoch;historyError='';
+  var task=apiGet({action:'all',part:'history'}).then(function(data){
+    if(TK!==session||dataEpoch!==epoch||historyReady)return false;
+    if(!data||data.error||!Array.isArray(data.cm)||!Array.isArray(data.toss))throw new Error(data&&data.error||'이력을 받지 못했습니다.');
+    absorb({cm:data.cm,toss:data.toss});historyReady=true;
+    render();if(pendingCommentLink)commentDataArrived();else if(lbRec)refreshLB();return true;
+  }).catch(function(e){
+    if(TK===session&&dataEpoch===epoch&&!historyReady){historyError=friendlyError(e);if(lbRec)refreshLB();}return false;
+  }).finally(function(){
+    if(historyPending===task)historyPending=null;
+    if(TK===session&&dataEpoch!==epoch&&!historyReady)scheduleHistory();
+  });historyPending=task;return task;
+}
+/* 보이는 카드 우선: 8장씩, 최대 2개 요청. 사진은 현재 로그인 세션의 메모리에만 둡니다. */
 var thumbBusy=false;
 /* 화면에 들어오는 카드의 사진을 먼저 줄 세웁니다 (게임의 '보이는 것부터 로딩'과 같은 방식) */
-var wantQ=[], wantSeen={}, wantIO=null, wantT=null;
+var wantQ=[], wantSeen={}, wantIO=null, wantT=null, wantRetryT=null;
+var wantErrors={}, wantEmpty={}, wantAttempts={};
+function photoVersion(r){return String(r.photoFile||'')+'|'+String(r.hasPhoto);}
+function photoRecord(id){return S.road.concat(S.db).find(function(r){return r.id===id;});}
+function photoNodes(id){return Array.prototype.filter.call(document.querySelectorAll('[data-photo-id]'),function(n){return n.getAttribute('data-photo-id')===id;});}
+function paintPhotoState(node,id){
+  var state=THUMBS[id]?'ready':wantEmpty[id]?'empty':wantErrors[id]?'error':'loading';
+  node.setAttribute('data-photo-state',state);node.setAttribute('aria-busy',String(state==='loading'));
+  var hint=node.querySelector('.photo-hint');if(hint)hint.remove();
+  if(state==='ready')return;
+  hint=document.createElement('span');hint.className='photo-hint';
+  hint.textContent=state==='empty'?'사진 없음':state==='error'?'사진 재시도':'사진 로딩…';node.appendChild(hint);
+}
+function paintPhoto(node,id){
+  var src=THUMBS[id];if(!src){paintPhotoState(node,id);return;}
+  node.innerHTML='';var img=document.createElement('img'),session=TK;
+  img.alt='후보 사진';img.decoding='async';
+  img.onerror=function(){
+    if(TK!==session||THUMBS[id]!==src||node.isConnected===false)return;
+    delete THUMBS[id];absorbPhotos();wantAttempts[id]=2;delete wantSeen[id];wantErrors[id]=true;
+    photoNodes(id).forEach(function(n){n.innerHTML='';n.setAttribute('data-want',id);paintPhotoState(n,id);});
+  };
+  node.appendChild(img);img.src=src;node.removeAttribute('data-want');paintPhotoState(node,id);
+}
+function bindPhoto(node,r,onOpen,probe){
+  var id=r.id;node.setAttribute('data-photo-id',id);
+  node.classList.add('clickable');node.tabIndex=0;node.setAttribute('role','button');node.setAttribute('aria-label',(nameOf(r)||'후보')+' 사진 및 상세 보기');
+  node.onclick=function(e){
+    if(e)e.stopPropagation();
+    if(wantErrors[id])retryPhoto(id);
+    onOpen();
+  };
+  node.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();node.onclick(e);}};
+  if(THUMBS[id]){paintPhoto(node,id);return;}
+  if(probe||r.hasPhoto||r.photoFile){node.setAttribute('data-want',id);paintPhotoState(node,id);if(!wantEmpty[id])wantWatch(node);}
+}
 function wantWatch(node){
   if(!window.IntersectionObserver){ var id0=node.getAttribute("data-want"); if(id0) wantPush(id0); return; }
   if(!wantIO) wantIO=new IntersectionObserver(function(es){
@@ -2211,32 +2273,61 @@ function wantWatch(node){
   wantIO.observe(node);
 }
 function wantPush(id){
-  if(wantSeen[id]||THUMBS[id]) return;
+  if(wantSeen[id]||THUMBS[id]||wantEmpty[id]||(wantErrors[id]&&wantAttempts[id]>=2)) return;
   wantSeen[id]=1; wantQ.push(id);
+  delete wantErrors[id];photoNodes(id).forEach(function(n){paintPhotoState(n,id);});
   clearTimeout(wantT); wantT=setTimeout(pullThumbs,80);   /* 짧게 모아서 한 번에 */
+}
+function retryPhoto(id){
+  if(!photoRecord(id)||wantSeen[id]||THUMBS[id])return;
+  delete wantErrors[id];delete wantEmpty[id];delete wantAttempts[id];wantPush(id);
+}
+function failedThumbs(ids){
+  ids.forEach(function(id){delete wantSeen[id];wantErrors[id]=true;photoNodes(id).forEach(function(n){paintPhotoState(n,id);});});
+  if(lbRec&&!lbRec.photoFile&&ids.indexOf(lbRec.id)>=0){var id=lbRec.id,im=lbBox.querySelector('.tama-lcd img');if(im)detailPhotoStatus(im,'사진을 불러오지 못했습니다.',function(){retryPhoto(id);detailPhotoStatus(im,'사진을 불러오는 중…');});}
+  if(wantRetryT||!ids.some(function(id){return wantAttempts[id]<2;}))return;
+  var session=TK;wantRetryT=setTimeout(function(){
+    wantRetryT=null;if(TK!==session)return;
+    Object.keys(wantErrors).forEach(function(id){if(wantAttempts[id]<2&&photoRecord(id))wantPush(id);});
+  },1500);
+}
+function resumePhotos(){
+  document.querySelectorAll('[data-want]').forEach(function(n){var id=n.getAttribute('data-want');if(wantErrors[id])retryPhoto(id);else wantPush(id);});
+  pullThumbs();
 }
 function pullThumbs(){
   if(thumbActive>=2||!navigator.onLine||!TK||!wantQ.length)return;
-  var session=TK,index={};['road','db'].forEach(function(k){S[k].forEach(function(r){index[r.id]=k;});});
+  var session=TK,index={},versions={};['road','db'].forEach(function(k){S[k].forEach(function(r){index[r.id]=k;versions[r.id]=photoVersion(r);});});
   wantQ=wantQ.filter(function(id){return index[id]&&!THUMBS[id];});if(!wantQ.length)return;
   var key=index[wantQ[0]],ids=[];
   wantQ=wantQ.filter(function(id){if(index[id]===key&&ids.length<8){ids.push(id);return false;}return true;});
+  ids.forEach(function(id){wantAttempts[id]=(wantAttempts[id]||0)+1;});
   thumbActive++;thumbBusy=true;
   apiGet({action:'thumbs',k:key,ids:ids.join(',')}).then(function(r){
-    if(TK!==session)return;if(r.error)throw new Error(r.error);cacheThumbResults(r.thumbs);absorbPhotos();applyThumbs(ids);
-  }).catch(function(){if(TK===session)ids.forEach(function(id){delete wantSeen[id];});}).finally(function(){
+    if(TK!==session)return;if(!r||r.error||!Array.isArray(r.thumbs))throw new Error(r&&r.error||'사진 응답 확인 필요');
+    var current={};S[key].forEach(function(x){current[x.id]=x;});
+    var valid=ids.filter(function(id){return current[id]&&photoVersion(current[id])===versions[id];});
+    var photos=r.thumbs.filter(function(x){return valid.indexOf(x.id)>=0;});
+    cacheThumbResults(photos);absorbPhotos();applyThumbs(photos.map(function(x){return x.id;}));
+    var failed=[];valid.forEach(function(id){
+      if(THUMBS[id]){delete wantErrors[id];delete wantEmpty[id];return;}
+      var item=photos.find(function(x){return x.id===id;});
+      if(item&&item.photo===''&&!item.error&&!current[id].hasPhoto&&!current[id].photoFile){wantEmpty[id]=true;delete wantErrors[id];photoNodes(id).forEach(function(n){paintPhotoState(n,id);});}
+      else failed.push(id);
+    });if(failed.length)failedThumbs(failed);
+  }).catch(function(){if(TK===session)failedThumbs(ids.filter(function(id){var r=photoRecord(id);return r&&photoVersion(r)===versions[id];}));}).finally(function(){
     if(TK!==session)return;thumbActive=Math.max(0,thumbActive-1);thumbBusy=thumbActive>0;if(wantQ.length)pullThumbs();
   });
   if(wantQ.length&&thumbActive<2)pullThumbs();
 }
 /* 도착한 썸네일만 그 자리에 끼워 넣음 (전체를 다시 그리지 않음) */
 function applyThumbs(ids){
-  ids.forEach(function(id){var src=THUMBS[id];if(!src)return;
-    document.querySelectorAll('.thumb[data-want]').forEach(function(th){if(th.getAttribute('data-want')!==id)return;
-      th.innerHTML='';var img=document.createElement('img');img.src=src;img.alt='후보 사진';img.decoding='async';th.appendChild(img);th.classList.add('clickable');th.removeAttribute('data-want');
-    });
-    if(lbRec&&lbRec.id===id){var im=lbBox.querySelector('.tama-lcd img');if(im&&!im.getAttribute('src'))im.src=src;}
+  var wanted=new Set(ids);
+  document.querySelectorAll('[data-photo-id][data-want]').forEach(function(th){
+    var id=th.getAttribute('data-want'),src=THUMBS[id];if(!wanted.has(id)||!src)return;
+    paintPhoto(th,id);
   });
+  if(lbRec&&wanted.has(lbRec.id)&&THUMBS[lbRec.id]){var im=lbBox.querySelector('.tama-lcd img');if(im&&!im.getAttribute('src')){im.src=THUMBS[lbRec.id];if(!lbRec.photoFile)detailPhotoStatus(im,'');}}
 }
 function absorbPhotos(){ ["road","db"].forEach(function(k){ (S[k]||[]).forEach(function(r){ r.photo=THUMBS[r.id]||""; }); }); }
 
@@ -2246,7 +2337,7 @@ function call(fn,args,okMsg,msgEl,mutating){
   args=args||[];if(mutating&&busy)return Promise.resolve(false);
   if(fn==='getAll'&&(busy||readPending))return readPending||Promise.resolve(false);
   var body,api;
-  if(fn==='getAll')api=function(){return apiGet({action:'all',revision:lastDataRev,fresh:args[0]==='fresh'?1:0,boot:0,photoKey:tab==='db'?'db':'road',photoOwner:(tab==='db'?fD.owner:fR.owner)||'전체',photoSort:tab==='db'?'점수순':fR.sort||'진행순',focus:focusId||''});};
+  if(fn==='getAll')api=function(){return apiGet({action:'all',part:!historyReady&&args[0]!=='fresh'?'core':'',revision:lastDataRev,fresh:args[0]==='fresh'?1:0,boot:0,photoKey:tab==='db'?'db':'road',photoOwner:(tab==='db'?fD.owner:fR.owner)||'전체',photoSort:tab==='db'?'점수순':fR.sort||'진행순',focus:focusId||''});};
   else {
     var actions={addItem:'add',updateItem:'update',editItem:'edit',deleteItem:'delete',addComment:'comment',editComment:'editcomment',delComment:'delcomment',toss:'toss'};
     if(!actions[fn])return Promise.resolve(false);body={action:actions[fn]};
@@ -2266,12 +2357,14 @@ function call(fn,args,okMsg,msgEl,mutating){
     if(fn==='editItem'&&args[2].photo!==undefined){delete THUMBS[args[1]];if(args[2].photo)data.thumbs=(data.thumbs||[]).concat([{id:args[1],photo:args[2].photo}]);}
     if(fn==='deleteItem')delete THUMBS[args[1]];
     if(fn==='getAll')lastSync=Date.now();lastMs=Date.now()-t0;el('banner').hidden=true;
-    if(fn==='getAll'&&data.unchanged)return true;
+    if(fn==='getAll'&&data.unchanged){scheduleHistory();return true;}
     if(fn==='getAll')lastDataRev=data.revision||'';
+    if(Array.isArray(data.cm)&&Array.isArray(data.toss)){historyReady=true;historyError='';}
     var sig=JSON.stringify([data.road,data.db,data.cm,data.toss,data.sched,data.profile]);
     if(sig!==lastSig||mutating){lastSig=sig;absorb(data);tryFocus();render();scrollFocus();}
     if(fn==='addItem'||fn==='editItem'){if(fn==='addItem')celebrate(args[1],args[0]);pending=null;cancelEdit();(args[0]==='road'?clearRoad:clearDb)();closeForm();}
-    if(fn==='getAll')commentDataArrived();
+    if(fn==='getAll'&&historyReady)commentDataArrived();
+    if(fn==='getAll'&&data.partial)scheduleHistory();
     if(/^.*Comment$/.test(fn)&&lbRec){cmEdit=null;refreshLB();}
     if(fn==='updateItem'&&lbRec)refreshLB();
     if(okMsg)note(msgEl,okMsg);return true;
@@ -2289,6 +2382,43 @@ function fetchFull(fileId){
   if(fullPending[fileId])return fullPending[fileId];
   var session=TK,pending=apiGet({action:'full',file:fileId}).then(function(x){return TK===session&&x&&x.photo||'';}).finally(function(){if(fullPending[fileId]===pending)delete fullPending[fileId];});
   fullPending[fileId]=pending;return pending;
+}
+function detailPhotoStatus(img,message,retry){
+  var host=img.parentNode;if(!host)return;
+  var old=host.querySelector('.detail-photo-state');if(old)old.remove();
+  if(!message)return;
+  var box=document.createElement('div');box.className='detail-photo-state';box.setAttribute('role','status');box.textContent=message;
+  if(retry){var button=document.createElement('button');button.type='button';button.textContent='사진 다시 불러오기';button.onclick=function(e){e.stopPropagation();retry();};box.appendChild(button);}
+  host.appendChild(box);
+}
+function decodeDetailPhoto(src){
+  return new Promise(function(resolve,reject){
+    var image=new Image(),timer=setTimeout(function(){finish(new Error('사진 표시 시간 초과'));},12000);
+    function finish(error){clearTimeout(timer);image.onload=image.onerror=null;if(error)reject(error);else resolve(src);}
+    image.onload=function(){finish();};image.onerror=function(){finish(new Error('사진을 표시할 수 없습니다.'));};image.src=src;
+  });
+}
+function loadDetailPhoto(r,img){
+  var session=TK,file=r.photoFile,version=photoVersion(r),ticket={};img.photoTicket=ticket;
+  function current(){var record=photoRecord(r.id);return TK===session&&lbRec===r&&img.isConnected!==false&&img.photoTicket===ticket&&record&&photoVersion(record)===version;}
+  function retry(){if(current())loadDetailPhoto(r,img);}
+  if(!file)return Promise.resolve(false);
+  if(!navigator.onLine&&!fullCache[file]){detailPhotoStatus(img,'인터넷 연결 후 사진을 다시 불러와주세요.',retry);return Promise.resolve(false);}
+  img.classList.add('lo');img.setAttribute('aria-busy','true');detailPhotoStatus(img,'원본 사진을 불러오는 중…');
+  var source='';
+  return fetchFull(file).then(function(src){
+    if(!current())return false;
+    if(!/^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/]+=*$/.test(src||''))throw new Error('원본 사진을 받지 못했습니다.');
+    source=src;return decodeDetailPhoto(src);
+  }).then(function(src){
+    if(!src||!current())return false;
+    if(Object.keys(fullCache).length>=8&&!fullCache[file])delete fullCache[Object.keys(fullCache)[0]];
+    fullCache[file]=src;img.src=src;detailPhotoStatus(img,'');return true;
+  }).catch(function(){
+    if(!current())return false;
+    if(source&&fullCache[file]===source)delete fullCache[file];
+    detailPhotoStatus(img,img.getAttribute('src')?'작은 사진을 표시하고 있어요. 원본을 다시 불러올 수 있습니다.':'사진을 불러오지 못했습니다. 다시 시도해주세요.',retry);return false;
+  }).finally(function(){if(current()){img.classList.remove('lo');img.setAttribute('aria-busy','false');}});
 }
 
 /* ---------- 공용 UI ---------- */
@@ -2480,7 +2610,7 @@ function renderAcad(){
   el('ac-kind').onchange=function(){acadKind=this.value;acadLimit=40;renderAcad();};
   if(el('ac-country'))el('ac-country').onchange=function(){acadCountry=this.value;acadCity='전체';acadLimit=40;renderAcad();};
   el('ac-city-select').onchange=function(){acadCity=this.value;acadLimit=40;renderAcad();};el('ac-sort').value=acadSort;el('ac-sort').onchange=function(){acadSort=this.value;acadLimit=40;renderAcad();};
-  el('ac-add').hidden=VIEW;renderSched();var box=el('ac-list');
+  el('ac-add').hidden=VIEW;var box=el('ac-list');
   if(!list){el('ac-meta').textContent='';box.innerHTML='<div class="empty">'+esc(acadErrors[acadRegion]||(acadBusy[acadRegion]?'학원 목록을 불러오는 중…':'학원 목록을 불러와주세요.'))+'</div>';if(!acadBusy[acadRegion]){var retry=miniBtn('불러오기',function(){loadAcad(acadRegion,true);renderAcad();});box.appendChild(retry);if(!acadErrors[acadRegion]&&TK){loadAcad(acadRegion);}}return;}
   var rows=list.filter(function(a){return academyFilterMatch(a)&&academyVisitMatches(a)&&acadInCity(a,acadCity)&&acadHit(a,acadQ.trim());}).sort(compareAcademies);
   var filter=acadRegion+'|'+acadCity+'|'+acadQ+'|'+acadSort+'|'+acadKind+'|'+acadCountry+'|'+acadVisitFilter;if(filter!==acadFilterKey){acadLimit=40;acadFilterKey=filter;}
@@ -2520,11 +2650,28 @@ function openAcad(a){
   }).catch(function(e){if(acadCur===a&&el('a-history'))el('a-history').textContent=e.message;});
 }
 function closeAcad(){ el("sheet-a").classList.remove("open"); unlockScroll(); acadCur=null; }
+function mergeAcademyResult(r){
+  var row=Array.isArray(r.academy)?r.academy:Array.isArray(r.list)?r.list.find(function(a){return a[AI.id]===r.id;}):null;
+  if(!Array.isArray(r.list)&&!Object.prototype.hasOwnProperty.call(r,'academy'))throw new Error('학원 저장 응답을 확인하지 못했습니다. 같은 내용으로 다시 저장해주세요.');
+  // 저장보다 먼저 시작한 조회는 무효화하되, 다른 권역의 목록은 그대로 재사용합니다.
+  acadEpoch++;acadPending={};acadBusy={};
+  Object.keys(ACAD).forEach(function(region){
+    ACAD[region]=(ACAD[region]||[]).filter(function(a){return a[AI.id]!==r.id;});
+    if(row&&(region==='전체'||region===row[AI.region]))ACAD[region].push(row);
+  });
+  if(Array.isArray(r.list)){ACAD[r.region]=r.list;acadLoaded[r.region]=Date.now();}
+  // 한 행만 받은 새 권역을 전체 목록으로 오인하지 않습니다. 없는 권역은 loadAcad로 조회합니다.
+  return row;
+}
 function saveAcad(){
   var patch={};['kind','rating','region','name','country','city','contact','insta','address','lastVisit','lastCount','checked','note'].forEach(function(k){patch[k]=el('a-'+k).value.trim();});
   if(!patch.name){el('a-error').textContent='학원명을 입력해주세요.';el('a-name').focus();return;}
   var cur=acadCur,btn=el('a-save');if(btn.disabled)return;btn.disabled=true;btn.textContent='저장 중…';
-  apiPost({action:cur?'acadedit':'acadadd',id:cur?cur[AI.id]:'',patch:patch}).then(function(r){if(!r||r.error)throw new Error(r&&r.error||'저장하지 못했습니다.');acadEpoch++;ACAD={};acadLoaded={};acadBusy={};acadPending={};ACAD[r.region]=r.list;acadLoaded[r.region]=Date.now();acadRegion=r.region;acadCity='전체';acadKind='전체';acadCountry='전체';closeAcad();renderAcad();SFX.play('save');toast(2,'SAVED',patch.name+' 저장됨');}).catch(function(e){if(el('a-error'))el('a-error').textContent=e.message;}).finally(function(){btn.disabled=false;btn.textContent=cur?'저장':'추가';});
+  apiPost({action:cur?'acadedit':'acadadd',id:cur?cur[AI.id]:'',patch:patch}).then(function(r){
+    if(!r||r.error)throw new Error(r&&r.error||'저장하지 못했습니다.');mergeAcademyResult(r);
+    if(acadCur===cur){if(acadRegion!==r.region){acadCity='전체';acadCountry='전체';}acadRegion=r.region;closeAcad();}
+    if(tab==='acad')renderAcad();SFX.play('save');toast(2,'SAVED',patch.name+' 저장됨');
+  }).catch(function(e){if(acadCur===cur&&el('a-error'))el('a-error').textContent=e.message;}).finally(function(){btn.disabled=false;btn.textContent=cur?'저장':'추가';});
 }
 function bindAcadLinks(node){ Array.prototype.forEach.call(node.querySelectorAll(".alink"),function(a){ a.onclick=function(e){ e.preventDefault(); SFX.play("tab"); closeLB(); jumpAcad(a.getAttribute("data-ac")); }; }); }
 function jumpAcad(q){acadQ=q||'';acadRegion='전체';acadCity='전체';acadKind='전체';acadCountry='전체';el('ac-q').value=acadQ;setTab('acad');loadAcad('전체');window.scrollTo(0,0);}
@@ -2567,7 +2714,7 @@ function renderBook(){
 function sendBook(clicked){
   if(B.busy||!B.start)return;B.busy=true;var state=B,go=el('b-go');el('b-body').querySelectorAll('button,input,textarea').forEach(function(n){n.disabled=true;});go.textContent='예약 확인 중…';if(clicked&&clicked.dataset&&clicked.dataset.quickDate)clicked.textContent='예약 확인 중…';invalidateSlots();
   var body={action:'book',date:B.date,start:B.start,dur:B.dur,place:B.place.trim()||'아톰',note:B.note.trim()};if(B.acad)body.acadId=B.acad[AI.id];else{body.recId=B.rec.id;body.k=B.key;}
-  apiPost(body).then(function(r){if(r.error)throw new Error(r.error);invalidateSlots();S.sched=r.sched||[];renderSched();if(B!==state)return;el('b-body').innerHTML='<p>회사 캘린더에 등록하고 팀원 초대를 요청했습니다. 진행은 해당 일요일 출근자가 맡습니다.</p><p>'+esc(B.date+' '+B.start+' · '+B.place)+'</p><a class="btn calendar-link" target="_blank" rel="noopener" href="'+esc(safeUrl(r.calendarUrl))+'">구글 캘린더에서 보기</a><button class="btn ghost sm" id="b-done">닫기</button>';el('b-done').onclick=closeBook;SFX.play('levelUp',4);toast(4,'BOOKED','오디션 일정을 등록했습니다.');}).catch(function(e){if(B!==state)return;if(el('b-error'))el('b-error').textContent=e.message;el('b-body').querySelectorAll('button,input,textarea').forEach(function(n){n.disabled=false;});go.textContent='같은 예약 다시 확인';if(clicked&&clicked.dataset&&clicked.dataset.quickDate)clicked.textContent='같은 예약 다시 확인';}).finally(function(){if(B===state)B.busy=false;});
+  apiPost(body).then(function(r){if(r.error)throw new Error(r.error);invalidateSlots();S.sched=r.sched||[];if(B!==state)return;el('b-body').innerHTML='<p>회사 캘린더에 등록하고 팀원 초대를 요청했습니다. 진행은 해당 일요일 출근자가 맡습니다.</p><p>'+esc(B.date+' '+B.start+' · '+B.place)+'</p><a class="btn calendar-link" target="_blank" rel="noopener" href="'+esc(safeUrl(r.calendarUrl))+'">구글 캘린더에서 보기</a><button class="btn ghost sm" id="b-done">닫기</button>';el('b-done').onclick=closeBook;SFX.play('levelUp',4);toast(4,'BOOKED','오디션 일정을 등록했습니다.');}).catch(function(e){if(B!==state)return;if(el('b-error'))el('b-error').textContent=e.message;el('b-body').querySelectorAll('button,input,textarea').forEach(function(n){n.disabled=false;});go.textContent='같은 예약 다시 확인';if(clicked&&clicked.dataset&&clicked.dataset.quickDate)clicked.textContent='같은 예약 다시 확인';}).finally(function(){if(B===state)B.busy=false;});
 }
 function cancelBook(x){
   if(!confirm(schedLabel(x)+" "+x.name+" 오디션을 취소할까요? 캘린더에서도 지워집니다.")) return;
@@ -2578,14 +2725,6 @@ function cancelBook(x){
     if(el("sheet-a").classList.contains("open")&&acadCur) openAcad(acadCur);
   }).catch(function(){ SFX.play("err"); toast(0,"ERROR","연결이 불안정합니다"); });
 }
-/* 학원 탭 위쪽 — 다가오는 오디션 */
-function renderSched(){
-  var box=el('ac-sched'),list=S.sched||[];box.hidden=VIEW||!list.length;if(box.hidden){box.innerHTML='';return;}
-  box.innerHTML='<div class="cmh"><b>다가오는 오디션</b><span>'+list.length+'건</span></div>';
-  list.slice(0,20).forEach(function(x){var row=document.createElement('div');row.className='schr';row.innerHTML='<b>'+esc(schedLabel(x))+'</b><span class="nm">'+esc(x.name)+'</span><span class="pl">'+esc(x.place)+' · '+esc(x.by)+'</span>'+((x.state==='check'||x.state==='creating')?'<strong>저장 확인 필요</strong>':'');var a=document.createElement('a');a.className='mini calendar-link';a.textContent='캘린더';a.href=safeUrl(x.calendarUrl);a.target='_blank';a.rel='noopener';row.appendChild(a);if(!VIEW&&(x.by===ME||isAdmin()))row.appendChild(miniBtn('취소',function(){cancelBook(x);}));box.appendChild(row);});
-  if(list.length>20){var p=document.createElement('p');p.className='hint';p.textContent='가까운 일정 20건을 표시합니다. 전체 일정은 회사 캘린더에서 확인하세요.';box.appendChild(p);}
-}
-
 /* ── 토스: "이 사람 연락 좀 해줘" ── */
 var T={rec:null,key:"",to:""};
 function openToss(r,key){
@@ -2672,15 +2811,8 @@ function chips(host,values,current,counts,onPick){
 }
 function thumbOf(r,onOpen){
   var th=document.createElement("div"); th.className="thumb";
-  if(!r.photo&&r.hasPhoto){ th.setAttribute("data-want",r.id); wantWatch(th); }   /* 화면에 가까워지면 그때 받아옵니다 */
-  if(r.photo){
-    var img=document.createElement("img"); img.src=r.photo; img.alt="사진 크게 보기";
-    img.loading="lazy"; img.decoding="async";
-    img.onerror=function(){ th.innerHTML='<span class="ph">사진</span>'; };
-    th.appendChild(img);
-    th.classList.add("clickable"); th.tabIndex=0; th.setAttribute("role","button");
-    th.onclick=onOpen; th.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); onOpen(); } };
-  } else th.innerHTML='<span class="ph">—</span>';
+  th.innerHTML='<span class="ph">—</span>';
+  bindPhoto(th,r,onOpen,false);
   return th;
 }
 function statusSelect(key,r){
@@ -2825,6 +2957,12 @@ function commentBlock(r,key){
   var __view=VIEW;
   var wrap=document.createElement("div"); wrap.className="cmts";
   var list=cmOf(r.id), av=scoreAvg(r.id);
+  if(!__view&&!historyReady){
+    wrap.innerHTML='<div class="cmh"><b>팀 의견 · 토스 이력</b></div><p class="hint" role="status">'+esc(historyError?'이력 확인 실패: '+historyError:'의견과 이력을 불러오는 중…')+'</p>';
+    if(historyError)wrap.appendChild(miniBtn('이력 다시 불러오기',function(b){b.disabled=true;loadHistory();}));
+    else scheduleHistory();
+    return wrap;
+  }
   var h='<div class="cmh"><b>팀 의견</b>'+(av?'<span class="cmavg">'+stars(Math.round(av.avg))+' <i>'+av.avg+'</i> · '+av.n+'명</span>':'<span class="cmavg dim">아직 의견 없음</span>')+'</div>';
   list.forEach(function(c){
     var d=new Date(Number(c.createdAt)||0), when=(d.getMonth()+1)+"/"+d.getDate();
@@ -2895,8 +3033,9 @@ function openLB(r,isDb,keep){
     fr.appendChild(st);
 
     var win=document.createElement("div"); win.className="tama-lcd";
-    var i=document.createElement("img"); i.src=src||""; i.alt=(nameOf(r)||"후보")+" 사진";
+    var i=document.createElement("img"); if(src)i.src=src; i.alt=(nameOf(r)||"후보")+" 사진";
     win.appendChild(i); fr.appendChild(win);
+    if(!src)detailPhotoStatus(i,(r.hasPhoto||r.photoFile)?'사진을 불러오는 중…':'등록된 사진이 없습니다.');
 
     var pl=document.createElement("div"); pl.className="tama-nm";
     pl.innerHTML='<b>'+(nameOf(r)?esc(nameOf(r)):"이름 미입력")+'</b><span>'+esc(r.status||"")+'</span>';
@@ -2949,19 +3088,10 @@ function openLB(r,isDb,keep){
     var tb=tossBlock(r); if(tb) lbBox.appendChild(tb);
     lbBox.appendChild(commentBlock(r,key)); focusComment();
   }
-  if(r.photoFile&&fullCache[r.photoFile]){ show(fullCache[r.photoFile]); return; }
   /* 게임처럼: 갖고 있는 작은 사진으로 즉시 열고, 큰 사진은 뒤에서 받아와 바꿔 끼웁니다 */
   show(r.photo||THUMBS[r.id]);
   if(!r.photo&&r.hasPhoto)wantPush(r.id);
-  if(!r.photoFile||!navigator.onLine) return;
-  var im=lbBox.querySelector(".tama-lcd img"); if(im) im.classList.add("lo");
-  var photoSession=TK; fetchFull(r.photoFile).then(function(f){
-    if(TK!==photoSession)return;
-    if(!f) return; if(Object.keys(fullCache).length>=8)delete fullCache[Object.keys(fullCache)[0]]; fullCache[r.photoFile]=f;
-    if(lbRec!==r) return;                                   /* 그새 다른 카드를 열었으면 그만 */
-    var cur=lbBox.querySelector(".tama-lcd img"); if(!cur) return;
-    var pre=new Image(); pre.onload=function(){ cur.src=f; cur.classList.remove("lo"); }; pre.src=f;
-  }).catch(function(){ if(im) im.classList.remove("lo"); });
+  var im=lbBox.querySelector('.tama-lcd img');if(r.photoFile&&im)loadDetailPhoto(r,im);
 }
 
 /* ---------- 로드캐스팅 → 개인 DB 승격 ---------- */
@@ -3349,8 +3479,7 @@ el("t-close").onclick=closeToss; el("t-cancel").onclick=closeToss; el("t-send").
 el("a-close").onclick=closeAcad; el("ac-add").onclick=function(){ SFX.play("open"); openAcad(null); };
 el("b-close").onclick=closeBook;
 var acadSearchTimer;el('ac-q').oninput=function(e){acadQ=this.value;clearTimeout(acadSearchTimer);if(e&&e.isComposing)return;acadSearchTimer=setTimeout(renderAcad,160);};el('ac-q').oncompositionend=function(){acadQ=this.value;clearTimeout(acadSearchTimer);acadSearchTimer=setTimeout(renderAcad,160);};
-/* 기기에 저장된 학원 목록부터 보여줍니다 */
-REGIONS.forEach(function(rg){ IDB.get("acad_"+rg).then(function(v){ if(v&&v.list&&!ACAD[rg]){ ACAD[rg]=v.list; if(tab==="acad") renderAcad(); } }).catch(function(){}); });
+/* 학원 목록은 로그인 세션 안에서 권역별로 재사용합니다. */
 el("f-reset").onclick=function(){ SFX.play("chip"); resetF(); buildFilter(); render(); };
 el("sheet-f").addEventListener("click",function(e){ if(e.target===el("sheet-f")) closeFilter(); });
 el("d-close").onclick=function(){ clearDb(); cancelEdit(); closeForm(); };
@@ -3802,11 +3931,8 @@ document.addEventListener("pointerdown",function once(){
   document.removeEventListener("pointerdown",once); setTimeout(alarmChime,60);
 },{passive:true,once:true});
 
-/* 1) 기기에 저장된 것부터 바로 보여주고 → 2) 서버에서 최신으로 */
-Promise.all([IDB.get("thumbs"),IDB.get("snap")]).then(function(v){
-  if(v[0]&&typeof v[0]==="object") THUMBS=v[0];
-  if(v[1]&&v[1].road){ S={road:v[1].road,db:v[1].db||[],cm:v[1].cm||[],toss:v[1].toss||[],sched:v[1].sched||[]}; absorbPhotos(); tryFocus(); render(); scrollFocus(); }
-}).catch(function(){}).then(function(){ if(navigator.onLine){ call("getAll",pendingCommentLink?["fresh"]:[]); setTimeout(pushSync,2500); setTimeout(askPush,3000); } else pullThumbs(); });
+/* 인증된 현재 목록 → 사진과 이력 순서. 예전 계정의 기기 캐시는 읽지 않습니다. */
+if(TK&&navigator.onLine){call('getAll',pendingCommentLink?['fresh']:[]);setTimeout(pushSync,2500);setTimeout(askPush,3000);}
 if(!TK) lockOpen(); else lockClose();
 var lastScroll=0; window.addEventListener("scroll",function(){ lastScroll=Date.now(); },{passive:true});
 /* 가만히 두면 점점 뜸하게 확인합니다 (1분 → 최대 8분). 만지면 다시 1분으로 */
@@ -3936,7 +4062,7 @@ var ptrPulls=0, ptrLast=0;
 
 /* 오프라인 표시 */
 function paintOnline(){ el("offline").classList.toggle("show",!navigator.onLine); }
-window.addEventListener("online",function(){ paintOnline(); call("getAll",[]); });
+window.addEventListener("online",function(){ paintOnline(); resumePhotos(); call("getAll",[]); });
 window.addEventListener("offline",paintOnline); paintOnline();
 
 /* 홈 화면 설치 안내 */
@@ -3981,12 +4107,14 @@ function bindCalendarSettings(){
 }
 
 function resetSessionData(){
+  clearTimeout(historyTimer);historyTimer=null;historyReady=false;historyPending=null;historyError='';
   S={road:[],db:[],cm:[],toss:[],sched:[]};THUMBS={};ACAD={};fullCache={};lastSig='';lastSync=0;lastDataRev='';
   invalidateSlots();acadEpoch++;acadPending={};acadBusy={};cmIndexSource=null;cmIndex={};
   dataEpoch++;readPending=null;thumbBusy=false;thumbActive=0;fullPending={};bookGeneration++;B={acad:null,rec:null,days:[],date:'',start:'',dur:60,place:'',note:'',busy:false};T={rec:null,key:'',to:''};acadCur=null;
   ['a-body','b-body','calendar-options'].forEach(function(id){if(el(id))el(id).innerHTML='';});if(el('t-note'))el('t-note').value='';
   sessionPhone='';store('ph','');paintPhone();
-  wantQ=[];wantSeen={};acadErrors={};acadLoaded={};pendingRequests={};pending=null;cmEdit=null;dSource='';
+  clearTimeout(wantT);clearTimeout(wantRetryT);wantT=wantRetryT=null;
+  wantQ=[];wantSeen={};wantErrors={};wantEmpty={};wantAttempts={};acadErrors={};acadLoaded={};pendingRequests={};pending=null;cmEdit=null;dSource='';
   if(wantIO)wantIO.disconnect();
   if(typeof rPhoto!=='undefined'){clearRoad();clearDb();cancelEdit();}
   ['sheet-r','sheet-d','sheet-a','sheet-b','sheet-t','sheet-f'].forEach(function(id){el(id).classList.remove('open');});
