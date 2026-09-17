@@ -1,10 +1,10 @@
-/* v61 · 화면 캐시 + FCM을 하나의 등록/범위에서 처리합니다.
+/* v62 · 화면 캐시 + FCM을 하나의 등록/범위에서 처리합니다.
  * 앱 폴더 안에서만 작동합니다. 다른 앱 캐시, 개인 데이터, 로그인 정보는 건드리지 않습니다.
  */
 if (!self.CASTING_SHELL_LOADED) {
   self.CASTING_SHELL_LOADED = true;
   (function() {
-    var BUILD = 'v61', VERSION = 'casting-' + encodeURIComponent(new URL('./',self.location.href).pathname) + '-' + BUILD;
+    var BUILD = 'v62', VERSION = 'casting-' + encodeURIComponent(new URL('./',self.location.href).pathname) + '-' + BUILD;
     var BASE = new URL('./', self.location.href);
     var PAGE = new URL('index.html', BASE).href;
     var SHELL = ['index.html','manifest.json','icon-192.png','icon-512.png','icon-180.png'];

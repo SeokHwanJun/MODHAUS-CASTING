@@ -963,6 +963,21 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,te
 .academy-rating>b{font-size:12px;font-weight:600}
 #a-rating{width:100%;min-height:44px;font-size:16px}
 
+/* 상태는 작게 보이되 터치/키보드 조작 면적은 44px 유지 */
+.status-control{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:84px;height:44px;vertical-align:middle}
+.status-caption{display:flex;align-items:center;justify-content:center;width:80px;height:30px;border:2px solid #000;border-radius:999px;background:var(--mute-soft);font:700 12px/1 "IBM Plex Sans KR",sans-serif;color:#000;box-shadow:2px 2px 0 var(--pumpkin);white-space:nowrap;pointer-events:none}
+.status-control select.status{position:absolute!important;inset:0!important;opacity:0!important;width:100%!important;height:44px!important;min-width:0!important;min-height:44px!important;margin:0!important;padding:0!important;font-size:16px!important;cursor:pointer}
+.status-control:focus-within .status-caption{outline:3px solid #000;outline-offset:3px}
+.status-caption[data-st="발견"]{background:var(--c-found,var(--surface-3))}
+.status-caption[data-st="DM발송"]{background:var(--c-dm,var(--sun))}
+.status-caption[data-st="회신"]{background:var(--c-re,var(--mint))}
+.status-caption[data-st="1차"],.status-caption[data-st="2차"]{background:var(--accent)}
+.status-caption[data-st="최종"],.status-caption[data-st="최종합격"]{background:var(--sun)}
+.item .side{max-width:100px;gap:4px}
+#ac-cities .acad-filter{display:flex;align-items:center;gap:6px;min-width:0}
+#ac-cities select{max-width:240px}
+@media(max-width:759px){.status-control{width:76px;flex-basis:auto}.status-caption{width:72px;font-size:11px}.item .side{max-width:80px}.item .body{min-width:0}#ac-cities{gap:8px 12px}#ac-cities .acad-filter{flex:1 1 140px}#ac-cities select{flex:1;min-width:0;width:100%}}
+
 </style>
 </head>
 <body>
@@ -1290,10 +1305,10 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
   <div class="lb-box" id="lb-box"></div>
 </div>
 
-<script>/* v61 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadFilterKey='',bookGeneration=0;
+<script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
+var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var WRITE_ACTIONS=['add','update','edit','delete','comment','editcomment','delcomment','toss','acadadd','acadedit','book','unbook','setcalendar'];
-var ACADEMY_LABELS={region:'권역',city:'지역',country:'국가',rating:'별점',name:'학원명',contact:'연락처',insta:'인스타',address:'주소',lastVisit:'최근 방문',lastCount:'지원 인원',checked:'체크 인원',note:'비고'};
+var ACADEMY_LABELS={region:'권역',city:'지역',country:'국가',rating:'별점',kind:'분류',name:'학원명',contact:'연락처',insta:'인스타',address:'주소',lastVisit:'최근 방문',lastCount:'지원 인원',checked:'체크 인원',note:'비고'};
 
 var OWNERS   = ["김소연","김나희","김담희","염진경","전석환"];
 var PLATFORMS= ["로드","인스타","틱톡","기타"];
@@ -2125,6 +2140,8 @@ function warmUp(){
 /* 서버가 준 목록에 기기에 저장된 썸네일을 붙입니다 */
 function absorb(data){
   if(data.profile){ME=data.profile.name;ADMIN=!!data.profile.admin;VIEW=!!data.profile.view;sessionPhone=data.profile.phone||'';paintPhone();store('nm',ME);store('adm',ADMIN?'1':'');store('vw',VIEW?'1':'');if(!VIEW){me=ME;R.owner=ME;D.owner=ME;}applyView();}
+  ['road','db'].forEach(function(k){var prev={};(S[k]||[]).forEach(function(r){prev[r.id]=r;});(data[k]||[]).forEach(function(r){var old=prev[r.id];if(old&&(old.photoFile!==r.photoFile||old.hasPhoto!==r.hasPhoto)){delete THUMBS[r.id];delete wantSeen[r.id];}});});
+  cacheThumbResults(data.thumbs||[]);
   ['road','db'].forEach(function(k){(data[k]||[]).forEach(function(r){r.photo=THUMBS[r.id]||'';if(r.status==='로드')r.status='발견';});});
   S={road:data.road||[],db:data.db||[],cm:data.cm||[],toss:data.toss||[],sched:data.sched||[]};
 }
@@ -2149,25 +2166,26 @@ function wantPush(id){
   clearTimeout(wantT); wantT=setTimeout(pullThumbs,80);   /* 짧게 모아서 한 번에 */
 }
 function pullThumbs(){
-  if(thumbBusy||!navigator.onLine||!TK||!wantQ.length)return;
-  var first=wantQ[0],key=S.db.some(function(r){return r.id===first;})?'db':'road';
-  var valid={};S[key].forEach(function(r){valid[r.id]=true;});var ids=[];
-  wantQ=wantQ.filter(function(id){if(valid[id]&&ids.length<16){if(!THUMBS[id])ids.push(id);return false;}return true;});
-  if(!ids.length){wantQ.shift();if(wantQ.length)pullThumbs();return;}
-  thumbBusy=true;
+  if(thumbActive>=2||!navigator.onLine||!TK||!wantQ.length)return;
+  var session=TK,index={};['road','db'].forEach(function(k){S[k].forEach(function(r){index[r.id]=k;});});
+  wantQ=wantQ.filter(function(id){return index[id]&&!THUMBS[id];});if(!wantQ.length)return;
+  var key=index[wantQ[0]],ids=[];
+  wantQ=wantQ.filter(function(id){if(index[id]===key&&ids.length<8){ids.push(id);return false;}return true;});
+  thumbActive++;thumbBusy=true;
   apiGet({action:'thumbs',k:key,ids:ids.join(',')}).then(function(r){
-    if(r.error)throw new Error(r.error);(r.thumbs||[]).forEach(function(t){if(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(t.photo||''))THUMBS[t.id]=t.photo;});absorbPhotos();applyThumbs(ids);
-  }).catch(function(){ids.forEach(function(id){delete wantSeen[id];});}).finally(function(){thumbBusy=false;if(wantQ.length)setTimeout(pullThumbs,100);});
+    if(TK!==session)return;if(r.error)throw new Error(r.error);cacheThumbResults(r.thumbs);absorbPhotos();applyThumbs(ids);
+  }).catch(function(){if(TK===session)ids.forEach(function(id){delete wantSeen[id];});}).finally(function(){
+    if(TK!==session)return;thumbActive=Math.max(0,thumbActive-1);thumbBusy=thumbActive>0;if(wantQ.length)pullThumbs();
+  });
+  if(wantQ.length&&thumbActive<2)pullThumbs();
 }
 /* 도착한 썸네일만 그 자리에 끼워 넣음 (전체를 다시 그리지 않음) */
 function applyThumbs(ids){
-  ids.forEach(function(id){
-    var src=THUMBS[id]; if(!src) return;
-    Array.prototype.forEach.call(document.querySelectorAll('[data-id="'+id+'"] .thumb'),function(th){
-      if(th.querySelector("img")) return;
-      th.innerHTML=""; var img=document.createElement("img"); img.src=src; img.alt="";
-      img.loading="lazy"; img.decoding="async"; th.appendChild(img); th.classList.add("clickable"); th.removeAttribute("data-want");
+  ids.forEach(function(id){var src=THUMBS[id];if(!src)return;
+    document.querySelectorAll('.thumb[data-want]').forEach(function(th){if(th.getAttribute('data-want')!==id)return;
+      th.innerHTML='';var img=document.createElement('img');img.src=src;img.alt='후보 사진';img.decoding='async';th.appendChild(img);th.classList.add('clickable');th.removeAttribute('data-want');
     });
+    if(lbRec&&lbRec.id===id){var im=lbBox.querySelector('.tama-lcd img');if(im&&!im.getAttribute('src'))im.src=src;}
   });
 }
 function absorbPhotos(){ ["road","db"].forEach(function(k){ (S[k]||[]).forEach(function(r){ r.photo=THUMBS[r.id]||""; }); }); }
@@ -2178,7 +2196,7 @@ function call(fn,args,okMsg,msgEl,mutating){
   args=args||[];if(mutating&&busy)return Promise.resolve(false);
   if(fn==='getAll'&&(busy||readPending))return readPending||Promise.resolve(false);
   var body,api;
-  if(fn==='getAll')api=function(){return apiGet({action:'all',fresh:args[0]==='fresh'?1:0});};
+  if(fn==='getAll')api=function(){return apiGet({action:'all',fresh:args[0]==='fresh'?1:0,boot:(!S.road.length&&!S.db.length)?1:0,photoKey:tab==='db'?'db':'road',photoOwner:(tab==='db'?fD.owner:fR.owner)||'전체',photoSort:tab==='db'?'점수순':fR.sort||'진행순',focus:focusId||''});};
   else {
     var actions={addItem:'add',updateItem:'update',editItem:'edit',deleteItem:'delete',addComment:'comment',editComment:'editcomment',delComment:'delcomment',toss:'toss'};
     if(!actions[fn])return Promise.resolve(false);body={action:actions[fn]};
@@ -2193,9 +2211,9 @@ function call(fn,args,okMsg,msgEl,mutating){
   var task=api().then(function(data){
     if(!mutating&&epoch!==dataEpoch)return false;
     if(!data||data.error)throw new Error(data&&data.error||'응답을 확인하지 못했습니다.');
-    if(data.build&&data.build!=='v61')throw new Error('서버도 v61으로 배포해주세요.');
-    if(fn==='addItem'&&data.id&&args[1].photo)THUMBS[data.id]=args[1].photo;
-    if(fn==='editItem'&&args[2].photo!==undefined){if(args[2].photo)THUMBS[args[1]]=args[2].photo;else delete THUMBS[args[1]];}
+    if(data.build&&data.build!=='v62')throw new Error('서버도 v62으로 배포해주세요.');
+    if(fn==='addItem'&&data.id&&args[1].photo){data.thumbs=(data.thumbs||[]).concat([{id:data.id,photo:args[1].photo}]);}
+    if(fn==='editItem'&&args[2].photo!==undefined){delete THUMBS[args[1]];if(args[2].photo)data.thumbs=(data.thumbs||[]).concat([{id:args[1],photo:args[2].photo}]);}
     if(fn==='deleteItem')delete THUMBS[args[1]];
     lastSync=Date.now();lastMs=Date.now()-t0;el('banner').hidden=true;
     var sig=JSON.stringify([data.road,data.db,data.cm,data.toss,data.sched,data.profile]);
@@ -2214,7 +2232,12 @@ function call(fn,args,okMsg,msgEl,mutating){
   }).finally(function(){done=true;clearTimeout(slow);if(mutating)setBusy(false);else if(readPending===task)readPending=null;});
   if(!mutating)readPending=task;return task;
 }
-function fetchFull(fileId){ return apiGet({action:"full",file:fileId}).then(function(x){ return x&&x.photo||""; }); }
+function fetchFull(fileId){
+  if(fullCache[fileId])return Promise.resolve(fullCache[fileId]);
+  if(fullPending[fileId])return fullPending[fileId];
+  var session=TK,pending=apiGet({action:'full',file:fileId}).then(function(x){return TK===session&&x&&x.photo||'';}).finally(function(){if(fullPending[fileId]===pending)delete fullPending[fileId];});
+  fullPending[fileId]=pending;return pending;
+}
 
 /* ---------- 공용 UI ---------- */
 function choices(host,values,state,key,after){
@@ -2326,9 +2349,9 @@ function closeFilter(){ el("sheet-f").classList.remove("open"); unlockScroll(); 
 /* ══════════ 학원 탭 ══════════
    엑셀 7개 시트(서울~제주)를 옮겨온 목록. 권역을 먼저 고르고, 그 권역만 서버에서 받아옵니다.
    행 형식: [id, 지역, 학원명, 연락처, 인스타, 주소, 최근방문, 최근지원인원, 체크인원, 비고, 수정시각, 수정자] */
-var REGIONS=["전체","서울","경기","전라","경상","충청","강원","제주","해외"];
+var REGIONS=["전체","서울","경기","전라","경상","충청","강원","제주","해외","미분류"];
 var ACAD={}, acadRegion=store("acreg")||"서울", acadCity="전체", acadQ="", acadBusy={}, acadCur=null;
-var AI={id:0,city:1,name:2,contact:3,insta:4,address:5,lastVisit:6,lastCount:7,checked:8,note:9,at:10,by:11,country:12,region:13,rating:14};
+var AI={id:0,city:1,name:2,contact:3,insta:4,address:5,lastVisit:6,lastCount:7,checked:8,note:9,at:10,by:11,country:12,region:13,rating:14,kind:15};
 function acadCount(){ var l=ACAD[acadRegion]; return l?l.length:""; }
 function loadAcad(region,force){
   if(acadBusy[region])return Promise.resolve();if(!force&&ACAD[region]&&Date.now()-(acadLoaded[region]||0)<60000)return Promise.resolve();
@@ -2337,32 +2360,37 @@ function loadAcad(region,force){
 }
 /* 권역 안의 지역(강남·마포·부산…) — 데이터에 있는 것만, 많은 순 */
 function acadCities(list){
-  var m={}; (list||[]).forEach(function(a){ String(a[AI.city]||"").split(/[,·\/]/).forEach(function(c){ c=c.trim(); if(c) m[c]=(m[c]||0)+1; }); });
-  return Object.keys(m).sort(function(x,y){ return m[y]-m[x]||x.localeCompare(y); }).map(function(c){ return {c:c,n:m[c]}; });
+  var counts={};(list||[]).forEach(function(a){var seen={};String(a[AI.city]||'').split(/[,·/\n]+/).forEach(function(x){x=x.trim();if(x&&!seen[x]){counts[x]=(counts[x]||0)+1;seen[x]=true;}});});
+  return Object.keys(counts).sort(function(a,b){return a.localeCompare(b,'ko');}).map(function(c){return {c:c,n:counts[c]};});
 }
-function acadInCity(a,city){ if(city==="전체") return true; return String(a[AI.city]||"").split(/[,·\/]/).some(function(c){ return c.trim()===city; }); }
-function acadHit(a,q){
-  if(!q) return true; q=q.toLowerCase();
-  return [a[AI.name],a[AI.city],a[AI.note],a[AI.checked],a[AI.address],a[AI.contact]].some(function(v){ return String(v||"").toLowerCase().indexOf(q)>=0; });
-}
+function acadInCity(a,city){return city==='전체'||String(a[AI.city]||'').split(/[,·/\n]+/).some(function(x){return x.trim()===city;});}
+function acadHit(a,q){q=String(q||'').trim().toLowerCase();return !q||['name','city','country','kind','note','checked','address','contact'].some(function(k){return String(a[AI[k]]||'').toLowerCase().indexOf(q)>=0;});}
 function renderAcad(){
   var host=el('ac-regions');host.innerHTML='';
-  REGIONS.forEach(function(rg){host.appendChild(qc(rg,ACAD[rg]?ACAD[rg].length:null,rg===acadRegion,function(){acadRegion=rg;acadCity='전체';acadLimit=40;store('acreg',rg);loadAcad(rg);renderAcad();}));});
+  REGIONS.forEach(function(rg){host.appendChild(qc(rg,ACAD[rg]?ACAD[rg].length:null,rg===acadRegion,function(){acadRegion=rg;acadCity='전체';acadCountry='전체';acadLimit=40;store('acreg',rg);loadAcad(rg);renderAcad();}));});
   var list=ACAD[acadRegion],cc=el('ac-cities');cc.hidden=false;
-  cc.innerHTML='<label for="ac-city-select">지역</label> <select id="ac-city-select" class="pill"><option value="전체">전체 지역</option>'+acadCities(list).map(function(x){return '<option value="'+esc(x.c)+'"'+(x.c===acadCity?' selected':'')+'>'+esc(x.c)+' ('+x.n+')</option>';}).join('')+'</select> <label for="ac-sort">정렬</label> <select id="ac-sort" class="pill"><option value="name">학원명순</option><option value="rating">별점 높은 순</option><option value="updated">최근 수정순</option><option value="unvisited">미방문 먼저</option></select>';
+  cc.innerHTML='<label for="ac-city-select">지역</label> <select id="ac-city-select" class="pill"><option value="전체">전체 지역</option>'+acadCities((list||[]).filter(academyFilterMatch)).map(function(x){return '<option value="'+esc(x.c)+'"'+(x.c===acadCity?' selected':'')+'>'+esc(x.c)+' ('+x.n+')</option>';}).join('')+'</select> <label for="ac-sort">정렬</label> <select id="ac-sort" class="pill"><option value="name">학원명순</option><option value="rating">별점 높은 순</option><option value="updated">최근 수정순</option><option value="unvisited">미방문 먼저</option></select>';
+  var countries=['전체'].concat(Array.from(new Set((list||[]).map(function(a){return a[AI.country]||'';}).filter(Boolean))).sort(function(a,b){return a.localeCompare(b,'ko');}));
+  cc.innerHTML+=academyFilterSelect('ac-kind','분류',['전체','학원','연기학원','학원·에이전시','에이전시','학교','댄스팀','행사','정보사이트'],acadKind);
+  if(acadRegion==='해외'||acadRegion==='전체')cc.innerHTML+=academyFilterSelect('ac-country','국가',countries,acadCountry);
+  el('ac-kind').onchange=function(){acadKind=this.value;acadLimit=40;renderAcad();};
+  if(el('ac-country'))el('ac-country').onchange=function(){acadCountry=this.value;acadCity='전체';acadLimit=40;renderAcad();};
   el('ac-city-select').onchange=function(){acadCity=this.value;acadLimit=40;renderAcad();};el('ac-sort').value=acadSort;el('ac-sort').onchange=function(){acadSort=this.value;acadLimit=40;renderAcad();};
   el('ac-add').hidden=VIEW;renderSched();var box=el('ac-list');
   if(!list){el('ac-meta').textContent='';box.innerHTML='<div class="empty">'+esc(acadErrors[acadRegion]||(acadBusy[acadRegion]?'학원 목록을 불러오는 중…':'학원 목록을 불러와주세요.'))+'</div>';if(!acadBusy[acadRegion]){var retry=miniBtn('불러오기',function(){loadAcad(acadRegion,true);renderAcad();});box.appendChild(retry);if(!acadErrors[acadRegion]&&TK){loadAcad(acadRegion);}}return;}
-  var rows=list.filter(function(a){return acadInCity(a,acadCity)&&acadHit(a,acadQ.trim());}).sort(compareAcademies);
-  var filter=acadRegion+'|'+acadCity+'|'+acadQ+'|'+acadSort;if(filter!==acadFilterKey){acadLimit=40;acadFilterKey=filter;}
+  var rows=list.filter(function(a){return academyFilterMatch(a)&&acadInCity(a,acadCity)&&acadHit(a,acadQ.trim());}).sort(compareAcademies);
+  var filter=acadRegion+'|'+acadCity+'|'+acadQ+'|'+acadSort+'|'+acadKind+'|'+acadCountry;if(filter!==acadFilterKey){acadLimit=40;acadFilterKey=filter;}
   el('ac-meta').textContent=acadRegion+' · '+rows.length+'곳'+(acadBusy[acadRegion]?' · 새로 확인 중':'');box.innerHTML='';
-  rows.slice(0,acadLimit).forEach(function(a){var d=document.createElement('button');d.type='button';d.className='acad';d.innerHTML='<div class="an"><b>'+esc(a[AI.name])+'</b><span class="tag who">'+esc([a[AI.region],a[AI.country]==='한국'?'':a[AI.country],a[AI.city]].filter(Boolean).join(' · '))+'</span></div>'+academyRatingHtml(a)+'<div class="am">'+(a[AI.lastVisit]?'최근 방문 '+esc(a[AI.lastVisit]):'방문 기록 없음')+(a[AI.lastCount]?' · 지원 '+esc(a[AI.lastCount]):'')+'</div>';d.onclick=function(){openAcad(a);};box.appendChild(d);});
+  rows.slice(0,acadLimit).forEach(function(a){var d=document.createElement('button');d.type='button';d.className='acad';d.innerHTML='<div class="an"><b>'+esc(a[AI.name])+'</b><span class="tag who">'+esc([a[AI.kind]||'학원',a[AI.region],a[AI.country]==='한국'?'':a[AI.country],a[AI.city]].filter(Boolean).join(' · '))+'</span></div>'+academyRatingHtml(a)+'<div class="am">'+(a[AI.lastVisit]?'방문·컨택 기록 '+esc(a[AI.lastVisit]):'방문 기록 없음')+(a[AI.lastCount]?' · 지원 '+esc(a[AI.lastCount]):'')+'</div>';d.onclick=function(){openAcad(a);};box.appendChild(d);});
   if(rows.length>acadLimit)box.appendChild(miniBtn('40곳 더 보기 ('+Math.min(acadLimit,rows.length)+' / '+rows.length+')',function(){acadLimit+=40;renderAcad();}));
   if(!rows.length)box.innerHTML='<div class="empty">조건에 맞는 학원이 없습니다.</div>';
   if(acadErrors[acadRegion]){var err=document.createElement('p');err.className='hint';err.textContent='최신 목록 확인 실패: '+acadErrors[acadRegion];box.appendChild(err);}
 }
 function telLinks(t){ return esc(t).replace(/(0\d{1,2}[\s.-]?\d{3,4}[\s.-]?\d{4})/g,function(m){ return '<a href="tel:'+m.replace(/\D/g,"")+'">'+m+'</a>'; }); }
-function instaLink(v){ v=String(v||"").trim(); if(!v) return ""; var u=/^https?:\/\//.test(v)?v:("https://www.instagram.com/"+v.replace(/^@/,"")); return '<a class="link" href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(v.replace(/^https?:\/\/(www\.)?instagram\.com\//,"@").replace(/\/$/,""))+'</a>'; }
+function instaLink(v){
+  v=String(v||'').trim();if(!v)return '';var u=/^@[A-Za-z0-9._]+$/.test(v)?'https://www.instagram.com/'+v.slice(1)+'/':safeUrl(v);
+  return u?'<a class="link" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(v)+'</a>':'<span class="hint">'+esc(v)+'</span>';
+}
 function alumniOf(name){var n=String(name||'').replace(/\s/g,'').toLowerCase();return n?S.db.filter(function(r){return String(r.academy||'').replace(/\s/g,'').toLowerCase()===n;}):[];}
 function openAcad(a){
   acadCur=a;var isNew=!a,v=function(k){return a?String(a[AI[k]]||''):'';},region=v('region')||(acadRegion==='전체'?'서울':acadRegion),h='';
@@ -2372,8 +2400,9 @@ function openAcad(a){
   if(a&&!VIEW)h+='<div class="bookrow"><button class="btn sm" id="a-book">오디션 일정 잡기</button></div>';
   if(!VIEW){
     h+='<div class="f"><label for="a-region">권역</label><select class="pill" id="a-region">'+REGIONS.filter(function(x){return x!=='전체';}).map(function(x){return '<option'+(x===region?' selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select></div>';
+    h+=academyFilterSelect('a-kind','분류',['학원','연기학원','학원·에이전시','에이전시','학교','댄스팀','행사','정보사이트'],v('kind')||'학원');
     h+='<div class="f"><label for="a-rating">학원 별점 · 5점 만점</label><select class="pill" id="a-rating"><option value="">미평가</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(academyRating(a)===n?' selected':'')+'>'+'★'.repeat(n)+'☆'.repeat(5-n)+' · '+n+'점</option>';}).join('')+'</select><p class="hint">팀 공통 평가입니다. 변경한 사람과 이전 별점은 이력에 남습니다.</p></div>';
-    [['name','학원명'],['country','국가'],['city','지역 · 도시'],['contact','연락처'],['insta','인스타 주소 또는 @계정'],['address','주소'],['lastVisit','최근 방문 · 오디션'],['lastCount','최근 지원 인원'],['checked','체크 인원']].forEach(function(f){h+='<div class="f"><label for="a-'+f[0]+'">'+f[1]+'</label><input type="text" id="a-'+f[0]+'" maxlength="4000" value="'+esc(v(f[0])||(f[0]==='country'&&region!=='해외'?'한국':''))+'"></div>';});
+    [['name','학원명'],['country','국가'],['city','지역 · 도시'],['contact','연락처'],['insta','SNS · 홈페이지 주소'],['address','주소'],['lastVisit','방문 · 오디션 기록 (원문)'],['lastCount','최근 지원 인원'],['checked','체크 인원']].forEach(function(f){h+='<div class="f"><label for="a-'+f[0]+'">'+f[1]+'</label><input type="text" id="a-'+f[0]+'" maxlength="4000" value="'+esc(v(f[0])||(f[0]==='country'&&region!=='해외'?'한국':''))+'"></div>';});
     h+='<div class="f"><label for="a-note">비고 · 통화 기록</label><textarea id="a-note" maxlength="4000">'+esc(v('note'))+'</textarea></div><p class="hint">방문 기록은 기존에 적은 내용을 그대로 보존합니다. 변경 내역은 아래 이력에 남습니다.</p><div class="row-btns"><button class="btn" id="a-save">'+(isNew?'추가':'저장')+'</button><button class="btn ghost sm" id="a-cancel">닫기</button></div><p id="a-error" role="status"></p>';
   }else h+='<p>'+esc([region,v('city'),v('address')].filter(Boolean).join(' · '))+'</p><p>최근 방문: '+esc(v('lastVisit')||'기록 없음')+'</p>';
   if(a){var al=alumniOf(v('name'));h+='<div class="cmh"><b>이 학원 출신 후보</b><span>'+al.length+'명</span></div><div class="alum">'+al.map(function(r){return '<button class="mini" data-id="'+esc(r.id)+'">'+esc(nameOf(r))+'</button>';}).join('')+'</div>';if(!VIEW)h+='<div class="cmh"><b>오디션 · 수정 이력</b></div><div id="a-history" aria-live="polite">불러오는 중…</div>';}
@@ -2388,13 +2417,13 @@ function openAcad(a){
 }
 function closeAcad(){ el("sheet-a").classList.remove("open"); unlockScroll(); acadCur=null; }
 function saveAcad(){
-  var patch={};['rating','region','name','country','city','contact','insta','address','lastVisit','lastCount','checked','note'].forEach(function(k){patch[k]=el('a-'+k).value.trim();});
+  var patch={};['kind','rating','region','name','country','city','contact','insta','address','lastVisit','lastCount','checked','note'].forEach(function(k){patch[k]=el('a-'+k).value.trim();});
   if(!patch.name){el('a-error').textContent='학원명을 입력해주세요.';el('a-name').focus();return;}
   var cur=acadCur,btn=el('a-save');if(btn.disabled)return;btn.disabled=true;
-  apiPost({action:cur?'acadedit':'acadadd',id:cur?cur[AI.id]:'',patch:patch}).then(function(r){if(!r||r.error)throw new Error(r&&r.error||'저장하지 못했습니다.');ACAD={};acadLoaded={};ACAD[r.region]=r.list;acadLoaded[r.region]=Date.now();acadRegion=r.region;acadCity='전체';closeAcad();renderAcad();SFX.play('save');toast(2,'SAVED',patch.name+' 저장됨');}).catch(function(e){if(el('a-error'))el('a-error').textContent=e.message;}).finally(function(){btn.disabled=false;});
+  apiPost({action:cur?'acadedit':'acadadd',id:cur?cur[AI.id]:'',patch:patch}).then(function(r){if(!r||r.error)throw new Error(r&&r.error||'저장하지 못했습니다.');ACAD={};acadLoaded={};ACAD[r.region]=r.list;acadLoaded[r.region]=Date.now();acadRegion=r.region;acadCity='전체';acadKind='전체';acadCountry='전체';closeAcad();renderAcad();SFX.play('save');toast(2,'SAVED',patch.name+' 저장됨');}).catch(function(e){if(el('a-error'))el('a-error').textContent=e.message;}).finally(function(){btn.disabled=false;});
 }
 function bindAcadLinks(node){ Array.prototype.forEach.call(node.querySelectorAll(".alink"),function(a){ a.onclick=function(e){ e.preventDefault(); SFX.play("tab"); closeLB(); jumpAcad(a.getAttribute("data-ac")); }; }); }
-function jumpAcad(q){acadQ=q||'';acadRegion='전체';acadCity='전체';el('ac-q').value=acadQ;setTab('acad');loadAcad('전체');window.scrollTo(0,0);}
+function jumpAcad(q){acadQ=q||'';acadRegion='전체';acadCity='전체';acadKind='전체';acadCountry='전체';el('ac-q').value=acadQ;setTab('acad');loadAcad('전체');window.scrollTo(0,0);}
 
 /* ══════════ 오디션 잡기 (구글 캘린더) ══════════
    서버가 캘린더를 읽어 일요일 오후 빈칸을 주면, 첫 빈칸을 추천으로 골라 둡니다. 한 번 더 누르면 캘린더에 들어갑니다. */
@@ -2555,7 +2584,7 @@ function statusSelect(key,r){
     if(lb.classList.contains("open")) closeLB();
     call("updateItem",[key,r.id,{status:v}],"상태를 바꿨습니다.",key==="road"?"r-msg":"d-msg",true);
   };
-  return sel;
+  var wrap=document.createElement('span');wrap.className='status-control';var label=document.createElement('span');label.className='status-caption';label.setAttribute('data-st',r.status||'');label.textContent=r.status||'상태';label.setAttribute('aria-hidden','true');wrap.appendChild(label);wrap.appendChild(sel);return wrap;
 }
 function miniBtn(label,fn,title){
   var b=document.createElement("button"); b.className="mini"; b.type="button"; b.textContent=label;
@@ -2799,10 +2828,12 @@ function openLB(r,isDb,keep){
   }
   if(r.photoFile&&fullCache[r.photoFile]){ show(fullCache[r.photoFile]); return; }
   /* 게임처럼: 갖고 있는 작은 사진으로 즉시 열고, 큰 사진은 뒤에서 받아와 바꿔 끼웁니다 */
-  show(r.photo);
+  show(r.photo||THUMBS[r.id]);
+  if(!r.photo&&r.hasPhoto)wantPush(r.id);
   if(!r.photoFile||!navigator.onLine) return;
   var im=lbBox.querySelector(".tama-lcd img"); if(im) im.classList.add("lo");
-  fetchFull(r.photoFile).then(function(f){
+  var photoSession=TK; fetchFull(r.photoFile).then(function(f){
+    if(TK!==photoSession)return;
     if(!f) return; if(Object.keys(fullCache).length>=8)delete fullCache[Object.keys(fullCache)[0]]; fullCache[r.photoFile]=f;
     if(lbRec!==r) return;                                   /* 그새 다른 카드를 열었으면 그만 */
     var cur=lbBox.querySelector(".tama-lcd img"); if(!cur) return;
@@ -3108,6 +3139,7 @@ function scrollFocus(){
   setTimeout(function(){ n.scrollIntoView({block:"center"}); if(r&&focusId===r.id) openLB(r,isDb); },60);
 }
 function render(){
+  if(wantIO)wantIO.disconnect();
   var y=window.scrollY||0, x=window.scrollX||0;
   buildTabs(); buildStats();
   if(tab==="road") renderRoad(); else if(tab==="db") renderDb(); else if(tab==="acad") renderAcad(); else if(tab==="league") renderLeague(); else renderDex();
@@ -3357,11 +3389,11 @@ function lkRetry(on){
   }
   b.hidden=false;
 }
-/* ── 폰 알림 · v61 ────────────────────────────────
+/* ── 폰 알림 · v62 ────────────────────────────────
    등록은 sw.js 하나만 사용합니다. Firebase에도 같은 등록을 명시합니다.
    on/off는 사용자의 선택, pushtok는 서버가 확인한 기기키입니다.
  */
-var PUSH_BUILD='v61', pushBusy=false, pushError='', pushScripts={}, appWorkerPromise=null;
+var PUSH_BUILD='v62', pushBusy=false, pushError='', pushScripts={}, appWorkerPromise=null;
 var pushMessaging=null, pushUnsubscribe=null, pushMemoryId='';
 function pushMsg(t){ var n=el('ac-pushmsg'); if(n) n.textContent=t||''; }
 function pushTimeout(p,ms,label){
@@ -3832,7 +3864,7 @@ function bindCalendarSettings(){
 
 function resetSessionData(){
   S={road:[],db:[],cm:[],toss:[],sched:[]};THUMBS={};ACAD={};fullCache={};lastSig='';lastSync=0;
-  dataEpoch++;readPending=null;thumbBusy=false;bookGeneration++;B={acad:null,rec:null,days:[],date:'',start:'',dur:60,place:'',note:'',busy:false};T={rec:null,key:'',to:''};acadCur=null;
+  dataEpoch++;readPending=null;thumbBusy=false;thumbActive=0;fullPending={};bookGeneration++;B={acad:null,rec:null,days:[],date:'',start:'',dur:60,place:'',note:'',busy:false};T={rec:null,key:'',to:''};acadCur=null;
   ['a-body','b-body','calendar-options'].forEach(function(id){if(el(id))el(id).innerHTML='';});if(el('t-note'))el('t-note').value='';
   sessionPhone='';store('ph','');paintPhone();
   wantQ=[];wantSeen={};acadErrors={};acadLoaded={};pendingRequests={};pending=null;cmEdit=null;dSource='';
@@ -3844,6 +3876,10 @@ function resetSessionData(){
 }
 
 function requestId(){return window.crypto&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_'+Math.random().toString(36).slice(2);}
+
+function cacheThumbResults(list){
+  (list||[]).forEach(function(t){if(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(t.photo||''))THUMBS[t.id]=t.photo;});
+}
 
 function academyRating(a){var v=a?String(a[AI.rating]||''):'';return /^[1-5]$/.test(v)?Number(v):0;}
 
@@ -3860,11 +3896,15 @@ function compareAcademies(a,b){
   return d||String(a[AI.name]||'').localeCompare(String(b[AI.name]||''),'ko')||String(a[AI.id]).localeCompare(String(b[AI.id]));
 }
 
+function academyFilterMatch(a){return (acadCountry==='전체'||a[AI.country]===acadCountry)&&(acadKind==='전체'||(a[AI.kind]||'학원')===acadKind);}
+
+function academyFilterSelect(id,label,values,current){return '<span class="acad-filter"><label for="'+id+'">'+label+'</label><select class="pill" id="'+id+'">'+values.map(function(v){return '<option value="'+esc(v)+'"'+(v===current?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select></span>';}
+
 function loadSlots(){
   var state=B,gen=++bookGeneration;B.generation=gen;B.busy=true;B.error='';renderBook();
   apiGet({action:'slots',dur:B.dur}).then(function(r){if(B!==state||gen!==bookGeneration)return;if(r.error||!r.days)throw new Error(r.error||'캘린더를 확인하지 못했습니다.');B.days=r.days;B.calendar=r.calendar||'회사 공용 캘린더';var keep=r.days.find(function(d){return d.date===B.date&&d.free.indexOf(B.start)>=0;});if(!keep){B.date='';B.start='';r.days.some(function(d){if(d.free.length){B.date=d.date;B.start=d.free[0];return true;}return false;});}}).catch(function(e){if(B===state)B.error=e.message;}).finally(function(){if(B===state&&gen===bookGeneration){B.busy=false;renderBook();}});
 }
-/* v61 — 터치/키보드, 기존 모달의 포커스 관리 */
+/* v62 — 터치/키보드, 기존 모달의 포커스 관리 */
 (function(){
   var stack=[],lastFocus=null;
   document.addEventListener('focusin',function(e){lastFocus=e.target;if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)&&window.innerWidth<760)setTimeout(function(){if(e.target===document.activeElement)e.target.scrollIntoView({block:'nearest',behavior:'smooth'});},280);});
