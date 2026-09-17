@@ -978,6 +978,27 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,te
 #ac-cities select{max-width:240px}
 @media(max-width:759px){.status-control{width:76px;flex-basis:auto}.status-caption{width:72px;font-size:11px}.item .side{max-width:80px}.item .body{min-width:0}#ac-cities{gap:8px 12px}#ac-cities .acad-filter{flex:1 1 140px}#ac-cities select{flex:1;min-width:0;width:100%}}
 
+
+/* v66: 권역 건수는 선택한 버튼 위, 필터는 독립된 칸으로 배치 */
+#ac-regions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:18px 8px;padding:12px 0 8px;overflow:visible}
+#ac-regions .acad-region{position:relative;display:flex;align-items:center;justify-content:center;padding:10px 2px;min-width:0;width:100%;min-height:44px;font-size:14px;white-space:nowrap;margin:0}
+#ac-regions .acad-region .n{position:absolute;top:-10px;left:50%;right:auto;transform:translateX(-50%);margin:0;padding:3px 7px;border:2px solid #000;border-radius:99px;background:var(--orange,#f87524);color:#000;font:700 11px/1.2 "IBM Plex Sans KR",sans-serif;min-width:24px;text-align:center;z-index:1;opacity:1}
+#ac-cities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px;margin:12px 0}
+#ac-cities .acad-filter{display:flex;flex-direction:column;align-items:stretch;gap:6px;min-width:0}
+#ac-cities label{font-size:13px;font-weight:700;line-height:1.4;padding-left:5px}
+#ac-cities select{display:block;width:100%;max-width:none;min-width:0;min-height:46px;padding:9px 28px 9px 12px;font-size:16px;line-height:1.4;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='black' stroke-width='2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.acad .an{display:flex;flex-wrap:wrap;gap:7px;align-items:flex-start}.acad .an b{min-width:0;max-width:100%;overflow-wrap:anywhere;line-height:1.5}
+.acad .tag{max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.5}.acad .am{display:block;line-height:1.65;overflow-wrap:anywhere}
+.acad-tools{min-width:0}.acad-tools input{flex:1 1 0;min-width:0;width:100%}.acad-tools button{flex:0 0 auto;white-space:nowrap}
+#nav [data-tab="acad"] .cnt{left:50%;right:auto;top:-9px;transform:translateX(-50%);margin:0}
+#nav [data-tab="acad"][aria-selected="false"] .cnt{display:none}
+#banner,#connection-status,#calendar-options{overflow-wrap:anywhere;line-height:1.6}
+#b-body .choices{gap:8px}#b-body .choice{white-space:normal;line-height:1.4;padding:9px 12px}
+.item .body{min-width:0}.item .spec,.item .sub2{overflow-wrap:anywhere}
+@media(max-width:359px){#ac-cities{grid-template-columns:minmax(0,1fr)}#ac-regions{gap:18px 5px}#ac-regions .acad-region{font-size:13px}}
+@media(min-width:760px){#ac-cities{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
 </style>
 </head>
 <body>
@@ -1027,6 +1048,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 
 <main>
   <div id="banner" hidden class="banner"></div>
+  <div id="connection-status" class="banner" role="status" hidden></div>
 
   <!-- 로드캐스팅 -->
   <section id="v-road">
@@ -1306,6 +1328,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
+var APP_BUILD='v66',SERVER_BUILD='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var WRITE_ACTIONS=['add','update','edit','delete','comment','editcomment','delcomment','toss','acadadd','acadedit','book','unbook','setcalendar'];
 var ACADEMY_LABELS={region:'권역',city:'지역',country:'국가',rating:'별점',kind:'분류',name:'학원명',contact:'연락처',insta:'인스타',address:'주소',lastVisit:'최근 방문',lastCount:'지원 인원',checked:'체크 인원',note:'비고'};
@@ -2071,12 +2094,15 @@ var IDB={get:function(){return Promise.resolve(undefined);},set:function(){retur
 try{if(window.indexedDB)indexedDB.deleteDatabase('casting-board');}catch(ignore){}
 
 var THUMBS={};                       /* id → 썸네일 data URL (기기에 저장) */
-var lastSync=0, lastMs=0, lastSig="";
+var lastSync=0, lastMs=0, lastSig="",lastDataRev='';
 var thumbSaveT=null;
 function saveThumbs(){ clearTimeout(thumbSaveT); thumbSaveT=setTimeout(function(){ IDB.set("thumbs",THUMBS); },400); }
 
 /* ---------- 서버 (Apps Script JSON API) ---------- */
+var busyFeedback=[];
 function setBusy(b){
+  if(b&&!busy){busyFeedback=['r-add','d-add','cm-send','t-send'].map(el).filter(function(n){return n&&n.tagName==='BUTTON';}).map(function(n){var old=n.textContent;n.textContent='저장 중…';n.setAttribute('aria-busy','true');return {node:n,text:old};});}
+  if(!b){(busyFeedback||[]).forEach(function(x){if(x.node.isConnected){if(x.node.textContent==='저장 중…')x.node.textContent=x.text;x.node.removeAttribute('aria-busy');}});busyFeedback=[];}
   if(b&&!busy){lockedControls=[].slice.call(document.querySelectorAll('#sheet-r button,#sheet-r input,#sheet-r textarea,#sheet-d button,#sheet-d input,#sheet-d textarea')).map(function(n){return {node:n,disabled:n.disabled};});lockedControls.forEach(function(x){x.node.disabled=true;});}
   busy=b;if(!b){(lockedControls||[]).forEach(function(x){if(x.node.isConnected)x.node.disabled=x.disabled;});lockedControls=[];}el('r-add').disabled=b;el('d-add').disabled=b;
 }
@@ -2118,12 +2144,14 @@ function withAuth(mk){
     if(res&&res.error==='AUTH')throw kickOut();return res;
   }).catch(function(e){if(TK!==sent)e.noauth=true;throw e;});
 }
-function apiGet(p){return withAuth(function(){var body=Object.assign({},p,{tk:TK});return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},1);});}
+function apiGet(p){return withAuth(function(){var body=Object.assign({},p,{tk:TK});return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},1);}).then(function(r){return observeServerReply(r,p.action);});}
 function apiPost(input){
+  if(input.action==='book'&&SERVER_BUILD!==APP_BUILD)return Promise.reject(new Error(serverVersionMessage(SERVER_BUILD)));
   var body=Object.assign({},input),tracked=WRITE_ACTIONS.indexOf(body.action)>=0,signature=TK+'|'+JSON.stringify(input);
-  if(tracked)dataEpoch++;
+  if(tracked){dataEpoch++;body.compact=1;}
   if(tracked){if(!pendingRequests[signature])pendingRequests[signature]=requestId();body.requestId=pendingRequests[signature];}
   return withAuth(function(){body.tk=TK;return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},tracked?1:0);}).then(function(r){
+    observeServerReply(r,body.action);
     if(r&&!r.error){delete pendingRequests[signature];if(r.tk){TK=r.tk;store('tk',TK);}}
     if(r&&r.error&&tracked)r.error+=' (요청 '+body.requestId+')';return r;
   });
@@ -2139,6 +2167,15 @@ function warmUp(){
 
 /* 서버가 준 목록에 기기에 저장된 썸네일을 붙입니다 */
 function absorb(data){
+  if(data.delta){
+    var merged={};['road','db','cm','toss','sched'].forEach(function(k){
+      var d=data.delta[k];if(!d){merged[k]=S[k]||[];return;}
+      var changes={};(d.upsert||[]).forEach(function(r){changes[r.id]=r;});
+      var remove=new Set(d.remove||[]),seen={};
+      merged[k]=(S[k]||[]).filter(function(r){return !remove.has(r.id);}).map(function(r){seen[r.id]=true;return changes[r.id]||r;});
+      (d.upsert||[]).forEach(function(r){if(!seen[r.id]&&!remove.has(r.id))merged[k].push(r);});
+    });data=Object.assign({},data,merged);
+  }
   if(data.profile){ME=data.profile.name;ADMIN=!!data.profile.admin;VIEW=!!data.profile.view;sessionPhone=data.profile.phone||'';paintPhone();store('nm',ME);store('adm',ADMIN?'1':'');store('vw',VIEW?'1':'');if(!VIEW){me=ME;R.owner=ME;D.owner=ME;}applyView();}
   ['road','db'].forEach(function(k){var prev={};(S[k]||[]).forEach(function(r){prev[r.id]=r;});(data[k]||[]).forEach(function(r){var old=prev[r.id];if(old&&(old.photoFile!==r.photoFile||old.hasPhoto!==r.hasPhoto)){delete THUMBS[r.id];delete wantSeen[r.id];}});});
   cacheThumbResults(data.thumbs||[]);
@@ -2196,7 +2233,7 @@ function call(fn,args,okMsg,msgEl,mutating){
   args=args||[];if(mutating&&busy)return Promise.resolve(false);
   if(fn==='getAll'&&(busy||readPending))return readPending||Promise.resolve(false);
   var body,api;
-  if(fn==='getAll')api=function(){return apiGet({action:'all',fresh:args[0]==='fresh'?1:0,boot:(!S.road.length&&!S.db.length)?1:0,photoKey:tab==='db'?'db':'road',photoOwner:(tab==='db'?fD.owner:fR.owner)||'전체',photoSort:tab==='db'?'점수순':fR.sort||'진행순',focus:focusId||''});};
+  if(fn==='getAll')api=function(){return apiGet({action:'all',revision:lastDataRev,fresh:args[0]==='fresh'?1:0,boot:0,photoKey:tab==='db'?'db':'road',photoOwner:(tab==='db'?fD.owner:fR.owner)||'전체',photoSort:tab==='db'?'점수순':fR.sort||'진행순',focus:focusId||''});};
   else {
     var actions={addItem:'add',updateItem:'update',editItem:'edit',deleteItem:'delete',addComment:'comment',editComment:'editcomment',delComment:'delcomment',toss:'toss'};
     if(!actions[fn])return Promise.resolve(false);body={action:actions[fn]};
@@ -2211,11 +2248,13 @@ function call(fn,args,okMsg,msgEl,mutating){
   var task=api().then(function(data){
     if(!mutating&&epoch!==dataEpoch)return false;
     if(!data||data.error)throw new Error(data&&data.error||'응답을 확인하지 못했습니다.');
-    if(data.build&&data.build!=='v62')throw new Error('서버도 v62으로 배포해주세요.');
+    observeServerReply(data,fn);
     if(fn==='addItem'&&data.id&&args[1].photo){data.thumbs=(data.thumbs||[]).concat([{id:data.id,photo:args[1].photo}]);}
     if(fn==='editItem'&&args[2].photo!==undefined){delete THUMBS[args[1]];if(args[2].photo)data.thumbs=(data.thumbs||[]).concat([{id:args[1],photo:args[2].photo}]);}
     if(fn==='deleteItem')delete THUMBS[args[1]];
-    lastSync=Date.now();lastMs=Date.now()-t0;el('banner').hidden=true;
+    if(fn==='getAll')lastSync=Date.now();lastMs=Date.now()-t0;el('banner').hidden=true;
+    if(fn==='getAll'&&data.unchanged)return true;
+    if(fn==='getAll')lastDataRev=data.revision||'';
     var sig=JSON.stringify([data.road,data.db,data.cm,data.toss,data.sched,data.profile]);
     if(sig!==lastSig||mutating){lastSig=sig;absorb(data);tryFocus();render();scrollFocus();}
     if(fn==='addItem'||fn==='editItem'){if(fn==='addItem')celebrate(args[1],args[0]);pending=null;cancelEdit();(args[0]==='road'?clearRoad:clearDb)();closeForm();}
@@ -2226,7 +2265,7 @@ function call(fn,args,okMsg,msgEl,mutating){
   }).catch(function(e){
     if(!mutating&&epoch!==dataEpoch)return false;
     if(e.auth||e.noauth)return false;
-    var m=e.message||'연결을 확인해주세요.';
+    var m=friendlyError(e);
     fail(m+(mutating?' 입력 내용은 유지했습니다. 통신이 끊겼다면 같은 내용으로 다시 누르면 중복 저장 없이 결과를 확인합니다.':''));
     if(fn==='updateItem')render();return false;
   }).finally(function(){done=true;clearTimeout(slow);if(mutating)setBusy(false);else if(readPending===task)readPending=null;});
@@ -2353,11 +2392,24 @@ var REGIONS=["전체","서울","경기","전라","경상","충청","강원","제
 var ACAD={}, acadRegion=store("acreg")||"서울", acadCity="전체", acadQ="", acadBusy={}, acadCur=null;
 var AI={id:0,city:1,name:2,contact:3,insta:4,address:5,lastVisit:6,lastCount:7,checked:8,note:9,at:10,by:11,country:12,region:13,rating:14,kind:15};
 function acadCount(){ var l=ACAD[acadRegion]; return l?l.length:""; }
+var acadPending={},acadEpoch=0;
 function loadAcad(region,force){
-  if(acadBusy[region])return Promise.resolve();if(!force&&ACAD[region]&&Date.now()-(acadLoaded[region]||0)<60000)return Promise.resolve();
-  acadBusy[region]=true;delete acadErrors[region];
-  return apiGet({action:'academies',region:region}).then(function(r){if(r.error||!r.list)throw new Error(r.error||'목록을 받지 못했습니다.');ACAD[region]=r.list;acadLoaded[region]=Date.now();}).catch(function(e){acadErrors[region]=e.message||'연결을 확인해주세요.';}).finally(function(){acadBusy[region]=false;if(tab==='acad')renderAcad();});
+  if(acadPending[region])return acadPending[region];
+  if(!force&&ACAD[region]&&Date.now()-(acadLoaded[region]||0)<120000)return Promise.resolve();
+  if(!force&&region!=='전체'&&ACAD['전체']&&Date.now()-(acadLoaded['전체']||0)<120000){ACAD[region]=ACAD['전체'].filter(function(a){return a[AI.region]===region;});acadLoaded[region]=acadLoaded['전체'];return Promise.resolve();}
+  var session=TK,epoch=acadEpoch;acadBusy[region]=true;delete acadErrors[region];
+  var task=apiGet({action:'academies',region:region}).then(function(r){
+    if(TK!==session||acadEpoch!==epoch)return;
+    if(r.error||!Array.isArray(r.list))throw new Error(r.error||'목록을 받지 못했습니다.');ACAD[region]=r.list;acadLoaded[region]=Date.now();
+  }).catch(function(e){if(TK===session&&acadEpoch===epoch)acadErrors[region]=friendlyError(e);}).finally(function(){
+    if(acadPending[region]===task)delete acadPending[region];
+    if(TK!==session||acadEpoch!==epoch)return;acadBusy[region]=false;if(tab==='acad')renderAcad();
+  });acadPending[region]=task;return task;
 }
+function paintAcadCount(){
+  document.querySelectorAll('[data-tab="acad"] .cnt,[data-tab="acad"] .n').forEach(function(n){n.textContent=acadCount();n.hidden=tab!=='acad';});
+}
+
 /* 권역 안의 지역(강남·마포·부산…) — 데이터에 있는 것만, 많은 순 */
 function acadCities(list){
   var counts={};(list||[]).forEach(function(a){var seen={};String(a[AI.city]||'').split(/[,·/\n]+/).forEach(function(x){x=x.trim();if(x&&!seen[x]){counts[x]=(counts[x]||0)+1;seen[x]=true;}});});
@@ -2367,9 +2419,11 @@ function acadInCity(a,city){return city==='전체'||String(a[AI.city]||'').split
 function acadHit(a,q){q=String(q||'').trim().toLowerCase();return !q||['name','city','country','kind','note','checked','address','contact'].some(function(k){return String(a[AI[k]]||'').toLowerCase().indexOf(q)>=0;});}
 function renderAcad(){
   var host=el('ac-regions');host.innerHTML='';
-  REGIONS.forEach(function(rg){host.appendChild(qc(rg,ACAD[rg]?ACAD[rg].length:null,rg===acadRegion,function(){acadRegion=rg;acadCity='전체';acadCountry='전체';acadLimit=40;store('acreg',rg);loadAcad(rg);renderAcad();}));});
+  REGIONS.forEach(function(rg){var active=rg===acadRegion,b=qc(rg,active&&ACAD[rg]?ACAD[rg].length:null,active,function(){acadRegion=rg;acadCity='전체';acadCountry='전체';acadLimit=40;store('acreg',rg);loadAcad(rg);renderAcad();},'acad-region');b.setAttribute('role','tab');b.setAttribute('aria-selected',String(active));host.appendChild(b);});
+  paintAcadCount();
   var list=ACAD[acadRegion],cc=el('ac-cities');cc.hidden=false;
-  cc.innerHTML='<label for="ac-city-select">지역</label> <select id="ac-city-select" class="pill"><option value="전체">전체 지역</option>'+acadCities((list||[]).filter(academyFilterMatch)).map(function(x){return '<option value="'+esc(x.c)+'"'+(x.c===acadCity?' selected':'')+'>'+esc(x.c)+' ('+x.n+')</option>';}).join('')+'</select> <label for="ac-sort">정렬</label> <select id="ac-sort" class="pill"><option value="name">학원명순</option><option value="rating">별점 높은 순</option><option value="updated">최근 수정순</option><option value="unvisited">미방문 먼저</option></select>';
+  var cities=acadCities((list||[]).filter(academyFilterMatch));if(acadCity!=='전체'&&!cities.some(function(x){return x.c===acadCity;}))acadCity='전체';
+  cc.innerHTML='<span class="acad-filter"><label for="ac-city-select">지역</label><select id="ac-city-select" class="pill"><option value="전체">전체 지역</option>'+cities.map(function(x){return '<option value="'+esc(x.c)+'"'+(x.c===acadCity?' selected':'')+'>'+esc(x.c)+' ('+x.n+')</option>';}).join('')+'</select></span><span class="acad-filter"><label for="ac-sort">정렬</label><select id="ac-sort" class="pill"><option value="name">학원명순</option><option value="rating">별점 높은 순</option><option value="updated">최근 수정순</option><option value="unvisited">미방문 먼저</option></select></span>';
   var countries=['전체'].concat(Array.from(new Set((list||[]).map(function(a){return a[AI.country]||'';}).filter(Boolean))).sort(function(a,b){return a.localeCompare(b,'ko');}));
   cc.innerHTML+=academyFilterSelect('ac-kind','분류',['전체','학원','연기학원','학원·에이전시','에이전시','학교','댄스팀','행사','정보사이트'],acadKind);
   if(acadRegion==='해외'||acadRegion==='전체')cc.innerHTML+=academyFilterSelect('ac-country','국가',countries,acadCountry);
@@ -2419,8 +2473,8 @@ function closeAcad(){ el("sheet-a").classList.remove("open"); unlockScroll(); ac
 function saveAcad(){
   var patch={};['kind','rating','region','name','country','city','contact','insta','address','lastVisit','lastCount','checked','note'].forEach(function(k){patch[k]=el('a-'+k).value.trim();});
   if(!patch.name){el('a-error').textContent='학원명을 입력해주세요.';el('a-name').focus();return;}
-  var cur=acadCur,btn=el('a-save');if(btn.disabled)return;btn.disabled=true;
-  apiPost({action:cur?'acadedit':'acadadd',id:cur?cur[AI.id]:'',patch:patch}).then(function(r){if(!r||r.error)throw new Error(r&&r.error||'저장하지 못했습니다.');ACAD={};acadLoaded={};ACAD[r.region]=r.list;acadLoaded[r.region]=Date.now();acadRegion=r.region;acadCity='전체';acadKind='전체';acadCountry='전체';closeAcad();renderAcad();SFX.play('save');toast(2,'SAVED',patch.name+' 저장됨');}).catch(function(e){if(el('a-error'))el('a-error').textContent=e.message;}).finally(function(){btn.disabled=false;});
+  var cur=acadCur,btn=el('a-save');if(btn.disabled)return;btn.disabled=true;btn.textContent='저장 중…';
+  apiPost({action:cur?'acadedit':'acadadd',id:cur?cur[AI.id]:'',patch:patch}).then(function(r){if(!r||r.error)throw new Error(r&&r.error||'저장하지 못했습니다.');acadEpoch++;ACAD={};acadLoaded={};acadBusy={};acadPending={};ACAD[r.region]=r.list;acadLoaded[r.region]=Date.now();acadRegion=r.region;acadCity='전체';acadKind='전체';acadCountry='전체';closeAcad();renderAcad();SFX.play('save');toast(2,'SAVED',patch.name+' 저장됨');}).catch(function(e){if(el('a-error'))el('a-error').textContent=e.message;}).finally(function(){btn.disabled=false;btn.textContent=cur?'저장':'추가';});
 }
 function bindAcadLinks(node){ Array.prototype.forEach.call(node.querySelectorAll(".alink"),function(a){ a.onclick=function(e){ e.preventDefault(); SFX.play("tab"); closeLB(); jumpAcad(a.getAttribute("data-ac")); }; }); }
 function jumpAcad(q){acadQ=q||'';acadRegion='전체';acadCity='전체';acadKind='전체';acadCountry='전체';el('ac-q').value=acadQ;setTab('acad');loadAcad('전체');window.scrollTo(0,0);}
@@ -2454,23 +2508,23 @@ function renderBook(){
   if(!B.busy&&!B.error){h+='<div class="choices">'+B.days.map(function(d){return '<button class="choice" data-date="'+d.date+'" aria-pressed="'+(d.date===B.date)+'"'+(!d.free.length?' disabled':'')+'>'+esc(d.label)+(d.free.length?'':' · 빈 시간 없음')+'</button>';}).join('')+'</div><div class="choices book-times">'+(cur?cur.free.map(function(t){return '<button class="choice" data-time="'+t+'" aria-pressed="'+(t===B.start)+'">'+t+'</button>';}).join(''):'<p>선택한 소요시간으로 가능한 일정이 없습니다.</p>')+'</div>';
   }
   h+='<div class="f"><label for="b-place">장소</label><input type="text" id="b-place" maxlength="160" value="'+esc(B.place)+'"></div><div class="f"><label for="b-note">메모</label><textarea id="b-note" maxlength="1000">'+esc(B.note)+'</textarea></div><div class="row-btns"><button class="btn" id="b-go"'+(B.busy||B.error||!B.start?' disabled':'')+'>'+((B.start&&!B.error)?B.date+' '+B.start+' 예약':'일정 예약')+'</button><button class="btn ghost sm" id="b-reload"'+(B.busy?' disabled':'')+'>빈 시간 다시 확인</button></div><p id="b-error" role="status"></p>';
-  box.innerHTML=h;el('b-place').oninput=function(){B.place=this.value;};el('b-note').oninput=function(){B.note=this.value;};el('b-go').onclick=sendBook;el('b-reload').onclick=loadSlots;
-  box.querySelectorAll('[data-quick-date]').forEach(function(b){b.onclick=function(){if(B.busy)return;B.date=b.dataset.quickDate;B.start=b.dataset.quickTime;B.place='아톰';sendBook();};});
+  box.innerHTML=h;el('b-place').oninput=function(){B.place=this.value;};el('b-note').oninput=function(){B.note=this.value;};el('b-go').onclick=sendBook;el('b-reload').onclick=function(){loadSlots(true);};
+  box.querySelectorAll('[data-quick-date]').forEach(function(b){b.onclick=function(){if(B.busy)return;B.date=b.dataset.quickDate;B.start=b.dataset.quickTime;B.place='아톰';sendBook(b);};});
   box.querySelectorAll('[data-dur]').forEach(function(b){b.onclick=function(){B.dur=Number(b.dataset.dur);loadSlots();};});
   box.querySelectorAll('[data-date]').forEach(function(b){b.onclick=function(){B.date=b.dataset.date;B.start=B.days.find(function(d){return d.date===B.date;}).free[0]||'';renderBook();};});
   box.querySelectorAll('[data-time]').forEach(function(b){b.onclick=function(){B.start=b.dataset.time;renderBook();};});
 }
-function sendBook(){
-  if(B.busy||!B.start)return;B.busy=true;var state=B,go=el('b-go');el('b-body').querySelectorAll('button,input,textarea').forEach(function(n){n.disabled=true;});go.textContent='예약 확인 중…';
+function sendBook(clicked){
+  if(B.busy||!B.start)return;B.busy=true;var state=B,go=el('b-go');el('b-body').querySelectorAll('button,input,textarea').forEach(function(n){n.disabled=true;});go.textContent='예약 확인 중…';if(clicked&&clicked.dataset&&clicked.dataset.quickDate)clicked.textContent='예약 확인 중…';invalidateSlots();
   var body={action:'book',date:B.date,start:B.start,dur:B.dur,place:B.place.trim()||'아톰',note:B.note.trim()};if(B.acad)body.acadId=B.acad[AI.id];else{body.recId=B.rec.id;body.k=B.key;}
-  apiPost(body).then(function(r){if(r.error)throw new Error(r.error);S.sched=r.sched||[];renderSched();if(B!==state)return;el('b-body').innerHTML='<p>회사 캘린더에 등록하고 팀원 초대를 요청했습니다. 진행은 해당 일요일 출근자가 맡습니다.</p><p>'+esc(B.date+' '+B.start+' · '+B.place)+'</p><a class="btn calendar-link" target="_blank" rel="noopener" href="'+esc(safeUrl(r.calendarUrl))+'">구글 캘린더에서 보기</a><button class="btn ghost sm" id="b-done">닫기</button>';el('b-done').onclick=closeBook;SFX.play('levelUp',4);toast(4,'BOOKED','오디션 일정을 등록했습니다.');}).catch(function(e){if(B!==state)return;if(el('b-error'))el('b-error').textContent=e.message;el('b-body').querySelectorAll('button,input,textarea').forEach(function(n){n.disabled=false;});go.textContent='같은 예약 다시 확인';}).finally(function(){if(B===state)B.busy=false;});
+  apiPost(body).then(function(r){if(r.error)throw new Error(r.error);invalidateSlots();S.sched=r.sched||[];renderSched();if(B!==state)return;el('b-body').innerHTML='<p>회사 캘린더에 등록하고 팀원 초대를 요청했습니다. 진행은 해당 일요일 출근자가 맡습니다.</p><p>'+esc(B.date+' '+B.start+' · '+B.place)+'</p><a class="btn calendar-link" target="_blank" rel="noopener" href="'+esc(safeUrl(r.calendarUrl))+'">구글 캘린더에서 보기</a><button class="btn ghost sm" id="b-done">닫기</button>';el('b-done').onclick=closeBook;SFX.play('levelUp',4);toast(4,'BOOKED','오디션 일정을 등록했습니다.');}).catch(function(e){if(B!==state)return;if(el('b-error'))el('b-error').textContent=e.message;el('b-body').querySelectorAll('button,input,textarea').forEach(function(n){n.disabled=false;});go.textContent='같은 예약 다시 확인';if(clicked&&clicked.dataset&&clicked.dataset.quickDate)clicked.textContent='같은 예약 다시 확인';}).finally(function(){if(B===state)B.busy=false;});
 }
 function cancelBook(x){
   if(!confirm(schedLabel(x)+" "+x.name+" 오디션을 취소할까요? 캘린더에서도 지워집니다.")) return;
   SFX.play("del");
   apiPost({action:"unbook",id:x.id}).then(function(r){
     if(!r||r.error){ SFX.play("err"); toast(0,"ERROR",(r&&r.error)||"취소하지 못했습니다"); return; }
-    S.sched=r.sched||[]; toast(6,"CANCELED",x.name+" 취소됨"); renderAcad();
+    invalidateSlots();S.sched=r.sched||[]; toast(6,"CANCELED",x.name+" 취소됨"); renderAcad();
     if(el("sheet-a").classList.contains("open")&&acadCur) openAcad(acadCur);
   }).catch(function(){ SFX.play("err"); toast(0,"ERROR","연결이 불안정합니다"); });
 }
@@ -2587,14 +2641,17 @@ function statusSelect(key,r){
   opts.forEach(function(s){ var o=document.createElement("option"); o.value=s; o.textContent=s;
     if(s===r.status)o.selected=true; sel.appendChild(o); });
   sel.onchange=function(){
-    var v=sel.value, nm=nameOf(r)||r.name||"", oi=STATUSES.indexOf(r.status), ni=STATUSES.indexOf(v);
-    if(v==="최종합격"){ SFX.play("final"); toast(5,"★ PASS ★",(nm||"이름 미입력")+" 최종 합격!"); }
-    else if(v==="최종"){ SFX.play("levelUp",5); toast(4,"FINAL ROUND",(nm||"이름 미입력")+" 최종 단계 진입"); }
-    else if(v==="보류"||v==="거절"){ SFX.play("sad"); toast(6,v==="보류"?"HOLD...":"BYE...",(nm||"이름 미입력")+" "+v); }
-    else if(ni>oi){ SFX.play("levelUp",STAGE[v]); toast(STAGE[v],"LEVEL UP!",(nm||"이름 미입력")+" → "+v); }
-    else SFX.play("back");
-    if(lb.classList.contains("open")) closeLB();
-    call("updateItem",[key,r.id,{status:v}],"상태를 바꿨습니다.",key==="road"?"r-msg":"d-msg",true);
+    if(busy){sel.value=r.status;return;}
+    var v=sel.value,nm=nameOf(r)||r.name||'',oi=STATUSES.indexOf(r.status),ni=STATUSES.indexOf(v);
+    sel.disabled=true;label.textContent='저장 중…';wrap.setAttribute('aria-busy','true');
+    if(lb.classList.contains('open'))closeLB();
+    call('updateItem',[key,r.id,{status:v}],'상태를 바꿨습니다.',key==='road'?'r-msg':'d-msg',true).then(function(ok){
+      if(!ok)return;
+      if(v==='최종합격'){SFX.play('final');toast(5,'★ PASS ★',(nm||'이름 미입력')+' 최종 합격!');}
+      else if(v==='최종'){SFX.play('levelUp',5);toast(4,'FINAL ROUND',(nm||'이름 미입력')+' 최종 단계 진입');}
+      else if(v==='보류'||v==='거절')SFX.play('sad');
+      else if(ni>oi)SFX.play('levelUp',STAGE[v]);else SFX.play('back');
+    }).finally(function(){if(wrap.isConnected){sel.disabled=false;sel.value=r.status;label.textContent=r.status;wrap.removeAttribute('aria-busy');}});
   };
   var wrap=document.createElement('span');wrap.className='status-control';var label=document.createElement('span');label.className='status-caption';label.setAttribute('data-st',r.status||'');label.textContent=r.status||'상태';label.setAttribute('aria-hidden','true');wrap.appendChild(label);wrap.appendChild(sel);return wrap;
 }
@@ -2702,7 +2759,11 @@ function closeLB(){ pendingCommentLink=null; lb.classList.remove("open"); lbBox.
 el("lb-x").onclick=closeLB;
 lb.addEventListener("click",function(e){ if(e.target===lb) closeLB(); });
 document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&lb.classList.contains("open")) closeLB(); });
-function cmOf(id){ return (S.cm||[]).filter(function(c){ return c.recId===id; }).sort(function(a,b){ return (Number(b.createdAt)||0)-(Number(a.createdAt)||0); }); }
+var cmIndexSource=null,cmIndex={};
+function cmOf(id){
+  if(cmIndexSource!==S.cm){cmIndexSource=S.cm;cmIndex={};(S.cm||[]).forEach(function(c){(cmIndex[c.recId]||(cmIndex[c.recId]=[])).push(c);});Object.keys(cmIndex).forEach(function(k){cmIndex[k].sort(function(a,b){return (Number(b.createdAt)||0)-(Number(a.createdAt)||0);});});}
+  return cmIndex[id]||[];
+}
 function scoreAvg(id){ var xs=cmOf(id).map(function(c){ return parseInt(c.score,10)||0; }).filter(Boolean); if(!xs.length) return null;
   return { avg: Math.round(xs.reduce(function(a,b){return a+b;},0)/xs.length*10)/10, n: xs.length }; }
 function stars(n){ var o=""; for(var i=1;i<=5;i++) o+=i<=n?"★":"☆"; return o; }
@@ -2918,7 +2979,7 @@ function buildNav(){
       if(VIEW) b.hidden=true;
       n.appendChild(b); return; }
     var cnt=(t[0]==="road"||t[0]==="db")?(S[t[0]]||[]).length:(t[0]==="league"?(teamWeek()+"/"+teamGoal()):(t[0]==="acad"?acadCount():dexList().length));
-    b.setAttribute("aria-selected",String(tab===t[0]));
+    b.setAttribute("data-tab",t[0]);b.setAttribute("aria-selected",String(tab===t[0]));
     b.innerHTML='<span class="ic">'+pix(PIX[t[0]])+'<i class="cnt">'+cnt+'</i></span><span class="l">'+NAVL[t[0]]+'</span>';
     b.onclick=function(){ if(tab!==t[0]) SFX.play("tab"); setTab(t[0]); window.scrollTo(0,0); };
     n.appendChild(b);
@@ -2941,13 +3002,13 @@ function buildTabs(){
   (VIEW?TABS.filter(function(t){return t[0]!=="league";}):TABS).forEach(function(t){
     var b=document.createElement("button");
     b.type="button"; b.setAttribute("role","tab");
-    b.setAttribute("aria-selected",String(tab===t[0]));
+    b.setAttribute("data-tab",t[0]);b.setAttribute("aria-selected",String(tab===t[0]));
     var cnt=(t[0]==="road"||t[0]==="db")?(S[t[0]]||[]).length:(t[0]==="league"?(teamWeek()+"/"+teamGoal()):(t[0]==="acad"?acadCount():dexList().length));
     b.innerHTML=t[1]+'<span class="n">'+cnt+'</span>';
     b.onclick=function(){ if(tab!==t[0]) SFX.play("tab"); setTab(t[0]); window.scrollTo(0,0); };
     n.appendChild(b);
   });
-  TABS.forEach(function(t){ el("v-"+t[0]).hidden=(tab!==t[0]); });
+  TABS.forEach(function(t){ el("v-"+t[0]).hidden=(tab!==t[0]); });paintAcadCount();
 }
 function buildStats(){
   var h=el("stats"); h.innerHTML="";
@@ -2992,9 +3053,6 @@ function buildStats(){
 
 /* ---------- 로드캐스팅 목록 ---------- */
 function renderRoad(){
-  var co={"전체":S.road.length}, cs={"전체":S.road.length};
-  OWNERS.forEach(function(o){ co[o]=S.road.filter(function(r){return mineOf(r,o);}).length; });
-  STATUSES.forEach(function(s){ cs[s]=S.road.filter(function(r){return r.status===s;}).length; });
   fbarRoad();
   var view=viewRoad().sort(cmpRoad);
   var host=el("r-list"); host.innerHTML="";
@@ -3049,7 +3107,9 @@ function renderRoad(){
   markDates();
 }
 /* 남은 건이 있으면 아래에 '더 보기' — 스크롤이 닿으면 저절로 열립니다 */
+var moreIO=null;
 function more(host,total,shown,onMore){
+  if(moreIO){moreIO.disconnect();moreIO=null;}
   if(total<=shown) return;
   var d=document.createElement("button");
   d.type="button"; d.className="btn ghost moreb";
@@ -3057,17 +3117,13 @@ function more(host,total,shown,onMore){
   d.onclick=function(){ SFX.play("chip"); onMore(); };
   host.appendChild(d);
   if(window.IntersectionObserver){
-    var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ io.disconnect(); onMore(); } }); },{rootMargin:"400px"});
-    io.observe(d);
+    var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting&&d.isConnected){ io.disconnect(); onMore(); } }); },{rootMargin:"400px"});
+    moreIO=io;io.observe(d);
   }
 }
 
 /* ---------- 개인 DB 목록 ---------- */
 function renderDb(){
-  var co={"전체":S.db.length}, cs={"전체":S.db.length};
-  OWNERS.forEach(function(o){ co[o]=S.db.filter(function(r){return mineOf(r,o);}).length; });
-  ["5","4","3","2","1"].forEach(function(s){
-    cs[s+"점"]=S.db.filter(function(r){ return String(parseInt(r.score,10)||"")===s; }).length; });
   fbarDb();
   var view=viewDb().sort(function(a,b){
       if(a.id===focusId) return -1; if(b.id===focusId) return 1;
@@ -3151,6 +3207,7 @@ function scrollFocus(){
   setTimeout(function(){ n.scrollIntoView({block:"center"}); if(r&&focusId===r.id) openLB(r,isDb); },60);
 }
 function render(){
+  if(moreIO){moreIO.disconnect();moreIO=null;}
   if(wantIO)wantIO.disconnect();
   var y=window.scrollY||0, x=window.scrollX||0;
   buildTabs(); buildStats();
@@ -3241,7 +3298,7 @@ el("f-close").onclick=closeFilter; el("f-apply").onclick=function(){ SFX.play("t
 el("t-close").onclick=closeToss; el("t-cancel").onclick=closeToss; el("t-send").onclick=sendToss;
 el("a-close").onclick=closeAcad; el("ac-add").onclick=function(){ SFX.play("open"); openAcad(null); };
 el("b-close").onclick=closeBook;
-el("ac-q").oninput=function(){ acadQ=this.value; renderAcad(); };
+var acadSearchTimer;el('ac-q').oninput=function(e){acadQ=this.value;clearTimeout(acadSearchTimer);if(e&&e.isComposing)return;acadSearchTimer=setTimeout(renderAcad,160);};el('ac-q').oncompositionend=function(){acadQ=this.value;clearTimeout(acadSearchTimer);acadSearchTimer=setTimeout(renderAcad,160);};
 /* 기기에 저장된 학원 목록부터 보여줍니다 */
 REGIONS.forEach(function(rg){ IDB.get("acad_"+rg).then(function(v){ if(v&&v.list&&!ACAD[rg]){ ACAD[rg]=v.list; if(tab==="acad") renderAcad(); } }).catch(function(){}); });
 el("f-reset").onclick=function(){ SFX.play("chip"); resetF(); buildFilter(); render(); };
@@ -3405,7 +3462,7 @@ function lkRetry(on){
    등록은 sw.js 하나만 사용합니다. Firebase에도 같은 등록을 명시합니다.
    on/off는 사용자의 선택, pushtok는 서버가 확인한 기기키입니다.
  */
-var PUSH_BUILD='v62', pushBusy=false, pushError='', pushScripts={}, appWorkerPromise=null;
+var PUSH_BUILD=APP_BUILD, pushBusy=false, pushError='', pushScripts={}, appWorkerPromise=null;
 var pushMessaging=null, pushUnsubscribe=null, pushMemoryId='';
 function pushMsg(t){ var n=el('ac-pushmsg'); if(n) n.textContent=t||''; }
 function pushTimeout(p,ms,label){
@@ -3442,10 +3499,10 @@ function ensureAppWorker(){
       var until=Date.now()+25000;
       function ready(){
         return workerHealth(reg).then(function(h){
-          if(h.build!==PUSH_BUILD) throw new Error('예전 워커가 실행 중입니다.');
+          if(h.build!==PUSH_BUILD || h.pushBuild!==PUSH_BUILD) throw new Error('화면 '+PUSH_BUILD+' / 워커 '+(h.build||'미확인')+' / 푸시 '+(h.pushBuild||'미확인')); 
           return reg;
         }).catch(function(e){
-          if(Date.now()>until) throw new Error('새 워커가 준비되지 않았습니다. sw.js와 firebase-messaging-sw.js를 함께 올렸는지 확인해주세요.');
+          if(Date.now()>until) throw new Error('알림 파일 버전 확인 실패: '+e.message+' · 최신 배포가 끝난 뒤 앱을 닫았다 다시 열어주세요.');
           return wait(300).then(ready);
         });
       }
@@ -3866,16 +3923,16 @@ function safeUrl(s){try{var u=new URL(String(s||''));return /^https?:$/.test(u.p
 
 function bindCalendarSettings(){
   var box=el('calendar-settings');if(!box){box=document.createElement('div');box.id='calendar-settings';el('ac-admin').appendChild(box);}
-  box.innerHTML='<p><b>회사 캘린더 연결</b></p><p class="hint">전석환 회사 계정에 등록하고 신인개발팀 전원을 초대합니다.</p><button class="btn ghost sm" id="calendar-load">캘린더 목록 불러오기</button><div id="calendar-options"></div>';
-  el('calendar-load').onclick=function(){var btn=this;btn.disabled=true;var out=el('calendar-options');out.textContent='회사 계정의 캘린더를 확인하는 중…';
-    apiGet({action:'calendarsettings'}).then(function(r){if(r.error)throw new Error(r.error);out.innerHTML='<p class="hint">연결 계정: '+esc(r.account||'Apps Script 배포 계정')+'</p><label for="calendar-choice">오디션을 등록할 회사 캘린더</label><select id="calendar-choice" class="pill"><option value="">선택해주세요</option>'+(r.list||[]).map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===r.selected?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select><button class="btn sm" id="calendar-save">이 캘린더 연결</button><p id="calendar-result" role="status"></p>';
-      el('calendar-save').onclick=function(){var id=el('calendar-choice').value,save=this;if(!id){el('calendar-result').textContent='캘린더를 선택해주세요.';return;}save.disabled=true;apiPost({action:'setcalendar',calendarId:id}).then(function(x){if(x.error)throw new Error(x.error);el('calendar-result').textContent=x.calendarName+'에 연결했습니다. 새 예약부터 이 캘린더에 저장합니다.';SFX.play('save');}).catch(function(e){el('calendar-result').textContent=e.message;}).finally(function(){save.disabled=false;});};
+  box.innerHTML='<p><b>회사 캘린더 연결 확인</b></p><p class="hint">전석환 회사 계정에 등록하고 신인개발팀 전원을 초대합니다.</p><button class="btn ghost sm" id="calendar-load">연결 상태 확인</button><div id="calendar-options" role="status"></div>';
+  el('calendar-load').onclick=function(){var btn=this;btn.disabled=true;var out=el('calendar-options');out.textContent='실제 호출되는 서버와 회사 캘린더를 확인하는 중…';
+    apiGet({action:'ping'}).then(function(r){if(r.build!==APP_BUILD)throw new Error(serverVersionMessage(r.build));return apiGet({action:'calendarsettings'});}).then(function(r){if(r.error)throw new Error(r.error);out.textContent='화면 '+APP_BUILD+' / 서버 '+r.build+' · 캘린더 읽기 연결 확인: '+r.account+' · 예약에는 이 캘린더의 일정 수정 권한이 필요합니다.';
     }).catch(function(e){out.textContent=e.message;}).finally(function(){btn.disabled=false;});
   };
 }
 
 function resetSessionData(){
-  S={road:[],db:[],cm:[],toss:[],sched:[]};THUMBS={};ACAD={};fullCache={};lastSig='';lastSync=0;
+  S={road:[],db:[],cm:[],toss:[],sched:[]};THUMBS={};ACAD={};fullCache={};lastSig='';lastSync=0;lastDataRev='';
+  invalidateSlots();acadEpoch++;acadPending={};acadBusy={};cmIndexSource=null;cmIndex={};
   dataEpoch++;readPending=null;thumbBusy=false;thumbActive=0;fullPending={};bookGeneration++;B={acad:null,rec:null,days:[],date:'',start:'',dur:60,place:'',note:'',busy:false};T={rec:null,key:'',to:''};acadCur=null;
   ['a-body','b-body','calendar-options'].forEach(function(id){if(el(id))el(id).innerHTML='';});if(el('t-note'))el('t-note').value='';
   sessionPhone='';store('ph','');paintPhone();
@@ -3912,10 +3969,32 @@ function academyFilterMatch(a){return (acadCountry==='전체'||a[AI.country]===a
 
 function academyFilterSelect(id,label,values,current){return '<span class="acad-filter"><label for="'+id+'">'+label+'</label><select class="pill" id="'+id+'">'+values.map(function(v){return '<option value="'+esc(v)+'"'+(v===current?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select></span>';}
 
-function loadSlots(){
-  var state=B,gen=++bookGeneration;B.generation=gen;B.busy=true;B.error='';renderBook();
-  apiGet({action:'slots',dur:B.dur}).then(function(r){if(B!==state||gen!==bookGeneration)return;if(r.error||!r.days)throw new Error(r.error||'캘린더를 확인하지 못했습니다.');B.days=r.days;B.calendar=r.calendar||'회사 공용 캘린더';var keep=r.days.find(function(d){return d.date===B.date&&d.free.indexOf(B.start)>=0;});if(!keep){B.date='';B.start='';r.days.some(function(d){if(d.free.length){B.date=d.date;B.start=d.free[0];return true;}return false;});}}).catch(function(e){if(B===state)B.error=e.message;}).finally(function(){if(B===state&&gen===bookGeneration){B.busy=false;renderBook();}});
+var slotCache=null,slotPending=null,slotEpoch=0;
+function invalidateSlots(){slotEpoch++;slotCache=null;slotPending=null;}
+function requestSlots(force){
+  if(!force&&slotCache&&slotCache.session===TK&&Date.now()-slotCache.at<45000)return Promise.resolve(slotCache.data);
+  if(slotPending)return slotPending;
+  var session=TK,epoch=slotEpoch;
+  var task=apiGet({action:'slots',dur:30}).then(function(r){
+    if(TK!==session||slotEpoch!==epoch)throw new Error('일정이 변경되었습니다. 빈 시간을 다시 확인해주세요.');
+    if(r.error||!Array.isArray(r.days)||!r.days.every(function(d){return Array.isArray(d.busy);}))throw new Error(r.error||'빈 시간 정보를 확인하지 못했습니다.');
+    slotCache={session:session,at:Date.now(),data:r};return r;
+  }).finally(function(){if(slotPending===task)slotPending=null;});slotPending=task;return task;
 }
+function durationDays(data,dur,now){
+  now=now===undefined?Date.now():now;
+  return data.days.map(function(d){var free=[];for(var t=13*60;t+dur<=19*60;t+=30){
+    var hm=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
+    if(Date.parse(d.date+'T'+hm+':00+09:00')<=now)continue;
+    if(!d.busy.some(function(x){var a=x.s.split(':'),b=x.e.split(':');return Number(a[0])*60+Number(a[1])<t+dur&&Number(b[0])*60+Number(b[1])>t;}))free.push(hm);
+  }return Object.assign({},d,{free:free});});
+}
+function loadSlots(force){
+  var state=B,gen=++bookGeneration;B.generation=gen;B.busy=true;B.error='';renderBook();
+  return requestSlots(force===true).then(function(r){if(B!==state||gen!==bookGeneration)return;B.days=durationDays(r,B.dur);B.calendar=r.calendar||'회사 캘린더';var keep=B.days.find(function(d){return d.date===B.date&&d.free.indexOf(B.start)>=0;});if(!keep){B.date='';B.start='';B.days.some(function(d){if(d.free.length){B.date=d.date;B.start=d.free[0];return true;}return false;});}}).catch(function(e){if(B===state&&gen===bookGeneration)B.error=friendlyError(e);}).finally(function(){if(B===state&&gen===bookGeneration){B.busy=false;renderBook();}});
+}
+function friendlyError(e){var m=String(e&&e.message||e||'');return /Load failed|Failed to fetch|Fetch is aborted|AbortError|NetworkError|Network lost/i.test(m)?'연결이 지연되고 있습니다. 표시된 내용은 유지하며, 다시 눌러 확인할 수 있습니다.':m||'연결을 확인해주세요.';}
+
 /* v62 — 터치/키보드, 기존 모달의 포커스 관리 */
 (function(){
   var stack=[],lastFocus=null;
@@ -3937,6 +4016,15 @@ function loadSlots(){
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitHead);
   if(window.ResizeObserver)new ResizeObserver(fitHead).observe(el('tabs').parentNode);
 })();
+
+function serverVersionMessage(version){return '앱은 '+APP_BUILD+'인데 실제 호출한 서버는 '+(version||'버전 미확인')+'입니다. Apps Script에서 기존 배포를 새 버전으로 갱신해주세요. 갱신 후에도 같으면 앱의 서버 주소와 배포 주소가 다른 상태입니다.';}
+function paintConnectionStatus(){var n=el('connection-status');if(!n)return;var old=SERVER_BUILD&&SERVER_BUILD!==APP_BUILD;n.hidden=!old;n.textContent=old?serverVersionMessage(SERVER_BUILD):'';}
+function observeServerReply(r,action){
+  if(r&&r.build){SERVER_BUILD=String(r.build);paintConnectionStatus();}
+  if(['slots','calendarsettings','setcalendar','book'].indexOf(action)>=0&&(!r||r.build!==APP_BUILD))throw new Error(serverVersionMessage(r&&r.build));
+  return r;
+}
+
 </script>
 </body>
 </html>

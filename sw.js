@@ -4,7 +4,7 @@
 if (!self.CASTING_SHELL_LOADED) {
   self.CASTING_SHELL_LOADED = true;
   (function() {
-    var BUILD = 'v64', VERSION = 'casting-' + encodeURIComponent(new URL('./',self.location.href).pathname) + '-' + BUILD;
+    var BUILD = 'v66', VERSION = 'casting-' + encodeURIComponent(new URL('./',self.location.href).pathname) + '-' + BUILD;
     var BASE = new URL('./', self.location.href);
     var PAGE = new URL('index.html', BASE).href;
     var SHELL = ['index.html','manifest.json','icon-192.png','icon-512.png','icon-180.png'];
@@ -29,7 +29,7 @@ if (!self.CASTING_SHELL_LOADED) {
     });
     self.addEventListener('message', function(event) {
       if (event.data && event.data.type==='CASTING_PUSH_HEALTH' && event.ports[0]) {
-        event.ports[0].postMessage({build:BUILD,pushReady:!!self.CASTING_PUSH_OK,
+        event.ports[0].postMessage({build:BUILD,pushBuild:self.CASTING_PUSH_BUILD||'',pushReady:!!self.CASTING_PUSH_OK,
           error:self.CASTING_PUSH_ERROR || '',scriptURL:self.location.href,scope:self.registration.scope});
       }
     });
