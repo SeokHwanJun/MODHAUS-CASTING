@@ -1289,7 +1289,7 @@ body:not([data-skin]) .hd{--surface:#fff;--surface-2:#F5F3FB;--surface-3:#EBEBEB
 }
 
 </style>
-</head>
+<style>.work-sheet-link{font-size:12px;color:inherit;white-space:nowrap}.work-small-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.work-holiday-label{color:#a72349;background:#fff0f3;border-radius:8px;padding:5px 8px;font-size:12px;display:block;overflow-wrap:anywhere}.work-sheet-status{display:block;font-size:11px;color:#756f83;overflow-wrap:anywhere;margin-top:4px}.work-sheet-status.review,.work-sheet-status.retry{color:#a45b12}.work-danger{color:#b12b49!important}.work-holiday-form label{display:block;margin-top:12px}.work-holiday-form input,.work-holiday-form select{width:100%;box-sizing:border-box;min-width:0}.work-holiday-form{max-width:600px}.academy-history-card{border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0;overflow-wrap:anywhere}.academy-history-card small{display:block;color:var(--muted);margin-top:4px}.academy-history-card p{margin:5px 0;white-space:pre-wrap}.academy-visit-form{padding:12px 0}#a-visit-form{margin:12px 0}#a-history{display:block}#a-visit-form input,#a-visit-form textarea{box-sizing:border-box;width:100%;min-width:0}.academy-history-note{white-space:pre-wrap}</style></head>
 <body>
 
 <div class="hd">
@@ -1628,10 +1628,10 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v74',UI_BUILD='v78',SERVER_BUILD='';
+var APP_BUILD='v79',UI_BUILD='v79',SERVER_BUILD='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadVisitFilter='전체',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var historyReady=false,historyPending=null,historyError='',historyTimer=null;
-var WRITE_ACTIONS=['add','update','edit','delete','comment','editcomment','delcomment','toss','acadadd','acadedit','book','unbook','setcalendar','worksave'];
+var WRITE_ACTIONS=['add','update','edit','delete','comment','editcomment','delcomment','toss','acadadd','acadedit','acadvisit','book','unbook','setcalendar','worksave','workholiday'];
 var ACADEMY_LABELS={region:'권역',city:'지역',country:'국가',rating:'별점',kind:'분류',name:'학원명',contact:'연락처',insta:'인스타',address:'주소',lastVisit:'최근 방문',lastCount:'지원 인원',checked:'체크 인원',note:'비고'};
 
 var OWNERS   = ["김소연","김나희","김담희","염진경","전석환"];
@@ -2924,10 +2924,44 @@ function instaLink(v){
   return u?'<a class="link" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(v)+'</a>':'<span class="hint">'+esc(v)+'</span>';
 }
 function alumniOf(name){var n=String(name||'').replace(/\s/g,'').toLowerCase();return n?S.db.filter(function(r){return String(r.academy||'').replace(/\s/g,'').toLowerCase()===n;}):[];}
+var acadHistoryCursor='',acadHistoryBusy=false,acadVisitBusy=false,acadHistoryEpoch=0;
+function academyVisitFormHtml(){return '<details id="a-visit-form"><summary class="btn sm">+ 방문·오디션 기록 추가</summary><div class="academy-visit-form"><div class="f"><label for="a-visit-date">방문일</label><input type="date" id="a-visit-date" max="'+workToday()+'" value="'+workToday()+'"></div><div class="f"><label for="a-visit-count">지원 인원</label><input id="a-visit-count" maxlength="4000" placeholder="예: 익산 20명, 군산 26명"></div><div class="f"><label for="a-visit-checked">체크 인원·후보</label><input id="a-visit-checked" maxlength="4000" placeholder="인원 또는 체크한 후보"></div><div class="f"><label for="a-visit-note">이번 방문 메모</label><textarea id="a-visit-note" maxlength="4000"></textarea></div><button class="btn sm" id="a-visit-save">기록 추가</button><p id="a-visit-error" role="status"></p></div></details>';}
+function academyHistoryCards(r){
+  var combined=(r.visits||[]).map(function(x){return {type:'visit',x:x};}).concat((r.list||[]).map(function(x){return {type:'audit',x:x};}));combined.sort(function(a,b){return Number(b.x.createdAt)-Number(a.x.createdAt);});
+  return combined.map(function(entry){var x=entry.x,stamp=new Date(Number(x.createdAt)).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+    if(entry.type==='visit')return '<article class="academy-history-card"><b>'+esc(x.date)+' 방문·오디션</b><small>'+esc(x.actor+' · 입력 '+stamp)+'</small><p>지원 인원: '+esc(x.count||'미기록')+'</p><p>체크 인원: '+esc(x.checked||'미기록')+'</p>'+(x.note?'<p class="academy-history-note">'+esc(x.note)+'</p>':'')+'</article>';
+    var before={},after={};try{before=JSON.parse(x.before||'{}');after=JSON.parse(x.after||'{}');}catch(e){return '<p class="hint">이전 기록의 형식을 확인해주세요.</p>';}
+    var fields=Object.keys(after).filter(function(k){return ['lastVisit','lastCount','checked','note'].indexOf(k)>=0;});
+    if(fields.length)return '<article class="academy-history-card legacy"><b>이전 기록 · 변경 이력</b><small>'+esc(x.actor+' · '+stamp)+'</small>'+fields.map(function(k){return '<p><b>'+esc(ACADEMY_LABELS[k]||k)+'</b><br>이전: '+esc(before[k]||'(없음)')+'<br>변경: '+esc(after[k]||'(없음)')+'</p>';}).join('')+'</article>';
+    return '<details><summary>'+esc(stamp+' · '+x.actor+' · 기본정보 수정')+'</summary>'+Object.keys(after).map(function(k){return '<p>'+esc(ACADEMY_LABELS[k]||k)+': '+esc(before[k]||'(없음)')+' → '+esc(after[k]||'(없음)')+'</p>';}).join('')+'</details>';
+  }).join('');
+}
+function loadAcademyHistory(a,more){
+  if(acadHistoryBusy||!a||VIEW)return Promise.resolve(false);var cursor=more?acadHistoryCursor:'',epoch=++acadHistoryEpoch;acadHistoryBusy=true;
+  return apiGet({action:'acadhistory',id:a[AI.id],cursor:cursor}).then(function(r){
+    if(acadCur!==a||epoch!==acadHistoryEpoch||!el('a-history'))return false;if(r.error)throw new Error(r.error);
+    var box=el('a-history'),old=el('a-history-more');if(old)old.remove();
+    var out=academyHistoryCards(r);if(!more)box.innerHTML=out||'<p class="hint">추가된 방문 기록이 없습니다. 기존 원문은 위에 보존됩니다.</p>';else box.insertAdjacentHTML('beforeend',out);
+    if(!more&&(r.schedule||[]).length)box.insertAdjacentHTML('beforeend','<details><summary>예약 이력</summary>'+r.schedule.map(function(s){return '<p>'+esc(s.date+' '+s.start+' · '+s.place+' · '+(s.state==='cancelled'?'취소':'예약'))+'</p>';}).join('')+'</details>');
+    acadHistoryCursor=r.nextCursor||'';if(acadHistoryCursor){box.insertAdjacentHTML('beforeend','<button class="btn ghost sm" id="a-history-more">이전 기록 더 보기</button>');el('a-history-more').onclick=function(){loadAcademyHistory(a,true);};}return true;
+  }).catch(function(e){if(acadCur===a&&epoch===acadHistoryEpoch&&el('a-history')){var box=el('a-history');if(!more)box.textContent=e.message;else box.insertAdjacentHTML('beforeend','<p class="hint">'+esc(e.message)+'</p>');}return false;}).finally(function(){if(acadCur===a&&epoch===acadHistoryEpoch)acadHistoryBusy=false;});
+}
+function saveAcademyVisit(){
+  if(!acadCur||VIEW||acadVisitBusy)return;var a=acadCur,baseDirty=typeof window.academyBaseDirty==='function'&&window.academyBaseDirty(),visit={date:el('a-visit-date').value,count:el('a-visit-count').value,checked:el('a-visit-checked').value,note:el('a-visit-note').value};
+  if(!visit.date){el('a-visit-error').textContent='방문일을 선택해주세요.';return;}
+  acadVisitBusy=true;el('a-visit-save').disabled=true;el('a-visit-error').textContent='저장 중…';
+  return apiPost({action:'acadvisit',id:a[AI.id],visit:visit,compact:1}).then(function(r){
+    if(r.error)throw new Error(r.error);var row=mergeAcademyResult(r);if(acadCur===a){acadVisitBusy=false;if(row){['lastVisit','lastCount','checked'].forEach(function(k){a[AI[k]]=row[AI[k]];if(el('a-'+k))el('a-'+k).value=String(row[AI[k]]||'');});}
+      el('a-visit-count').value='';el('a-visit-checked').value='';el('a-visit-note').value='';el('a-visit-form').open=false;el('a-visit-error').textContent='방문 기록을 추가했습니다.';acadHistoryBusy=false;loadAcademyHistory(a,false);
+      if(typeof window.refreshAcademySummary==='function')window.refreshAcademySummary(a,!baseDirty);
+    }if(tab==='acad')renderAcad();toast(2,'SAVED','방문 기록이 쌓였습니다.');
+  }).catch(function(e){if(acadCur===a&&el('a-visit-error'))el('a-visit-error').textContent=e.message;}).finally(function(){acadVisitBusy=false;if(acadCur===a&&el('a-visit-save'))el('a-visit-save').disabled=false;});
+}
+
 function openAcad(a){
-  acadCur=a;var isNew=!a,v=function(k){return a?String(a[AI[k]]||''):'';},region=v('region')||(acadRegion==='전체'?'서울':acadRegion),h='';
+  acadCur=a;acadHistoryEpoch++;acadHistoryCursor='';acadHistoryBusy=false;var isNew=!a,v=function(k){return a?String(a[AI[k]]||''):'';},region=v('region')||(acadRegion==='전체'?'서울':acadRegion),h='';
   el('a-title').textContent=isNew?'학원 추가':v('name');
-  if(a)h+=academyRatingHtml(a);
+  if(a)h+=academyRatingHtml(a);if(a&&!VIEW)h+=academyVisitFormHtml();
   if(a)h+='<div class="spec">'+telLinks(v('contact'))+' '+instaLink(v('insta'))+'</div>';
   if(a&&!VIEW)h+='<div class="bookrow"><button class="btn sm" id="a-book">오디션 일정 잡기</button></div>';
   if(!VIEW){
@@ -2935,19 +2969,15 @@ function openAcad(a){
     h+=academyFilterSelect('a-kind','분류',['학원','연기학원','학원·에이전시','에이전시','학교','댄스팀','행사','정보사이트'],v('kind')||'학원');
     h+='<div class="f"><label for="a-rating">학원 별점 · 5점 만점</label><select class="pill" id="a-rating"><option value="">미평가</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(academyRating(a)===n?' selected':'')+'>'+'★'.repeat(n)+'☆'.repeat(5-n)+' · '+n+'점</option>';}).join('')+'</select><p class="hint">팀 공통 평가입니다. 변경한 사람과 이전 별점은 이력에 남습니다.</p></div>';
     [['name','학원명'],['country','국가'],['city','지역 · 도시'],['contact','연락처'],['insta','SNS · 홈페이지 주소'],['address','주소'],['lastVisit','방문 · 오디션 기록 (원문)'],['lastCount','최근 지원 인원'],['checked','체크 인원']].forEach(function(f){h+='<div class="f"><label for="a-'+f[0]+'">'+f[1]+'</label><input type="text" id="a-'+f[0]+'" maxlength="4000" value="'+esc(v(f[0])||(f[0]==='country'&&region!=='해외'?'한국':''))+'"></div>';});
-    h+='<div class="f"><label for="a-note">비고 · 통화 기록</label><textarea id="a-note" maxlength="4000">'+esc(v('note'))+'</textarea></div><p class="hint">방문 기록은 기존에 적은 내용을 그대로 보존합니다. 변경 내역은 아래 이력에 남습니다.</p><div class="row-btns"><button class="btn" id="a-save">'+(isNew?'추가':'저장')+'</button><button class="btn ghost sm" id="a-cancel">닫기</button></div><p id="a-error" role="status"></p>';
+    h+='<div class="f"><label for="a-note">비고 · 통화 기록</label><textarea id="a-note" maxlength="4000">'+esc(v('note'))+'</textarea></div><p class="hint">새 방문은 위의 ‘방문·오디션 기록 추가’를 사용하세요. 아래 기본정보를 수정한 이전 값도 이력에서 볼 수 있습니다.</p><div class="row-btns"><button class="btn" id="a-save">'+(isNew?'추가':'저장')+'</button><button class="btn ghost sm" id="a-cancel">닫기</button></div><p id="a-error" role="status"></p>';
   }else h+='<p>'+esc([region,v('city'),v('address')].filter(Boolean).join(' · '))+'</p><p>최근 방문: '+esc(v('lastVisit')||'기록 없음')+'</p>';
   if(a){var al=alumniOf(v('name'));h+='<div class="cmh"><b>이 학원 출신 후보</b><span>'+al.length+'명</span></div><div class="alum">'+al.map(function(r){return '<button class="mini" data-id="'+esc(r.id)+'">'+esc(nameOf(r))+'</button>';}).join('')+'</div>';if(!VIEW)h+='<div class="cmh"><b>오디션 · 수정 이력</b></div><div id="a-history" aria-live="polite">불러오는 중…</div>';}
   el('a-body').innerHTML=h;el('sheet-a').classList.add('open');lockScroll();
-  if(el('a-save'))el('a-save').onclick=saveAcad;if(el('a-cancel'))el('a-cancel').onclick=closeAcad;if(el('a-book'))el('a-book').onclick=function(){openBook(a);};
+  if(el('a-visit-save'))el('a-visit-save').onclick=saveAcademyVisit;if(el('a-save'))el('a-save').onclick=saveAcad;if(el('a-cancel'))el('a-cancel').onclick=closeAcad;if(el('a-book'))el('a-book').onclick=function(){openBook(a);};
   el('a-body').querySelectorAll('.alum button').forEach(function(b){b.onclick=function(){var r=S.db.find(function(x){return x.id===b.dataset.id;});if(r){closeAcad();openLB(r,true);}};});
-  if(a&&!VIEW)apiGet({action:'acadhistory',id:a[AI.id]}).then(function(r){
-    if(acadCur!==a||!el('a-history'))return;if(r.error)throw new Error(r.error);
-    var out=(r.schedule||[]).map(function(s){return '<p>'+esc(s.date+' '+s.start+'~'+s.end+' · '+s.place+' · '+(s.state==='cancelled'?'취소':s.state==='check'?'확인 필요':'예약')+' · '+s.by)+'</p>';}).join('');
-    (r.list||[]).forEach(function(x){var fields=JSON.parse(x.after||'{}'),before=JSON.parse(x.before||'{}');out+='<details><summary>'+esc(new Date(Number(x.createdAt)).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})+' · '+x.actor)+'</summary>'+Object.keys(fields).map(function(k){return '<p>'+esc(ACADEMY_LABELS[k]||k)+': '+esc(before[k]||'(없음)')+' → '+esc(fields[k])+'</p>';}).join('')+'</details>';});el('a-history').innerHTML=out||'<p class="hint">아직 이력이 없습니다. 업데이트 이후 변경부터 기록됩니다.</p>';
-  }).catch(function(e){if(acadCur===a&&el('a-history'))el('a-history').textContent=e.message;});
+  if(a&&!VIEW)loadAcademyHistory(a,false);
 }
-function closeAcad(){ el("sheet-a").classList.remove("open"); unlockScroll(); acadCur=null; }
+function closeAcad(){ if(acadVisitBusy)return;el("sheet-a").classList.remove("open"); unlockScroll(); acadCur=null; }
 function mergeAcademyResult(r){
   var row=Array.isArray(r.academy)?r.academy:Array.isArray(r.list)?r.list.find(function(a){return a[AI.id]===r.id;}):null;
   if(!Array.isArray(r.list)&&!Object.prototype.hasOwnProperty.call(r,'academy'))throw new Error('학원 저장 응답을 확인하지 못했습니다. 같은 내용으로 다시 저장해주세요.');
@@ -2963,7 +2993,7 @@ function mergeAcademyResult(r){
 }
 function saveAcad(){
   var patch={};['kind','rating','region','name','country','city','contact','insta','address','lastVisit','lastCount','checked','note'].forEach(function(k){patch[k]=el('a-'+k).value.trim();});
-  if(!patch.name){el('a-error').textContent='학원명을 입력해주세요.';el('a-name').focus();return;}
+  if(acadVisitBusy)return;if(!patch.name){el('a-error').textContent='학원명을 입력해주세요.';el('a-name').focus();return;}
   var cur=acadCur,btn=el('a-save');if(btn.disabled)return;btn.disabled=true;btn.textContent='저장 중…';
   apiPost({action:cur?'acadedit':'acadadd',id:cur?cur[AI.id]:'',patch:patch}).then(function(r){
     if(!r||r.error)throw new Error(r&&r.error||'저장하지 못했습니다.');mergeAcademyResult(r);
@@ -4493,8 +4523,58 @@ function loadSlots(force){
 function friendlyError(e){var m=String(e&&e.message||e||'');return /Load failed|Failed to fetch|Fetch is aborted|AbortError|NetworkError|Network lost/i.test(m)?'연결이 지연되고 있습니다. 표시된 내용은 유지하며, 다시 눌러 확인할 수 있습니다.':m||'연결을 확인해주세요.';}
 
 /* 팀 근무 · 일/주/월 전환 */
-var W={date:'',week:'',rows:[],dates:[],loaded:'',loading:false,saving:false,error:'',notice:'',view:'day',filter:'전체',person:null,edit:null,history:null,epoch:0};
+var W={date:'',week:'',rows:[],holidays:[],holidayEdit:null,clipboard:null,dates:[],loaded:'',loading:false,saving:false,error:'',notice:'',view:'day',filter:'전체',person:null,edit:null,history:null,epoch:0};
 var WORK_TYPES=['미입력','출근','출장','외근','휴무','연차'];
+function workMirrorStatusHtml(r){
+  var labels={pending:'시트 반영 대기',retry:'시트 연결 재시도 중',review:'시트 반영 확인 필요',synced:'시트 반영 완료'},label=labels[r.syncState];
+  return label?'<span class="work-sheet-status '+esc(r.syncState)+'">'+esc(label)+(r.syncError?' · '+esc(r.syncError):'')+'</span>':'';
+}
+function workPersonActions(r){
+  return '<div class="work-small-actions">'+(r.status!=='미입력'?'<button class="btn ghost sm" id="w-copy">근무 복사</button>':'')+(workCanEdit(r.owner)&&W.clipboard?'<button class="btn ghost sm" id="w-paste">붙여넣기</button>':'')+(workCanEdit(r.owner)&&r.status!=='미입력'?'<button class="btn ghost sm work-danger" id="w-delete">근무 삭제</button>':'')+'</div>';
+}
+function workCopy(owner){
+  var r=workRow(owner,W.date);if(r.status==='미입력')return;
+  W.clipboard={owner:owner,date:W.date,status:r.status,blocks:workBlocks(r).map(function(b){return Object.assign({},b);}),note:r.note||'',audition:r.audition==='Y'};
+  W.notice='근무를 복사했습니다. 원하는 날짜에서 붙여넣기를 누르세요.';W.person=null;renderWork();
+}
+function workPaste(owner){
+  var c=W.clipboard;if(!c||!workCanEdit(owner)||W.saving||W.loading)return;
+  editWork(owner);if(!W.edit)return;
+  W.edit.status=c.status;W.edit.blocks=c.blocks.map(function(b){return Object.assign({},b);});W.edit.note=c.note;W.edit.audition=c.audition;W.edit.pasted=true;renderWork();
+}
+function workDelete(owner){
+  if(!workCanEdit(owner)||W.loading||W.saving)return;
+  if(!confirm(workDateLabel(W.date)+' '+owner+'님의 근무를 삭제할까요? 변경 이력은 남고 연결된 시트에서도 반영된 근무를 지웁니다.'))return;
+  var r=workRow(owner,W.date),revisions={};revisions[W.date]=r.revision||'';
+  W.edit={owner:owner,days:[W.date],revisions:revisions,status:'미입력',blocks:[],note:'',audition:false};W.person=null;return saveWork();
+}
+function workHoliday(day){return (W.holidays||[]).find(function(r){return r.date===day;})||{};}
+function workHolidayHtml(day,compact){var r=workHoliday(day);return r.name?'<span class="work-holiday-label">'+esc((compact?'':r.kind+' · ')+r.name)+'</span>':'';}
+function workEditHoliday(){
+  if(!ADMIN||VIEW||W.saving||W.loading)return;var r=workHoliday(W.date);
+  W.holidayEdit={date:W.date,name:r.name||'',kind:r.kind||'회사 휴일',revision:r.revision||''};W.error='';renderWork();
+}
+function renderWorkHoliday(){
+  var e=W.holidayEdit;if(!e)return;
+  el('w-body').innerHTML='<div class="work-holiday-form"><h3>'+esc(workDateLabel(e.date))+' 휴일 지정</h3><p class="hint">공통 휴일을 표시합니다. 이미 입력한 개인 근무·출장은 유지됩니다.</p><label for="w-holiday-kind">구분</label><select id="w-holiday-kind"><option'+(e.kind==='회사 휴일'?' selected':'')+'>회사 휴일</option><option'+(e.kind==='공휴일'?' selected':'')+'>공휴일</option></select><label for="w-holiday-name">휴일명</label><input id="w-holiday-name" maxlength="60" placeholder="예: 추석, 대체공휴일, 회사 휴무" value="'+esc(e.name)+'">'+(W.error?'<p class="work-error">'+esc(W.error)+'</p>':'')+'<div class="work-small-actions"><button class="btn" id="w-holiday-save">'+(W.saving?'저장 중…':'휴일 저장')+'</button>'+(e.revision?'<button class="btn ghost sm work-danger" id="w-holiday-delete">휴일 해제</button>':'')+'<button class="btn ghost sm" id="w-holiday-cancel">취소</button></div></div>';
+  el('w-holiday-name').oninput=function(){e.name=this.value;};el('w-holiday-kind').onchange=function(){e.kind=this.value;};
+  el('w-holiday-cancel').onclick=function(){W.holidayEdit=null;W.error='';renderWork();};el('w-holiday-save').onclick=function(){saveWorkHoliday(false);};
+  if(el('w-holiday-delete'))el('w-holiday-delete').onclick=function(){saveWorkHoliday(true);};
+  if(W.saving)el('w-body').querySelectorAll('button,input,select').forEach(function(n){n.disabled=true;});
+}
+function saveWorkHoliday(remove){
+  if(!ADMIN||VIEW||W.saving||!W.holidayEdit)return Promise.resolve(false);
+  var e=W.holidayEdit,session=TK;
+  if(remove&&!confirm('이 날짜의 공통 휴일 표시를 해제할까요? 개인 근무는 유지됩니다.'))return Promise.resolve(false);
+  if(!remove&&!e.name.trim()){W.error='휴일명을 입력해주세요.';renderWork();return Promise.resolve(false);}
+  W.saving=true;W.error='';renderWork();
+  return apiPost({action:'workholiday',week:workMonday(e.date),date:e.date,name:remove?'':e.name,kind:e.kind,revision:e.revision}).then(function(r){
+    if(TK!==session||W.holidayEdit!==e)return false;
+    if(!r||r.error||!r.work||!Array.isArray(r.work.holidays))throw new Error(r&&r.error||'휴일 저장 결과를 확인하지 못했습니다.');
+    var dates=workWeekDays(r.work.week);W.holidays=(W.holidays||[]).filter(function(h){return dates.indexOf(h.date)<0;}).concat(r.work.holidays);W.holidayEdit=null;W.notice=remove?'휴일을 해제했습니다.':'휴일을 지정했습니다.';return true;
+  }).catch(function(err){if(TK===session&&W.holidayEdit===e)W.error=friendlyError(err);return false;}).finally(function(){if(TK===session){W.saving=false;renderWork();}});
+}
+
 function workToday(){return new Date(Date.now()+9*3600000).toISOString().slice(0,10);}
 function workShift(day,n){return new Date(new Date(day+'T12:00:00Z').getTime()+n*86400000).toISOString().slice(0,10);}
 function workMonday(day){var d=new Date(day+'T12:00:00Z');return workShift(day,-((d.getUTCDay()+6)%7));}
@@ -4513,7 +4593,7 @@ function workDetailHtml(r){
   if(!b.length&&['출근','출장','외근'].indexOf(r.status)>=0)h='<p class="hint">시간·장소·업무를 입력해주세요.</p>';
   return h+(r.audition==='Y'?'<p class="hint">일요일 센터 오디션 진행</p>':'')+(r.note?'<p class="work-note">'+esc(r.note)+'</p>':'');
 }
-function resetWork(){var epoch=W?W.epoch+1:0;W={date:'',week:'',rows:[],dates:[],loaded:'',loading:false,saving:false,error:'',notice:'',view:'day',filter:'전체',person:null,edit:null,history:null,epoch:epoch};if(el('w-body'))el('w-body').innerHTML='';}
+function resetWork(){var epoch=W?W.epoch+1:0;W={date:'',week:'',rows:[],holidays:[],holidayEdit:null,clipboard:null,dates:[],loaded:'',loading:false,saving:false,error:'',notice:'',view:'day',filter:'전체',person:null,edit:null,history:null,epoch:epoch};if(el('w-body'))el('w-body').innerHTML='';}
 function openWork(){
   return setTab('work');
 }
@@ -4522,8 +4602,8 @@ function workEnter(){
 }
 function workLeave(){
   if(W.saving){toast(0,'SAVE','근무 저장을 확인하고 있어요. 잠시만 기다려주세요.');return false;}
-  if(W.edit&&!confirm('작성 중인 근무 입력을 닫을까요? 아직 저장되지 않았습니다.'))return false;
-  W.edit=null;W.person=null;W.history=null;W.epoch++;W.loading=false;return true;
+  if((W.edit||W.holidayEdit)&&!confirm('작성 중인 근무 입력을 닫을까요? 아직 저장되지 않았습니다.'))return false;
+  W.edit=null;W.holidayEdit=null;W.person=null;W.history=null;W.epoch++;W.loading=false;return true;
 }
 function workSetView(view){
   if(['day','week','month'].indexOf(view)<0||W.saving)return;
@@ -4542,7 +4622,7 @@ function loadWork(){
   return apiGet(monthly?{action:'workmonth',month:month}:{action:'workweek',week:week}).then(function(r){
     if(TK!==session||W.epoch!==epoch)return false;
     if(!r||r.error||!Array.isArray(r.rows)||(monthly?r.month!==month:r.week!==week))throw new Error(r&&r.error||'근무표를 받지 못했습니다.');
-    W.rows=r.rows;W.dates=dates;W.loaded=week;return true;
+    W.rows=r.rows;W.holidays=r.holidays||[];W.dates=dates;W.loaded=week;return true;
   }).catch(function(e){if(TK===session&&W.epoch===epoch)W.error=friendlyError(e);return false;}).finally(function(){if(TK===session&&W.epoch===epoch){W.loading=false;renderWork();}});
 }
 function workDateLabel(day){var d=new Date(day+'T12:00:00Z');return Number(day.slice(5,7))+'월 '+Number(day.slice(8))+'일 ('+'일월화수목금토'[d.getUTCDay()]+')';}
@@ -4557,14 +4637,15 @@ function workRowSummary(r){
 }
 function workDayHtml(){
   var visible=OWNERS.filter(function(o){return W.filter==='전체'||workRow(o,W.date).status===W.filter;});
-  var h='<div class="work-day-heading"><h3>'+esc(workDateLabel(W.date))+'</h3><button class="work-primary" id="w-mine"'+(W.loading||W.error?' disabled':'')+'>내 근무 입력</button></div>';
+  var h='<div class="work-day-heading"><h3>'+esc(workDateLabel(W.date))+'</h3>'+((ADMIN&&!VIEW)?'<button id="w-holiday" class="work-today" title="휴일 지정·관리">휴일</button>':'')+'<button class="work-primary" id="w-mine"'+(W.loading||W.error?' disabled':'')+'>내 근무 입력</button></div>';
+  h+=workHolidayHtml(W.date);if(!VIEW&&W.clipboard)h+='<div class="work-small-actions"><button id="w-paste-mine" class="btn ghost sm">내 근무에 붙여넣기</button></div>';
   if(new Date(W.date+'T12:00:00Z').getUTCDay()===0){var duty=OWNERS.filter(function(o){var r=workRow(o,W.date);return r.status==='출근'&&r.audition==='Y';});h+='<p class="work-duty">오디션 진행 · '+esc(duty.join(' · ')||'아직 지정하지 않았어요')+'</p>';}
-  h+='<div class="work-people">'+visible.map(function(o){var r=workRow(o,W.date);return '<button class="work-person-row" data-work-person="'+esc(o)+'" aria-label="'+esc(o+' '+r.status+' 상세')+'"><span class="work-person-top"><b>'+esc(o)+'</b>'+workStatusHtml(r.status)+'<span class="work-chevron" aria-hidden="true">›</span></span>'+workRowSummary(r)+'</button>';}).join('')+'</div>';
+  h+='<div class="work-people">'+visible.map(function(o){var r=workRow(o,W.date);return '<button class="work-person-row" data-work-person="'+esc(o)+'" aria-label="'+esc(o+' '+r.status+' 상세')+'"><span class="work-person-top"><b>'+esc(o)+'</b>'+workStatusHtml(r.status)+'<span class="work-chevron" aria-hidden="true">›</span></span>'+workRowSummary(r)+workMirrorStatusHtml(r)+'</button>';}).join('')+'</div>';
   return h;
 }
 function workWeekHtml(){
   var days=workWeekDays(W.week),today=workToday(),h='<p class="work-scroll-hint">좌우로 넘겨 한 주를 확인하세요 · 칸을 누르면 상세</p><div class="work-week-scroll" role="region" aria-label="팀원별 주간 근무표"><table class="work-week-grid"><thead><tr><th scope="col">팀원</th>';
-  h+=days.map(function(d,i){return '<th scope="col"'+(d===today?' class="work-is-today"':'')+'><button data-day="'+d+'" data-open-day="true">'+'월화수목금토일'[i]+' <b>'+Number(d.slice(8))+'</b></button></th>';}).join('')+'</tr></thead><tbody>';
+  h+=days.map(function(d,i){return '<th scope="col"'+(d===today?' class="work-is-today"':'')+'><button data-day="'+d+'" data-open-day="true">'+'월화수목금토일'[i]+' <b>'+Number(d.slice(8))+'</b>'+workHolidayHtml(d,true)+'</button></th>';}).join('')+'</tr></thead><tbody>';
   h+=OWNERS.map(function(o){return '<tr><th scope="row">'+esc(o)+'</th>'+days.map(function(d){var r=workRow(o,d),b=workBlocks(r);return '<td><button class="work-week-cell '+workStatusClass(r.status)+'" data-week-person="'+esc(o)+'" data-work-date="'+d+'" aria-label="'+esc(o+' '+d+' '+r.status+' 상세')+'">'+workStatusHtml(r.status)+b.map(function(x){return '<span class="work-week-block"><time>'+esc(x.start+'–'+x.end)+'</time><strong>'+esc(x.place||'장소 미입력')+'</strong><span>'+esc(x.task||'')+'</span></span>';}).join('')+(r.note?'<span class="work-week-note">'+esc(r.note)+'</span>':'')+'</button></td>';}).join('')+'</tr>';}).join('');
   return h+'</tbody></table></div>';
 }
@@ -4572,26 +4653,26 @@ function workDayCounts(day){var c={on:0,trip:0,off:0,empty:0};OWNERS.forEach(fun
 function workMonthHtml(){
   var month=W.date.slice(0,7),today=workToday(),h='<p class="work-month-legend">근무 = 출근·외근 / 휴무 = 휴무·연차</p><div class="work-month-grid">';
   h+='월화수목금토일'.split('').map(function(s){return '<div class="work-weekday">'+s+'</div>';}).join('');
-  h+=workMonthDays(month).map(function(d){var c=workDayCounts(d),other=d.slice(0,7)!==month;return '<button class="work-month-cell'+(other?' other':'')+(d===today?' today':'')+'" data-day="'+d+'" aria-pressed="'+(d===W.date)+'" aria-label="'+esc(d+' 근무 '+c.on+'명, 출장 '+c.trip+'명, 휴무 '+c.off+'명, 미입력 '+c.empty+'명')+'"><b>'+Number(d.slice(8))+'</b>'+(c.on?'<span class="on">근무 '+c.on+'</span>':'')+(c.trip?'<span class="trip">출장 '+c.trip+'</span>':'')+(c.off?'<span class="off">휴무 '+c.off+'</span>':'')+(c.empty?'<span class="empty">미입력 '+c.empty+'</span>':'')+'</button>';}).join('');
+  h+=workMonthDays(month).map(function(d){var c=workDayCounts(d),other=d.slice(0,7)!==month;return '<button class="work-month-cell'+(other?' other':'')+(d===today?' today':'')+'" data-day="'+d+'" aria-pressed="'+(d===W.date)+'" aria-label="'+esc(d+' 근무 '+c.on+'명, 출장 '+c.trip+'명, 휴무 '+c.off+'명, 미입력 '+c.empty+'명')+'"><b>'+Number(d.slice(8))+'</b>'+workHolidayHtml(d,true)+(c.on?'<span class="on">근무 '+c.on+'</span>':'')+(c.trip?'<span class="trip">출장 '+c.trip+'</span>':'')+(c.off?'<span class="off">휴무 '+c.off+'</span>':'')+(c.empty?'<span class="empty">미입력 '+c.empty+'</span>':'')+'</button>';}).join('');
   return h+'</div><p class="work-scroll-hint">날짜를 누르면 아래에서 팀원별 일정을 볼 수 있어요.</p><div class="work-month-detail">'+workDayHtml()+'</div>';
 }
 function renderWork(){
   var tabs=el('w-tabs'),box=el('w-body');if(!tabs||!box)return;
-  tabs.hidden=!!(W.edit||W.history||W.person);
+  tabs.hidden=!!(W.edit||W.history||W.person||W.holidayEdit);
   tabs.innerHTML=[['day','일'],['week','주'],['month','월']].map(function(x){return '<button type="button" data-view="'+x[0]+'" aria-pressed="'+(W.view===x[0])+'" aria-label="'+x[1]+'간 보기">'+x[1]+'</button>';}).join('');
   tabs.querySelectorAll('button').forEach(function(b){b.disabled=W.saving;b.onclick=function(){workSetView(b.dataset.view);};});
-  if(W.edit){renderWorkEdit();return;}if(W.history){renderWorkHistory();return;}if(W.person){renderWorkPerson();return;}
+  if(W.holidayEdit){renderWorkHoliday();return;}if(W.edit){renderWorkEdit();return;}if(W.history){renderWorkHistory();return;}if(W.person){renderWorkPerson();return;}
   var days=workWeekDays(W.week),unit=W.view==='month'?'달':W.view==='week'?'주':'날',h='<div class="work-toolbar"><button id="w-prev" class="work-arrow" aria-label="이전 '+unit+'">‹</button><input type="month" id="w-month" aria-label="연도와 월 선택" min="2000-01" max="2099-12" value="'+W.date.slice(0,7)+'"><button id="w-next" class="work-arrow" aria-label="다음 '+unit+'">›</button><button class="work-today" id="w-today">오늘</button></div>';
   if(W.view==='day')h+='<div class="work-days">'+days.map(function(d,i){return '<button data-day="'+d+'" aria-pressed="'+(W.date===d)+'"><small>'+'월화수목금토일'[i]+'</small>'+Number(d.slice(8))+'</button>';}).join('')+'</div>';
   if(W.view==='week')h+='<div class="work-period">'+esc(workDateLabel(days[0])+' – '+workDateLabel(days[6]))+'</div>';
-  h+='<div class="work-sync"><span role="status">'+esc(W.loading?'최신 일정 확인 중…':W.notice||'한국시간 · 저장 즉시 확정')+'</span><button id="w-refresh"'+(W.loading?' disabled':'')+'>새로고침</button></div>';
+  h+='<div class="work-sync"><span role="status">'+esc(W.loading?'최신 일정 확인 중…':W.notice||'한국시간 · 저장 즉시 확정')+'</span><span><a class="work-sheet-link" href="https://docs.google.com/spreadsheets/d/1GAhQi8QFi7LVyYq1ghTNMvd9usTC2OKJvpLMJ_nMJIQ/edit" target="_blank" rel="noopener noreferrer">시트 보기</a> <button id="w-refresh"'+(W.loading?' disabled':'')+'>새로고침</button></span></div>';
   if(W.error)h+='<p class="work-error" role="alert">'+esc(W.error)+'</p>';
   if(!workReady()){h+='<p class="work-loading" role="status">'+(W.loading?'팀 일정을 불러오고 있어요.':'이 기간의 일정을 확인하지 못했어요. 새로고침을 눌러주세요.')+'</p>';box.innerHTML=h;bindWorkDates();return;}
   h+=W.view==='week'?workWeekHtml():W.view==='month'?workMonthHtml():workDayHtml();
   box.innerHTML=h;bindWorkDates();
   box.querySelectorAll('[data-work-person]').forEach(function(b){b.onclick=function(){workOpenPerson(b.dataset.workPerson,W.date);};});
   box.querySelectorAll('[data-week-person]').forEach(function(b){b.onclick=function(){workOpenPerson(b.dataset.weekPerson,b.dataset.workDate);};});
-  if(el('w-mine'))el('w-mine').onclick=function(){editWork(ME);};
+  if(el('w-mine'))el('w-mine').onclick=function(){editWork(ME);};if(el('w-paste-mine'))el('w-paste-mine').onclick=function(){workPaste(ME);};if(el('w-holiday'))el('w-holiday').onclick=workEditHoliday;
 }
 function bindWorkDates(){
   if(el('w-month'))el('w-month').onchange=function(){if(/^20\d{2}-(0[1-9]|1[0-2])$/.test(this.value))chooseWorkDate(this.value+'-01');};
@@ -4604,10 +4685,10 @@ function bindWorkDates(){
 function workOpenPerson(owner,day){if(OWNERS.indexOf(owner)<0||W.dates.indexOf(day)<0)return;W.date=day;W.week=workMonday(day);W.person=owner;W.history=null;W.error='';renderWork();}
 function renderWorkPerson(){
   var owner=W.person,r=workRow(owner,W.date);
-  el('w-body').innerHTML='<button class="work-back" id="w-person-back">← 근무표</button><p class="work-detail-date">'+esc(workDateLabel(W.date))+'</p><div class="work-person-title"><h3>'+esc(owner)+'</h3>'+workStatusHtml(r.status)+'</div>'+workDetailHtml(r)+(workCanEdit(owner)?'<button class="work-primary work-wide" id="w-person-edit"'+(W.loading||W.error?' disabled':'')+'>'+ (r.status==='미입력'?'근무 입력':'근무 수정')+'</button>':'')+'<button class="work-history-link" id="w-person-history">변경 이력 보기</button>';
+  el('w-body').innerHTML='<button class="work-back" id="w-person-back">← 근무표</button><p class="work-detail-date">'+esc(workDateLabel(W.date))+'</p><div class="work-person-title"><h3>'+esc(owner)+'</h3>'+workStatusHtml(r.status)+'</div>'+workDetailHtml(r)+workMirrorStatusHtml(r)+workPersonActions(r)+(workCanEdit(owner)?'<button class="work-primary work-wide" id="w-person-edit"'+(W.loading||W.error?' disabled':'')+'>'+ (r.status==='미입력'?'근무 입력':'근무 수정')+'</button>':'')+'<button class="work-history-link" id="w-person-history">변경 이력 보기</button>';
   el('w-person-back').onclick=function(){W.person=null;renderWork();};
   if(el('w-person-edit'))el('w-person-edit').onclick=function(){editWork(owner);};
-  el('w-person-history').onclick=function(){openWorkHistory(owner);};
+  el('w-person-history').onclick=function(){openWorkHistory(owner);};if(el('w-copy'))el('w-copy').onclick=function(){workCopy(owner);};if(el('w-paste'))el('w-paste').onclick=function(){workPaste(owner);};if(el('w-delete'))el('w-delete').onclick=function(){workDelete(owner);};
 }
 function editWork(owner){
   if(!workCanEdit(owner)||W.loading||!workHasDays(workWeekDays(W.week)))return;
@@ -4648,11 +4729,11 @@ function workPayload(edit){
 }
 function saveWork(){
   if(W.saving||W.loading||!W.edit||!W.edit.days.length||W.edit.conflict)return Promise.resolve(false);
-  var edit=W.edit,session=TK,body=workPayload(edit);W.saving=true;W.error='';W.epoch++;renderWork();
+  var edit=W.edit,session=TK,body=workPayload(edit);if(edit.pasted&&edit.days.some(function(d){return workRow(edit.owner,d).status!=='미입력';})&&!confirm('선택한 날짜의 기존 근무를 복사한 내용으로 덮어쓸까요? 변경 이력은 남습니다.'))return Promise.resolve(false);W.saving=true;W.error='';W.epoch++;renderWork();
   return apiPost(body).then(function(r){
     if(TK!==session||W.edit!==edit)return false;
     if(!r||r.error||!r.work||r.work.week!==body.week||!Array.isArray(r.work.rows))throw new Error(r&&r.error||'저장 결과를 확인하지 못했습니다. 같은 입력으로 다시 눌러주세요.');
-    var updated=workWeekDays(r.work.week);W.rows=W.rows.filter(function(row){return updated.indexOf(row.date)<0;}).concat(r.work.rows);updated.forEach(function(d){if(W.dates.indexOf(d)<0)W.dates.push(d);});W.loaded=r.work.week;W.edit=null;W.person=null;W.notice=r.saved+'일 근무를 확정했습니다.';return true;
+    var updated=workWeekDays(r.work.week);W.rows=W.rows.filter(function(row){return updated.indexOf(row.date)<0;}).concat(r.work.rows);updated.forEach(function(d){if(W.dates.indexOf(d)<0)W.dates.push(d);});W.loaded=r.work.week;W.edit=null;W.person=null;W.holidays=r.work.holidays||W.holidays||[];W.notice=edit.status==='미입력'?'근무를 삭제했습니다.':r.saved+'일 근무를 확정했습니다.';if(r.work.rows.some(function(x){return x.syncState==='pending';}))W.notice+=' 시트 반영 대기 중';return true;
   }).catch(function(err){
     if(TK===session&&W.edit===edit){W.error=friendlyError(err)+' 입력 내용은 유지했습니다.';if(/다른 사람이 먼저/.test(err.message))edit.conflict=true;}return false;
   }).finally(function(){if(TK===session){W.saving=false;renderWork();}});
@@ -4703,7 +4784,7 @@ function serverVersionMessage(version){var newer=Number(String(version||'').repl
 function paintConnectionStatus(){var n=el('connection-status');if(!n)return;var old=SERVER_BUILD&&SERVER_BUILD!==APP_BUILD;n.hidden=!old;n.textContent=old?serverVersionMessage(SERVER_BUILD):'';}
 function observeServerReply(r,action){
   if(r&&r.build){SERVER_BUILD=String(r.build);paintConnectionStatus();}
-  if(['slots','calendarsettings','setcalendar','book','workweek','workmonth','worksave','workhistory'].indexOf(action)>=0&&(!r||r.build!==APP_BUILD))throw new Error(serverVersionMessage(r&&r.build));
+  if(['slots','calendarsettings','setcalendar','book','workweek','workmonth','worksave','workhistory','workholiday','acadvisit'].indexOf(action)>=0&&(!r||r.build!==APP_BUILD))throw new Error(serverVersionMessage(r&&r.build));
   return r;
 }
 
@@ -4729,29 +4810,30 @@ function observeServerReply(r,action){
     else{if(node.parentNode!==home)home.appendChild(node);node.classList.remove('desktop-embedded');node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');}
   }
   function reposition(){mount(lb,(tab==='road'||tab==='db')?el('desktop-'+tab):null,homeLB);mount(el('sheet-a'),tab==='acad'&&acadCur?el('desktop-acad'):null,homeA);if(modalOpen())baseLock();else release();measure();}
-  function draft(){return Array.from(el('a-body').querySelectorAll('input,select,textarea')).map(function(n){return [n.id,n.value];}).reduce(function(out,x){return out+JSON.stringify(x);},'');}
-  function canLeaveAcademy(){if(!mq.matches||!el('sheet-a').classList.contains('open')||!el('sheet-a').classList.contains('desktop-embedded'))return true;var save=el('a-save');if(save&&save.disabled){toast(0,'SAVE','학원 저장을 확인하고 있어요.');return false;}return draft()===acadSnapshot||confirm('저장하지 않은 학원 수정 내용을 닫고 이동할까요?');}
+  function draft(){return Array.from(el('sheet-a').querySelectorAll('input,select,textarea')).filter(function(n){return n.id.indexOf('a-visit-')!==0;}).map(function(n){return [n.id,n.value];}).reduce(function(out,x){return out+JSON.stringify(x);},'');}
+  function canLeaveAcademy(){if(!mq.matches||!el('sheet-a').classList.contains('open')||!el('sheet-a').classList.contains('desktop-embedded'))return true;var save=el('a-save');if(acadVisitBusy||(save&&save.disabled)){toast(0,'SAVE','학원 저장을 확인하고 있어요.');return false;}return (draft()===acadSnapshot&&!['a-visit-count','a-visit-checked','a-visit-note'].some(function(id){return el(id)&&el(id).value.trim();}))||confirm('저장하지 않은 학원 수정 내용을 닫고 이동할까요?');}
   function decorateRows(){
     ['road','db'].forEach(function(k){el(k==='road'?'r-list':'d-list').querySelectorAll('.item').forEach(function(n){var active=!!(lbRec&&lb.classList.contains('open')&&lbRec.id===n.dataset.id&&lbIsDb===(k==='db'));n.classList.toggle('desktop-selected',mq.matches&&active);if(mq.matches){n.tabIndex=0;n.setAttribute('aria-label','후보자 상세 열기');n.onkeydown=function(e){if(e.target===n&&(e.key==='Enter'||e.key===' ')){e.preventDefault();n.click();}};}else{n.removeAttribute('tabindex');n.removeAttribute('aria-label');n.onkeydown=null;}});});
   }
   openLB=function(r,isDb,keep){if(mq.matches&&(tab==='road'||tab==='db')&&el('sheet-a').classList.contains('desktop-embedded'))closeAcad();mount(lb,(tab==='road'||tab==='db')?el('desktop-'+tab):null,homeLB);baseOpenLB(r,isDb,keep);decorateRows();measure();};
   function academySummary(a){
-    var old=el('desktop-acad-summary');if(old)old.remove();var form=el('a-body');form.classList.remove('desktop-acad-collapsed');if(!a||!mq.matches||tab!=='acad')return;
+    var old=el('desktop-acad-summary'),form=el('a-body');if(old){['a-visit-form','a-history'].forEach(function(id){var n=old.querySelector('#'+id);if(n)form.appendChild(n);});old.remove();}form.classList.remove('desktop-acad-collapsed');if(!a||!mq.matches||tab!=='acad')return;
     var section=document.createElement('div');section.id='desktop-acad-summary';section.className='desktop-acad-summary';
     var v=function(k){return String(a[AI[k]]||'');},visit=academyVisitFor(a);
-    section.innerHTML='<p>'+esc([v('kind'),v('region'),v('city'),v('country')].filter(Boolean).join(' · '))+'</p>'+academyRatingHtml(a)+'<div class="desktop-acad-meta"><div><small>최근 방문</small>'+esc(visit.date||(visit.kind==='none'?'방문 기록 없음':'날짜 확인 필요'))+'</div><div><small>방문 상태</small>'+esc(visit.label||'날짜 확인')+'</div><div><small>연락처</small>'+telLinks(v('contact')||'미입력')+'</div><div><small>주소</small>'+esc(v('address')||'미입력')+'</div></div><b>방문·오디션 기록</b><p class="desktop-acad-note">'+esc(v('lastVisit')||'등록된 방문 기록이 없습니다.')+'</p>'+(v('note')?'<details><summary>비고·이전 기록 펼치기</summary><p class="desktop-acad-note">'+esc(v('note'))+'</p></details>':'')+'<div class="row-btns">'+(!VIEW?'<button class="btn sm" id="desktop-acad-edit">정보 수정 · 전체 이력</button><button class="mini" id="desktop-acad-book">오디션 잡기</button>':'')+'</div>';
-    form.before(section);form.classList.add('desktop-acad-collapsed');
-    if(el('desktop-acad-edit'))el('desktop-acad-edit').onclick=function(){form.classList.remove('desktop-acad-collapsed');section.remove();measure();};
+    section.innerHTML='<p>'+esc([v('kind'),v('region'),v('city'),v('country')].filter(Boolean).join(' · '))+'</p>'+academyRatingHtml(a)+'<div class="desktop-acad-meta"><div><small>최근 방문</small>'+esc(visit.date||(visit.kind==='none'?'방문 기록 없음':'날짜 확인 필요'))+'</div><div><small>방문 상태</small>'+esc(visit.label||'날짜 확인')+'</div><div><small>연락처</small>'+telLinks(v('contact')||'미입력')+'</div><div><small>주소</small>'+esc(v('address')||'미입력')+'</div></div><b>최근 방문 기록</b><p class="desktop-acad-note">'+esc(v('lastVisit')||'등록된 방문 기록이 없습니다.')+'</p><p>지원 인원: '+esc(v('lastCount')||'미기록')+'<br>체크 인원: '+esc(v('checked')||'미기록')+'</p>'+(v('note')?'<details><summary>비고·이전 기록 펼치기</summary><p class="desktop-acad-note">'+esc(v('note'))+'</p></details>':'')+'<div class="row-btns">'+(!VIEW?'<button class="btn sm" id="desktop-acad-edit">정보 수정 · 전체 이력</button><button class="mini" id="desktop-acad-book">오디션 잡기</button>':'')+'</div>';
+    form.before(section);form.classList.add('desktop-acad-collapsed');var visitForm=el('a-visit-form'),history=el('a-history');if(visitForm)section.appendChild(visitForm);if(history){var title=document.createElement('h4');title.textContent='누적 방문·변경 기록';section.appendChild(title);section.appendChild(history);}
+    if(el('desktop-acad-edit'))el('desktop-acad-edit').onclick=function(){['a-visit-form','a-history'].forEach(function(id){var n=section.querySelector('#'+id);if(n)form.appendChild(n);});form.classList.remove('desktop-acad-collapsed');section.remove();measure();};
     if(el('desktop-acad-book'))el('desktop-acad-book').onclick=function(){openBook(a);};
   }
-  openAcad=function(a){if(!canLeaveAcademy())return;mount(el('sheet-a'),tab==='acad'&&a?el('desktop-acad'):null,homeA);baseOpenAcad(a);academySummary(a);acadSnapshot=draft();paintAcademySelection();measure();};
+  window.academyBaseDirty=function(){return draft()!==acadSnapshot;};window.refreshAcademySummary=function(a,clean){academySummary(a);if(clean)acadSnapshot=draft();measure();};
+  openAcad=function(a){if(!canLeaveAcademy())return;var oldSummary=el('desktop-acad-summary');if(oldSummary)oldSummary.remove();mount(el('sheet-a'),tab==='acad'&&a?el('desktop-acad'):null,homeA);baseOpenAcad(a);academySummary(a);acadSnapshot=draft();paintAcademySelection();measure();};
   setTab=function(t){if(t!==tab&&!canLeaveAcademy())return false;return baseSetTab(t);};
   renderRoad=function(){baseRenderRoad();decorateRows();};renderDb=function(){baseRenderDb();decorateRows();};
   function paintAcademySelection(){el('ac-list').querySelectorAll('.acad').forEach(function(n){n.classList.toggle('desktop-selected',!!(mq.matches&&acadCur&&el('sheet-a').classList.contains('open')&&n.dataset.academyId===String(acadCur[AI.id])));});}
   renderAcad=function(){baseRenderAcad();paintAcademySelection();};
   render=function(){if(lastTab!==tab){if(lb.classList.contains('desktop-embedded'))closeLB();if(el('sheet-a').classList.contains('desktop-embedded'))closeAcad();lastTab=tab;}reposition();baseRender();measure();};
   workEnter=function(){baseWorkEnter();if(mq.matches){W.view='week';workDesktopStarted=true;}};
-  function resize(){reposition();decorateRows();if(mq.matches&&tab==='work'&&!workDesktopStarted&&!W.edit&&!W.person&&!W.history&&!W.saving){workDesktopStarted=true;workSetView('week');}}
+  function resize(){reposition();decorateRows();if(acadCur&&el('sheet-a').classList.contains('open')){academySummary(acadCur);}if(mq.matches&&tab==='work'&&!workDesktopStarted&&!W.edit&&!W.person&&!W.history&&!W.saving){workDesktopStarted=true;workSetView('week');}}
   if(mq.addEventListener)mq.addEventListener('change',resize);else mq.addListener(resize);
   // A close button can retain its original handler; watch only open/close classes.
   new MutationObserver(function(){decorateRows();if(!modalOpen())release();}).observe(lb,{attributes:true,attributeFilter:['class']});
