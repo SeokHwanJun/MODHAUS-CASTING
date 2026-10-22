@@ -1289,7 +1289,7 @@ body:not([data-skin]) .hd{--surface:#fff;--surface-2:#F5F3FB;--surface-3:#EBEBEB
 }
 
 </style>
-<style>.work-sheet-link{font-size:12px;color:inherit;white-space:nowrap}.work-small-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.work-holiday-label{color:#a72349;background:#fff0f3;border-radius:8px;padding:5px 8px;font-size:12px;display:block;overflow-wrap:anywhere}.work-sheet-status{display:block;font-size:11px;color:#756f83;overflow-wrap:anywhere;margin-top:4px}.work-sheet-status.review,.work-sheet-status.retry{color:#a45b12}.work-danger{color:#b12b49!important}.work-holiday-form label{display:block;margin-top:12px}.work-holiday-form input,.work-holiday-form select{width:100%;box-sizing:border-box;min-width:0}.work-holiday-form{max-width:600px}.academy-history-card{border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0;overflow-wrap:anywhere}.academy-history-card small{display:block;color:var(--muted);margin-top:4px}.academy-history-card p{margin:5px 0;white-space:pre-wrap}.academy-visit-form{padding:12px 0}#a-visit-form{margin:12px 0}#a-history{display:block}#a-visit-form input,#a-visit-form textarea{box-sizing:border-box;width:100%;min-width:0}.academy-history-note{white-space:pre-wrap}</style></head>
+<style>.work-sheet-link{font-size:12px;color:inherit;white-space:nowrap}.work-small-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.work-holiday-label{color:#a72349;background:#fff0f3;border-radius:8px;padding:5px 8px;font-size:12px;display:block;overflow-wrap:anywhere}.work-sheet-status{display:block;font-size:11px;color:#756f83;overflow-wrap:anywhere;margin-top:4px}.work-sheet-status.sync-review,.work-sheet-status.sync-retry{color:#a45b12}.work-danger{color:#b12b49!important}.work-holiday-form label{display:block;margin-top:12px}.work-holiday-form input,.work-holiday-form select{width:100%;box-sizing:border-box;min-width:0}.work-holiday-form{max-width:600px}.academy-history-card{border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0;overflow-wrap:anywhere}.academy-history-card small{display:block;color:var(--muted);margin-top:4px}.academy-history-card p{margin:5px 0;white-space:pre-wrap}.academy-visit-form{padding:12px 0}#a-visit-form{margin:12px 0}#a-history{display:block}#a-visit-form input,#a-visit-form textarea{box-sizing:border-box;width:100%;min-width:0}.academy-history-note{white-space:pre-wrap}</style></head>
 <body>
 
 <div class="hd">
@@ -1629,7 +1629,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v80',UI_BUILD='v80-firebase-read1',SERVER_BUILD='';
+var APP_BUILD='v80',UI_BUILD='v80-attendance-overlay1',SERVER_BUILD='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadVisitFilter='전체',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var requestTimes=[],viewTimes=[];
 function recordViewPaint(label,started){var session=TK;requestAnimationFrame(function(){requestAnimationFrame(function(){if(TK!==session)return;viewTimes.push({label:label,ms:Math.max(0,Date.now()-started)});if(viewTimes.length>8)viewTimes.shift();});});}
@@ -4683,7 +4683,7 @@ function workViewSignature(){return JSON.stringify([W.rows,W.holidays,W.sheetSyn
 var WORK_TYPES=['미입력','출근','출장','외근','휴무','연차'];
 function workMirrorStatusHtml(r){
   var labels={pending:'시트 반영 대기',retry:'시트 연결 재시도 중',review:'시트 반영 확인 필요',synced:'시트 반영 완료',sheet:'구글시트에서 확인'},label=labels[r.syncState];
-  return label?'<span class="work-sheet-status '+esc(r.syncState)+'">'+esc(label)+(r.syncError?' · '+esc(r.syncError):'')+'</span>':'';
+  return label?'<span class="work-sheet-status sync-'+esc(r.syncState)+'">'+esc(label)+(r.syncError?' · '+esc(r.syncError):'')+'</span>':'';
 }
 function workPersonActions(r){
   return '<div class="work-small-actions">'+(r.status!=='미입력'?'<button class="btn ghost sm" id="w-copy">근무 복사</button>':'')+(workCanEdit(r.owner)&&W.clipboard?'<button class="btn ghost sm" id="w-paste">붙여넣기</button>':'')+(workCanEdit(r.owner)&&r.status!=='미입력'?'<button class="btn ghost sm work-danger" id="w-delete">근무 삭제</button>':'')+'</div>';
