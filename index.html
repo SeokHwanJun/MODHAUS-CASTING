@@ -1629,7 +1629,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v80',UI_BUILD='v80-save-speed1',SERVER_BUILD='',SERVER_PATCH='';
+var APP_BUILD='v80',UI_BUILD='v80-native-candidates1',SERVER_BUILD='',SERVER_PATCH='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadVisitFilter='전체',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var requestTimes=[],viewTimes=[];
 function recordViewPaint(label,started){var session=TK;requestAnimationFrame(function(){requestAnimationFrame(function(){if(TK!==session)return;viewTimes.push({label:label,ms:Math.max(0,Date.now()-started)});if(viewTimes.length>8)viewTimes.shift();});});}
@@ -2460,7 +2460,7 @@ var firebaseViewCache={},firebaseViewPending={},firebaseViewGeneration=0;
 function firebaseSessionKey(){return 'mh-read-session:'+PUSH.projectId+':'+location.pathname.replace(/index\.html$/,'');}
 function forgetFirebaseSession(){try{sessionStorage.removeItem(firebaseSessionKey());}catch(e){}}
 function invalidateFirebaseViews(){firebaseViewGeneration++;firebaseViewCache={};firebaseViewPending={};firebaseReadPause={};}
-function resetFirebaseReads(){firebaseReadGeneration++;firebaseReadSession=null;firebaseReadPending=null;forgetFirebaseSession();invalidateFirebaseViews();}
+function resetFirebaseReads(){nativeCandidates=false;firebaseReadGeneration++;firebaseReadSession=null;firebaseReadPending=null;forgetFirebaseSession();invalidateFirebaseViews();}
 function firebaseSessionBinding(session){
   if(typeof crypto==='undefined'||!crypto.subtle||typeof TextEncoder==='undefined')return Promise.resolve('');
   return crypto.subtle.digest('SHA-256',new TextEncoder().encode(session)).then(function(b){return Array.from(new Uint8Array(b),function(n){return n.toString(16).padStart(2,'0');}).join('');}).catch(function(){return '';});
@@ -2580,6 +2580,7 @@ function warmSaveAuth(){
  if(!TK||VIEW||!navigator.onLine||Date.now()-authWarmAt<15000)return;
  authWarmAt=Date.now();ensureFirebaseReads(TK).catch(function(){});
 }
+var nativeCandidates=false,candidateSheetPending=0,candidateSheetConflicts=0;
 var commentSheetPending=0,commentSheetConflicts=0;
 var CASTING_WRITE_API='https://asia-northeast3-modhauscasting-6ffd7.cloudfunctions.net/castingApi';
 function commentApi(body,session){
@@ -2589,7 +2590,7 @@ function commentApi(body,session){
   return fetch(CASTING_WRITE_API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+auth.idToken},body:JSON.stringify(body),cache:'no-store',signal:ctrl.signal}).then(function(response){return response.json().then(function(data){
    if(TK!==session)throw new Error('이전 로그인 요청입니다.');
    if(response.status===401){resetFirebaseReads();throw new Error('로그인 확인이 필요합니다. 같은 내용으로 다시 시도해주세요.');}
-   if(!response.ok)throw new Error(data.error||'의견 저장을 확인하지 못했습니다.');return data;
+   if(!response.ok){var e=new Error(data.error||'저장을 확인하지 못했습니다.');e.status=response.status;throw e;}return data;
   });}).finally(function(){clearTimeout(timer);});
  });
 }
@@ -2601,15 +2602,22 @@ function currentComments(data,session){
   return Object.assign({},data,{cm:comments.cm,unchanged:false,sheetPending:comments.sheetPending});
  });
 }
-function apiGet(p){var started=Date.now(),ok=false,session=TK,source='Apps Script';return withAuth(function(){return p.action==='all'&&!VIEW?Promise.all([routedRead(p,TK),currentComments({},session)]).then(function(parts){return Object.assign({},parts[0],parts[1]);}):routedRead(p,TK);}).then(function(r){source=r&&r.readSource||source;observeServerReply(r,p.action);ok=!!r&&!r.error;return r;}).finally(function(){if(TK===session)recordRequestTime(p.action==='all'?'all_'+(p.part||'full'):p.action,started,ok,source);});}
-function recordRequestTime(action,started,ok,source){
-  requestTimes.push({action:String(action||'read'),ms:Math.max(0,Date.now()-started),ok:!!ok,source:source||'Apps Script'});
+function currentCandidates(p,session){
+ return commentApi({action:'candidates'},session).then(function(data){
+  if(!data.candidatesEnabled){if(nativeCandidates)throw new Error('인원 서버를 확인하고 있습니다. 입력 내용은 유지됩니다.');return routedRead(p,session);}
+  nativeCandidates=true;candidateSheetPending=data.candidateSheetPending||0;candidateSheetConflicts=data.candidateSheetConflicts||0;
+  return ensureFirebaseReads(session).then(function(auth){data.profile=auth.profile;return data;});
+ });
+}
+function apiGet(p){var started=Date.now(),ok=false,session=TK,source='Apps Script';return withAuth(function(){return p.action==='all'&&!VIEW?Promise.all([currentCandidates(p,session),currentComments({},session)]).then(function(parts){return Object.assign({},parts[0],parts[1]);}):p.action==='thumbs'&&p.fast===1&&nativeCandidates&&!VIEW?commentApi({action:'candidateThumbs',k:p.k,ids:p.ids},session):routedRead(p,TK);}).then(function(r){source=r&&r.readSource||source;observeServerReply(r,p.action);ok=!!r&&!r.error;return r;}).finally(function(){if(TK===session)recordRequestTime(p.action==='all'?'all_'+(p.part||'full'):p.action,started,ok,source);});}
+function recordRequestTime(action,started,ok,source,timings){
+  requestTimes.push({action:String(action||'read'),ms:Math.max(0,Date.now()-started),ok:!!ok,source:source||'Apps Script',timings:timings||null});
   if(requestTimes.length>60){var discard=requestTimes.findIndex(function(x){return ['comment','editcomment','delcomment','add','edit','stagephoto','worksave'].indexOf(x.action)<0;});requestTimes.splice(discard<0?0:discard,1);}
 }
 function showSpeedReport(){
   var labels={stagephoto:'사진 미리 전송',all:'목록/이력',all_core:'첫 목록',all_history:'추가 이력',all_full:'전체 목록',thumbs:'작은 사진',full:'원본 사진',academies:'학원 목록',workweek:'주간 출근표',workmonth:'월간 출근표',comment:'의견 등록',editcomment:'의견 수정',delcomment:'의견 삭제',add:'후보 등록',edit:'후보 수정',worksave:'근무 저장'};
   var rows=requestTimes.filter(function(x){return labels[x.action];});
-  el('ac-speed-report').textContent='화면 '+UI_BUILD+' / 서버 '+(SERVER_BUILD||'확인 전')+'\n'+(viewTimes.length?'화면 표시\n'+viewTimes.map(function(x){return x.label+' '+(x.ms/1000).toFixed(2)+'초';}).join('\n')+'\n\n':'')+'서버 조회\n'+(rows.length?rows.filter(function(x){return ['comment','editcomment','delcomment','add','edit','stagephoto','worksave'].indexOf(x.action)>=0;}).slice(-8).concat(rows.filter(function(x){return ['comment','editcomment','delcomment','add','edit','stagephoto','worksave'].indexOf(x.action)<0;}).slice(-8)).map(function(x){return labels[x.action]+' '+(x.ms/1000).toFixed(1)+'초 · '+x.source+(x.ok?'':' · 실패');}).join('\n'):'목록이나 사진을 불러온 뒤 확인해주세요.')+'\n사진 대기 '+(wantQ.length+photoRepairQ.length)+'장 · 요청 중 '+thumbActive+'개';
+  el('ac-speed-report').textContent='화면 '+UI_BUILD+' / 서버 '+(SERVER_BUILD||'확인 전')+'\n'+(viewTimes.length?'화면 표시\n'+viewTimes.map(function(x){return x.label+' '+(x.ms/1000).toFixed(2)+'초';}).join('\n')+'\n\n':'')+'서버 조회\n'+(rows.length?rows.filter(function(x){return ['comment','editcomment','delcomment','add','edit','stagephoto','worksave'].indexOf(x.action)>=0;}).slice(-8).concat(rows.filter(function(x){return ['comment','editcomment','delcomment','add','edit','stagephoto','worksave'].indexOf(x.action)<0;}).slice(-8)).map(function(x){return labels[x.action]+' '+(x.ms/1000).toFixed(1)+'초 · '+x.source+(x.ok?'':' · 실패')+(x.timings?' (서버 '+(x.timings.serverMs/1000).toFixed(2)+'초 / 잠금 '+((x.timings.lockWaitMs||0)/1000).toFixed(2)+'초 / 처리 '+((x.timings.businessMs||0)/1000).toFixed(2)+'초)':'');}).join('\n'):'목록이나 사진을 불러온 뒤 확인해주세요.')+'\n사진 대기 '+(wantQ.length+photoRepairQ.length)+'장 · 요청 중 '+thumbActive+'개';
 }
 // A short-lived, session-bound list preview. Contact, notes, comments and photos stay out of storage.
 var previewOnly=false,previewKey='mh-list-preview-v1';
@@ -2645,21 +2653,32 @@ function preparedPhoto(rec,p){
  if(p.photoTicket&&p.expires>Date.now()+60000){rec.photoTicket=p.photoTicket;delete rec.photoFull;}
  return rec;
 }
+function postCandidatePhoto(body){
+ if(nativeCandidates&&body.rec&&body.rec.photoFull){
+  return apiPost({action:'stagephoto',photoFull:body.rec.photoFull,photo:body.rec.photo}).then(function(r){
+   if(!r||r.error||!r.photoTicket)throw new Error(r&&r.error||'사진 전송을 확인하지 못했습니다.');
+   body.rec.photoTicket=r.photoTicket;delete body.rec.photoFull;return apiPost(body);
+  });
+ }
+ return apiPost(body);
+}
 function apiPost(input){
   if(previewOnly)return Promise.reject(new Error('최신 목록을 확인하고 있습니다. 잠시 뒤 다시 눌러주세요.'));
   if(input.action==='book'&&SERVER_BUILD!==APP_BUILD)return Promise.reject(new Error(serverVersionMessage(SERVER_BUILD)));
   if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();
-  var started=Date.now(),success=false,isComment=['comment','editcomment','delcomment'].indexOf(input.action)>=0;
+  var started=Date.now(),serverTimings=null,success=false,isComment=['comment','editcomment','delcomment'].indexOf(input.action)>=0,isCandidate=nativeCandidates&&['add','edit','update','delete','toss'].indexOf(input.action)>=0;
   var session=TK,body=Object.assign({},input),tracked=WRITE_ACTIONS.indexOf(body.action)>=0,signature=TK+'|'+JSON.stringify(input);
   if(isComment&&input.action!=='comment'){var existing=(S.cm||[]).find(function(c){return c.id===input.id;});body.revision=existing&&existing.revision||'';}
+  if(isCandidate&&input.action!=='add'){var candidate=(S[input.k||'road']||[]).find(function(r){return r.id===input.id;});body.revision=candidate&&candidate.revision||'';}
+  signature=TK+'|'+JSON.stringify(body);
   if(input.action==='worksave')body.workDelta=1;
   if(tracked){dataEpoch++;body.compact=1;invalidateFirebaseViews();}
   if(tracked){if(!pendingRequests[signature])pendingRequests[signature]=requestId();body.requestId=pendingRequests[signature];}
-  return withAuth(function(){if(isComment)return commentApi(body,TK);body.tk=TK;return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},tracked?1:0);}).then(function(r){
-    observeServerReply(r,body.action);
-    if(r&&!r.error){if(isComment)commentSheetPending=Math.max(1,commentSheetPending);success=true;delete pendingRequests[signature];if(r.tk){if(r.tk!==TK)resetFirebaseReads();TK=r.tk;store('tk',TK);}}
+  return withAuth(function(){if(isComment||isCandidate)return commentApi(body,TK);body.tk=TK;return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},tracked?1:0);}).then(function(r){
+    observeServerReply(r,body.action);serverTimings=r&&r.timings||null;
+    if(r&&!r.error){if(isComment)commentSheetPending=Math.max(1,commentSheetPending);if(isCandidate)candidateSheetPending=Math.max(1,candidateSheetPending);success=true;delete pendingRequests[signature];if(r.tk){if(r.tk!==TK)resetFirebaseReads();TK=r.tk;store('tk',TK);}}
     if(r&&r.error&&tracked)r.error+=' (요청 '+body.requestId+')';return r;
-  }).finally(function(){if((tracked||input.action==='stagephoto')&&TK===session){recordRequestTime(input.action,started,success,isComment?'Firebase':'Apps Script');if(tracked)invalidateFirebaseViews();if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();}});
+  }).finally(function(){if((tracked||input.action==='stagephoto')&&TK===session){recordRequestTime(input.action,started,success,isComment||isCandidate?'Firebase':'Apps Script',serverTimings);if(tracked)invalidateFirebaseViews();if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();}});
 }
 /* 로그인은 열쇠 없이 보냅니다 */
 function apiLogin(name,pin){return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',name:name,pin:pin})},0);}
@@ -2865,9 +2884,9 @@ function call(fn,args,okMsg,msgEl,mutating){
     api=function(){
       var state=body.k==='road'?rPhoto.get():body.k==='db'?dPhoto.get():null;
       if((body.action==='add'||body.action==='edit')&&state&&state.staging&&body.rec.photoFull&&body.rec.photoFull===state.full){
-        return state.staging.then(function(){preparedPhoto(body.rec,state);return apiPost(body);});
+        return state.staging.then(function(){preparedPhoto(body.rec,state);return postCandidatePhoto(body);});
       }
-      return apiPost(body);
+      return postCandidatePhoto(body);
     };
   }
   if(mutating){dataEpoch++;setBusy(true);}var epoch=dataEpoch,t0=Date.now(),done=false;
@@ -3533,6 +3552,7 @@ function commentBlock(r,key){
     return wrap;
   }
   var h='<div class="cmh"><b>팀 의견</b>'+(av?'<span class="cmavg">'+stars(Math.round(av.avg))+' <i>'+av.avg+'</i> · '+av.n+'명</span>':'<span class="cmavg dim">아직 의견 없음</span>')+'</div>';
+  if(!__view&&(candidateSheetPending||candidateSheetConflicts))h+='<p class="hint" role="status">'+(candidateSheetConflicts?'구글시트에 별도 수정된 후보가 있어 확인이 필요합니다. 앱 저장 내용은 보관되어 있습니다.':'인원 저장 완료 · 구글시트 반영 대기 중')+'</p>';
   if(!__view&&(commentSheetPending||commentSheetConflicts))h+='<p class="hint" role="status">'+(commentSheetConflicts?'구글시트에 별도 수정된 의견이 있어 확인이 필요합니다. 앱 저장 내용은 보관되어 있습니다.':'앱 저장 완료 · 구글시트 반영 대기 중')+'</p>';
   list.forEach(function(c){
     var d=new Date(Number(c.createdAt)||0), when=(d.getMonth()+1)+"/"+d.getDate();
