@@ -1629,7 +1629,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v80',UI_BUILD='v80-comments1',SERVER_BUILD='';
+var APP_BUILD='v80',UI_BUILD='v80-comments-work1',SERVER_BUILD='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadVisitFilter='전체',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var requestTimes=[],viewTimes=[];
 function recordViewPaint(label,started){var session=TK;requestAnimationFrame(function(){requestAnimationFrame(function(){if(TK!==session)return;viewTimes.push({label:label,ms:Math.max(0,Date.now()-started)});if(viewTimes.length>8)viewTimes.shift();});});}
@@ -2595,7 +2595,7 @@ function currentComments(data,session){
   return Object.assign({},data,{cm:comments.cm,unchanged:false,sheetPending:comments.sheetPending});
  });
 }
-function apiGet(p){var started=Date.now(),ok=false,session=TK,source='Apps Script';return withAuth(function(){return routedRead(p,TK).then(function(data){return p.action==='all'?currentComments(data,session):data;});}).then(function(r){source=r&&r.readSource||source;observeServerReply(r,p.action);ok=!!r&&!r.error;return r;}).finally(function(){if(TK===session)recordRequestTime(p.action==='all'?'all_'+(p.part||'full'):p.action,started,ok,source);});}
+function apiGet(p){var started=Date.now(),ok=false,session=TK,source='Apps Script';return withAuth(function(){return p.action==='all'&&!VIEW?Promise.all([routedRead(p,TK),currentComments({},session)]).then(function(parts){return Object.assign({},parts[0],parts[1]);}):routedRead(p,TK);}).then(function(r){source=r&&r.readSource||source;observeServerReply(r,p.action);ok=!!r&&!r.error;return r;}).finally(function(){if(TK===session)recordRequestTime(p.action==='all'?'all_'+(p.part||'full'):p.action,started,ok,source);});}
 function recordRequestTime(action,started,ok,source){
   requestTimes.push({action:String(action||'read'),ms:Math.max(0,Date.now()-started),ok:!!ok,source:source||'Apps Script'});
   if(requestTimes.length>30)requestTimes.shift();
@@ -2611,6 +2611,7 @@ function apiPost(input){
   var started=Date.now(),success=false,isComment=['comment','editcomment','delcomment'].indexOf(input.action)>=0;
   var session=TK,body=Object.assign({},input),tracked=WRITE_ACTIONS.indexOf(body.action)>=0,signature=TK+'|'+JSON.stringify(input);
   if(isComment&&input.action!=='comment'){var existing=(S.cm||[]).find(function(c){return c.id===input.id;});body.revision=existing&&existing.revision||'';}
+  if(input.action==='worksave')body.workDelta=1;
   if(tracked){dataEpoch++;body.compact=1;invalidateFirebaseViews();}
   if(tracked){if(!pendingRequests[signature])pendingRequests[signature]=requestId();body.requestId=pendingRequests[signature];}
   return withAuth(function(){if(isComment)return commentApi(body,TK);body.tk=TK;return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},tracked?1:0);}).then(function(r){
@@ -4989,7 +4990,7 @@ function saveWork(){
   return apiPost(body).then(function(r){
     if(TK!==session||W.edit!==edit)return false;
     if(!r||r.error||!r.work||r.work.week!==body.week||!Array.isArray(r.work.rows))throw new Error(r&&r.error||'저장 결과를 확인하지 못했습니다. 같은 입력으로 다시 눌러주세요.');
-    var updated=workWeekDays(r.work.week);W.rows=W.rows.filter(function(row){return updated.indexOf(row.date)<0;}).concat(r.work.rows);updated.forEach(function(d){if(W.dates.indexOf(d)<0)W.dates.push(d);});W.loaded=r.work.week;W.edit=null;W.person=null;W.holidays=r.work.holidays||W.holidays||[];W.notice=edit.status==='미입력'?'근무를 삭제했습니다.':r.saved+'일 근무를 확정했습니다.';if(r.work.rows.some(function(x){return x.syncState==='pending';}))W.notice+=' 시트 반영 대기 중';return true;
+    var updated=workWeekDays(r.work.week),changed={};r.work.rows.forEach(function(row){changed[row.date+'|'+row.owner]=true;});W.rows=W.rows.filter(function(row){return r.work.delta?!changed[row.date+'|'+row.owner]:updated.indexOf(row.date)<0;}).concat(r.work.rows);updated.forEach(function(d){if(W.dates.indexOf(d)<0)W.dates.push(d);});W.loaded=r.work.week;W.edit=null;W.person=null;W.holidays=r.work.holidays||W.holidays||[];W.notice=edit.status==='미입력'?'근무를 삭제했습니다.':r.saved+'일 근무를 확정했습니다.';if(r.work.rows.some(function(x){return x.syncState==='pending';}))W.notice+=' 시트 반영 대기 중';return true;
   }).catch(function(err){
     if(TK===session&&W.edit===edit){W.error=friendlyError(err)+' 입력 내용은 유지했습니다.';if(/다른 사람이 먼저/.test(err.message))edit.conflict=true;}return false;
   }).finally(function(){if(TK===session){W.saving=false;renderWork();}});
