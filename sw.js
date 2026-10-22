@@ -4,7 +4,7 @@
 if (!self.CASTING_SHELL_LOADED) {
   self.CASTING_SHELL_LOADED = true;
   (function() {
-    var BUILD = 'v80', VERSION = 'casting-' + encodeURIComponent(new URL('./',self.location.href).pathname) + '-' + BUILD;
+    var BUILD = 'v80', VERSION = 'casting-' + encodeURIComponent(new URL('./',self.location.href).pathname) + '-' + BUILD + '-speed2';
     var BASE = new URL('./', self.location.href);
     var PAGE = new URL('index.html', BASE).href;
     var SHELL = ['index.html','manifest.json','icon-192.png','icon-512.png','icon-180.png'];
@@ -17,9 +17,10 @@ if (!self.CASTING_SHELL_LOADED) {
           var url = new URL(path,BASE).href;
           return fetch(url,{cache:'reload'}).then(function(res) {
             if (res.ok && res.type !== 'opaque') return cache.put(url,res);
-          }).catch(function() {});
+            if(path==='index.html')throw new Error('App shell update unavailable');
+          }).catch(function(e) {if(path==='index.html')throw e;});
         }));
-      }).catch(function() {}).then(function() { return self.skipWaiting(); }));
+      }).then(function() { return self.skipWaiting(); }));
     });
     self.addEventListener('activate', function(event) {
       event.waitUntil(caches.keys().then(function(keys) {
@@ -37,7 +38,7 @@ if (!self.CASTING_SHELL_LOADED) {
       var request=event.request, url=new URL(request.url);
       if (request.method!=='GET' || url.origin!==BASE.origin || url.pathname.indexOf(BASE.pathname)!==0) return;
       // 워커/JS를 예전 화면 캐시에서 제공하지 않습니다. Apps Script 요청도 캐시하지 않습니다.
-      var page=request.mode==='navigate' || url.pathname===BASE.pathname || url.pathname===new URL(PAGE).pathname;
+      var page=url.pathname===BASE.pathname || url.pathname===new URL(PAGE).pathname;
       var asset=SHELL.slice(1).some(function(name) { return url.pathname===new URL(name,BASE).pathname; });
       if (!page && !asset) return;
       if (page) {
@@ -46,16 +47,12 @@ if (!self.CASTING_SHELL_LOADED) {
           if (res.ok) return caches.open(VERSION).then(function(c) { return c.put(PAGE,res.clone()); });
         }).catch(function() {});
         event.waitUntil(update);
-        event.respondWith(new Promise(function(resolve) {
-          var done=false, timer=setTimeout(fallback,3000);
-          function finish(value) { if (!done) { done=true; clearTimeout(timer); resolve(value); } }
-          function fallback() {
-            caches.match(PAGE,{cacheName:VERSION}).then(function(hit) {
-              if (hit) finish(hit);
-              else network.then(finish,function() { finish(Response.error()); });
-            }).catch(function() { network.then(finish,function() { finish(Response.error()); }); });
-          }
-          network.then(function(res) { if (res.ok) finish(res); else fallback(); },fallback);
+        // Show the public shell immediately; refresh its copy in the background.
+        // A deliberate browser reload still waits for the latest deployed page.
+        var reload=request.cache==='reload'||request.cache==='no-cache';
+        event.respondWith(caches.match(PAGE,{cacheName:VERSION}).catch(function(){return null;}).then(function(hit){
+          if(hit&&!reload)return hit;
+          return network.then(function(res){return res.ok?res:(hit||res);},function(){return hit||Response.error();});
         }));
       } else {
         event.respondWith(caches.open(VERSION).then(function(c) {
