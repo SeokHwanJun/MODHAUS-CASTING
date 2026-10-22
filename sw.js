@@ -4,7 +4,7 @@
 if (!self.CASTING_SHELL_LOADED) {
   self.CASTING_SHELL_LOADED = true;
   (function() {
-    var BUILD = 'v80', VERSION = 'casting-' + encodeURIComponent(new URL('./',self.location.href).pathname) + '-' + BUILD + '-comments-work1';
+    var BUILD = 'v80', VERSION = 'casting-' + encodeURIComponent(new URL('./',self.location.href).pathname) + '-' + BUILD + '-save-speed1';
     var BASE = new URL('./', self.location.href);
     var PAGE = new URL('index.html', BASE).href;
     var SHELL = ['index.html','manifest.json','icon-192.png','icon-512.png','icon-180.png'];
