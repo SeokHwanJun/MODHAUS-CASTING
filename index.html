@@ -1629,7 +1629,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v80',UI_BUILD='v80-native-candidates1',SERVER_BUILD='',SERVER_PATCH='';
+var APP_BUILD='v80',UI_BUILD='v80-native-candidates2',SERVER_BUILD='',SERVER_PATCH='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadVisitFilter='전체',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var requestTimes=[],viewTimes=[];
 function recordViewPaint(label,started){var session=TK;requestAnimationFrame(function(){requestAnimationFrame(function(){if(TK!==session)return;viewTimes.push({label:label,ms:Math.max(0,Date.now()-started)});if(viewTimes.length>8)viewTimes.shift();});});}
@@ -2609,7 +2609,7 @@ function currentCandidates(p,session){
   return ensureFirebaseReads(session).then(function(auth){data.profile=auth.profile;return data;});
  });
 }
-function apiGet(p){var started=Date.now(),ok=false,session=TK,source='Apps Script';return withAuth(function(){return p.action==='all'&&!VIEW?Promise.all([currentCandidates(p,session),currentComments({},session)]).then(function(parts){return Object.assign({},parts[0],parts[1]);}):p.action==='thumbs'&&p.fast===1&&nativeCandidates&&!VIEW?commentApi({action:'candidateThumbs',k:p.k,ids:p.ids},session):routedRead(p,TK);}).then(function(r){source=r&&r.readSource||source;observeServerReply(r,p.action);ok=!!r&&!r.error;return r;}).finally(function(){if(TK===session)recordRequestTime(p.action==='all'?'all_'+(p.part||'full'):p.action,started,ok,source);});}
+function apiGet(p){var started=Date.now(),ok=false,session=TK,source='Apps Script',serverTimings=null;return withAuth(function(){return p.action==='all'&&!VIEW?Promise.all([currentCandidates(p,session),currentComments({},session)]).then(function(parts){return Object.assign({},parts[0],parts[1]);}):p.action==='thumbs'&&p.fast===1&&nativeCandidates&&!VIEW?commentApi({action:'candidateThumbs',k:p.k,ids:p.ids},session):routedRead(p,TK);}).then(function(r){source=r&&r.readSource||source;serverTimings=r&&r.timings||null;observeServerReply(r,p.action);ok=!!r&&!r.error;return r;}).finally(function(){if(TK===session)recordRequestTime(p.action==='all'?'all_'+(p.part||'full'):p.action,started,ok,source,serverTimings);});}
 function recordRequestTime(action,started,ok,source,timings){
   requestTimes.push({action:String(action||'read'),ms:Math.max(0,Date.now()-started),ok:!!ok,source:source||'Apps Script',timings:timings||null});
   if(requestTimes.length>60){var discard=requestTimes.findIndex(function(x){return ['comment','editcomment','delcomment','add','edit','stagephoto','worksave'].indexOf(x.action)<0;});requestTimes.splice(discard<0?0:discard,1);}
@@ -2925,7 +2925,8 @@ function call(fn,args,okMsg,msgEl,mutating){
 function fetchFull(fileId){
   if(fullCache[fileId])return Promise.resolve(fullCache[fileId]);
   if(fullPending[fileId])return fullPending[fileId];
-  var session=TK,pending=apiGet({action:'full',file:fileId}).then(function(x){return TK===session&&x&&x.photo||'';}).finally(function(){if(fullPending[fileId]===pending)delete fullPending[fileId];});
+  var key=S.road.some(function(r){return r.photoFile===fileId;})?'road':'db',record=(S[key]||[]).find(function(r){return r.photoFile===fileId;});
+  var session=TK,pending=apiGet({action:'full',file:fileId,k:key,id:record&&record.id||''}).then(function(x){return TK===session&&x&&x.photo||'';}).finally(function(){if(fullPending[fileId]===pending)delete fullPending[fileId];});
   fullPending[fileId]=pending;return pending;
 }
 function detailPhotoStatus(img,message,retry){
