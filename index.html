@@ -1629,7 +1629,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v80',UI_BUILD='v80-speed2',SERVER_BUILD='';
+var APP_BUILD='v80',UI_BUILD='v80-comments1',SERVER_BUILD='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadVisitFilter='전체',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var requestTimes=[],viewTimes=[];
 function recordViewPaint(label,started){var session=TK;requestAnimationFrame(function(){requestAnimationFrame(function(){if(TK!==session)return;viewTimes.push({label:label,ms:Math.max(0,Date.now()-started)});if(viewTimes.length>8)viewTimes.shift();});});}
@@ -2573,27 +2573,51 @@ function routedRead(p,session){
   });
 }
 
-function apiGet(p){var started=Date.now(),ok=false,session=TK,source='Apps Script';return withAuth(function(){return routedRead(p,TK);}).then(function(r){source=r&&r.readSource||source;observeServerReply(r,p.action);ok=!!r&&!r.error;return r;}).finally(function(){if(TK===session)recordRequestTime(p.action==='all'?'all_'+(p.part||'full'):p.action,started,ok,source);});}
+
+var commentSheetPending=0,commentSheetConflicts=0;
+var CASTING_WRITE_API='https://asia-northeast3-modhauscasting-6ffd7.cloudfunctions.net/castingApi';
+function commentApi(body,session){
+ return ensureFirebaseReads(session).then(function(auth){
+  if(TK!==session)throw new Error('이전 로그인 요청입니다.');
+  var ctrl=new AbortController(),timer=setTimeout(function(){ctrl.abort();},20000);
+  return fetch(CASTING_WRITE_API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+auth.idToken},body:JSON.stringify(body),cache:'no-store',signal:ctrl.signal}).then(function(response){return response.json().then(function(data){
+   if(TK!==session)throw new Error('이전 로그인 요청입니다.');
+   if(response.status===401){resetFirebaseReads();throw new Error('로그인 확인이 필요합니다. 같은 내용으로 다시 시도해주세요.');}
+   if(!response.ok)throw new Error(data.error||'의견 저장을 확인하지 못했습니다.');return data;
+  });}).finally(function(){clearTimeout(timer);});
+ });
+}
+function currentComments(data,session){
+ if(VIEW)return Promise.resolve(data);
+ return commentApi({action:'comments'},session).then(function(comments){
+  if(!comments.commentsEnabled)throw new Error('의견 저장 전환 중입니다. 잠시 뒤 새로고침해주세요.');
+  commentSheetPending=comments.sheetPending||0;commentSheetConflicts=comments.sheetConflicts||0;
+  return Object.assign({},data,{cm:comments.cm,unchanged:false,sheetPending:comments.sheetPending});
+ });
+}
+function apiGet(p){var started=Date.now(),ok=false,session=TK,source='Apps Script';return withAuth(function(){return routedRead(p,TK).then(function(data){return p.action==='all'?currentComments(data,session):data;});}).then(function(r){source=r&&r.readSource||source;observeServerReply(r,p.action);ok=!!r&&!r.error;return r;}).finally(function(){if(TK===session)recordRequestTime(p.action==='all'?'all_'+(p.part||'full'):p.action,started,ok,source);});}
 function recordRequestTime(action,started,ok,source){
   requestTimes.push({action:String(action||'read'),ms:Math.max(0,Date.now()-started),ok:!!ok,source:source||'Apps Script'});
   if(requestTimes.length>30)requestTimes.shift();
 }
 function showSpeedReport(){
-  var labels={all:'목록/이력',all_core:'첫 목록',all_history:'추가 이력',all_full:'전체 목록',thumbs:'작은 사진',full:'원본 사진',academies:'학원 목록',workweek:'주간 출근표',workmonth:'월간 출근표'};
+  var labels={all:'목록/이력',all_core:'첫 목록',all_history:'추가 이력',all_full:'전체 목록',thumbs:'작은 사진',full:'원본 사진',academies:'학원 목록',workweek:'주간 출근표',workmonth:'월간 출근표',comment:'의견 등록',editcomment:'의견 수정',delcomment:'의견 삭제',add:'후보 등록',edit:'후보 수정',worksave:'근무 저장'};
   var rows=requestTimes.filter(function(x){return labels[x.action];});
   el('ac-speed-report').textContent='화면 '+UI_BUILD+' / 서버 '+(SERVER_BUILD||'확인 전')+'\n'+(viewTimes.length?'화면 표시\n'+viewTimes.map(function(x){return x.label+' '+(x.ms/1000).toFixed(2)+'초';}).join('\n')+'\n\n':'')+'서버 조회\n'+(rows.length?rows.slice(-12).map(function(x){return labels[x.action]+' '+(x.ms/1000).toFixed(1)+'초 · '+x.source+(x.ok?'':' · 실패');}).join('\n'):'목록이나 사진을 불러온 뒤 확인해주세요.')+'\n사진 대기 '+(wantQ.length+photoRepairQ.length)+'장 · 요청 중 '+thumbActive+'개';
 }
 function apiPost(input){
   if(input.action==='book'&&SERVER_BUILD!==APP_BUILD)return Promise.reject(new Error(serverVersionMessage(SERVER_BUILD)));
   if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();
+  var started=Date.now(),success=false,isComment=['comment','editcomment','delcomment'].indexOf(input.action)>=0;
   var session=TK,body=Object.assign({},input),tracked=WRITE_ACTIONS.indexOf(body.action)>=0,signature=TK+'|'+JSON.stringify(input);
+  if(isComment&&input.action!=='comment'){var existing=(S.cm||[]).find(function(c){return c.id===input.id;});body.revision=existing&&existing.revision||'';}
   if(tracked){dataEpoch++;body.compact=1;invalidateFirebaseViews();}
   if(tracked){if(!pendingRequests[signature])pendingRequests[signature]=requestId();body.requestId=pendingRequests[signature];}
-  return withAuth(function(){body.tk=TK;return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},tracked?1:0);}).then(function(r){
+  return withAuth(function(){if(isComment)return commentApi(body,TK);body.tk=TK;return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},tracked?1:0);}).then(function(r){
     observeServerReply(r,body.action);
-    if(r&&!r.error){delete pendingRequests[signature];if(r.tk){if(r.tk!==TK)resetFirebaseReads();TK=r.tk;store('tk',TK);}}
+    if(r&&!r.error){if(isComment)commentSheetPending=Math.max(1,commentSheetPending);success=true;delete pendingRequests[signature];if(r.tk){if(r.tk!==TK)resetFirebaseReads();TK=r.tk;store('tk',TK);}}
     if(r&&r.error&&tracked)r.error+=' (요청 '+body.requestId+')';return r;
-  }).finally(function(){if(tracked&&TK===session){invalidateFirebaseViews();if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();}});
+  }).finally(function(){if(tracked&&TK===session){recordRequestTime(input.action,started,success,isComment?'Firebase':'Apps Script');invalidateFirebaseViews();if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();}});
 }
 /* 로그인은 열쇠 없이 보냅니다 */
 function apiLogin(name,pin){return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',name:name,pin:pin})},0);}
@@ -3454,6 +3478,7 @@ function commentBlock(r,key){
     return wrap;
   }
   var h='<div class="cmh"><b>팀 의견</b>'+(av?'<span class="cmavg">'+stars(Math.round(av.avg))+' <i>'+av.avg+'</i> · '+av.n+'명</span>':'<span class="cmavg dim">아직 의견 없음</span>')+'</div>';
+  if(!__view&&(commentSheetPending||commentSheetConflicts))h+='<p class="hint" role="status">'+(commentSheetConflicts?'구글시트에 별도 수정된 의견이 있어 확인이 필요합니다. 앱 저장 내용은 보관되어 있습니다.':'앱 저장 완료 · 구글시트 반영 대기 중')+'</p>';
   list.forEach(function(c){
     var d=new Date(Number(c.createdAt)||0), when=(d.getMonth()+1)+"/"+d.getDate();
     h+='<div class="cm'+(c.id===cmEdit?" editing":"")+'" data-id="'+esc(c.id)+'">'+
