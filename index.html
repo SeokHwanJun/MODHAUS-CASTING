@@ -1629,7 +1629,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v80',UI_BUILD='v80-attendance-overlay1',SERVER_BUILD='';
+var APP_BUILD='v80',UI_BUILD='v80-speed2',SERVER_BUILD='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadVisitFilter='전체',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var requestTimes=[],viewTimes=[];
 function recordViewPaint(label,started){var session=TK;requestAnimationFrame(function(){requestAnimationFrame(function(){if(TK!==session)return;viewTimes.push({label:label,ms:Math.max(0,Date.now()-started)});if(viewTimes.length>8)viewTimes.shift();});});}
@@ -2455,8 +2455,31 @@ function withAuth(mk){
   }).catch(function(e){if(TK!==sent)e.noauth=true;throw e;});
 }
 /* Firebase handles eligible reads directly after the existing PIN session is verified. */
-var firebaseReadSession=null,firebaseReadPending=null,firebaseReadGeneration=0,firebaseReadPause=0;
-function resetFirebaseReads(){firebaseReadGeneration++;firebaseReadSession=null;firebaseReadPending=null;firebaseReadPause=0;}
+var firebaseReadSession=null,firebaseReadPending=null,firebaseReadGeneration=0,firebaseReadPause={};
+var firebaseViewCache={},firebaseViewPending={},firebaseViewGeneration=0;
+function firebaseSessionKey(){return 'mh-read-session:'+PUSH.projectId+':'+location.pathname.replace(/index\.html$/,'');}
+function forgetFirebaseSession(){try{sessionStorage.removeItem(firebaseSessionKey());}catch(e){}}
+function invalidateFirebaseViews(){firebaseViewGeneration++;firebaseViewCache={};firebaseViewPending={};firebaseReadPause={};}
+function resetFirebaseReads(){firebaseReadGeneration++;firebaseReadSession=null;firebaseReadPending=null;forgetFirebaseSession();invalidateFirebaseViews();}
+function firebaseSessionBinding(session){
+  if(typeof crypto==='undefined'||!crypto.subtle||typeof TextEncoder==='undefined')return Promise.resolve('');
+  return crypto.subtle.digest('SHA-256',new TextEncoder().encode(session)).then(function(b){return Array.from(new Uint8Array(b),function(n){return n.toString(16).padStart(2,'0');}).join('');}).catch(function(){return '';});
+}
+function restoreFirebaseSession(session,binding){
+  if(!binding)return null;
+  try{
+    var saved=JSON.parse(sessionStorage.getItem(firebaseSessionKey())||'null'),now=Date.now(),parts=String(session).split('~');
+    if(!saved)return null;
+    if(saved.build!==APP_BUILD||saved.project!==PUSH.projectId||saved.binding!==binding||!saved.profile||saved.profile.name!==parts[0]||saved.profile.view||typeof saved.idToken!=='string'||!saved.idToken||!Number.isFinite(saved.at)||!Number.isFinite(saved.expires)||now<saved.at||saved.expires<=now+60000||saved.expires>saved.at+3600000||saved.expires>Number(parts[1])||!Number.isFinite(Number(parts[1])))throw new Error('세션 갱신 필요');
+    return {session:session,idToken:saved.idToken,expires:saved.expires,profile:saved.profile};
+  }catch(e){forgetFirebaseSession();return null;}
+}
+function rememberFirebaseSession(auth,binding){
+  if(!binding)return;
+  // Same-tab reload only. No PIN, refresh token, candidate list or photos are stored.
+  // Firestore still verifies account/session revocation on every network read.
+  try{sessionStorage.setItem(firebaseSessionKey(),JSON.stringify({build:APP_BUILD,project:PUSH.projectId,binding:binding,at:Date.now(),idToken:auth.idToken,expires:auth.expires,profile:auth.profile}));}catch(e){}
+}
 function legacyRead(p,session){return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({},p,{tk:session}))},1);}
 function firebaseJson(url,options){
   var ctrl=new AbortController(),timer=setTimeout(function(){ctrl.abort();},4000);
@@ -2466,15 +2489,20 @@ function ensureFirebaseReads(session){
   var now=Date.now(),generation=firebaseReadGeneration;
   if(firebaseReadSession&&firebaseReadSession.session===session&&firebaseReadSession.expires>now+60000)return Promise.resolve(firebaseReadSession);
   if(firebaseReadPending&&firebaseReadPending.session===session)return firebaseReadPending.task;
-  var task=legacyRead({action:'firebasesession'},session).then(function(r){
+  var task=firebaseSessionBinding(session).then(function(binding){
+    if(TK!==session||generation!==firebaseReadGeneration)throw new Error('이전 로그인 요청입니다.');
+    var restored=restoreFirebaseSession(session,binding);if(restored){firebaseReadSession=restored;return restored;}
+    return legacyRead({action:'firebasesession'},session).then(function(r){
     if(TK!==session||generation!==firebaseReadGeneration)throw new Error('이전 로그인 요청입니다.');
     if(r&&r.error==='AUTH')return Promise.reject(kickOut());
     if(!r||!r.enabled||!r.customToken||r.projectId!==PUSH.projectId)throw new Error('Firebase 직접 조회 준비 중');
     return firebaseJson('https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key='+encodeURIComponent(PUSH.apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:r.customToken,returnSecureToken:true})}).then(function(auth){
       if(TK!==session||generation!==firebaseReadGeneration)throw new Error('이전 로그인 요청입니다.');
       if(!auth.idToken||!Number(auth.expiresIn))throw new Error('Firebase 인증 응답 오류');
-      // No refresh token or private app data is persisted in the browser.
-      firebaseReadSession={session:session,idToken:auth.idToken,expires:Date.now()+Number(auth.expiresIn)*1000,profile:r.profile};return firebaseReadSession;
+      var sessionExpiry=Number(String(session).split('~')[1]);
+      firebaseReadSession={session:session,idToken:auth.idToken,expires:Math.min(Date.now()+Math.min(Number(auth.expiresIn),3600)*1000,Number.isFinite(sessionExpiry)?sessionExpiry:Infinity),profile:r.profile};
+      rememberFirebaseSession(firebaseReadSession,binding);return firebaseReadSession;
+    });
     });
   }).finally(function(){if(firebaseReadPending&&firebaseReadPending.task===task)firebaseReadPending=null;});
   firebaseReadPending={session:session,task:task};return task;
@@ -2509,17 +2537,39 @@ function decodeFirebaseRead(doc,target,p,profile){
     }
   }data.readSource='Firebase';return data;
 }
+function firebaseView(target,session,auth,fresh){
+  var hit=firebaseViewCache[target.id],pending=firebaseViewPending[target.id],generation=firebaseViewGeneration,now=Date.now();
+  if(!fresh&&hit&&hit.session===session&&now>=hit.at&&now-hit.at<5000)return Promise.resolve(hit);
+  if(pending&&pending.session===session&&pending.generation===generation)return pending.task;
+  var task=firebaseJson('https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(PUSH.projectId)+'/databases/(default)/documents/mhAppViews/'+target.id,{headers:{Authorization:'Bearer '+auth.idToken}}).then(function(doc){
+    if(TK!==session||generation!==firebaseViewGeneration){var e=new Error('이전 조회입니다.');e.stale=true;throw e;}
+    var next={session:session,at:Date.now(),doc:doc};
+    // Validate before caching, and parse anew for each consumer so week filtering cannot mutate a month.
+    decodeFirebaseRead(doc,target,{},auth.profile);firebaseViewCache[target.id]=next;
+    Object.keys(firebaseViewCache).sort(function(a,b){return firebaseViewCache[b].at-firebaseViewCache[a].at;}).slice(4).forEach(function(k){delete firebaseViewCache[k];});return next;
+  }).finally(function(){if(firebaseViewPending[target.id]&&firebaseViewPending[target.id].task===task)delete firebaseViewPending[target.id];});
+  firebaseViewPending[target.id]={session:session,generation:generation,task:task};return task;
+}
 function routedRead(p,session){
-  var target=!VIEW&&Date.now()>=firebaseReadPause&&firebaseReadTarget(p),generation=firebaseReadGeneration;
-  if(!target)return legacyRead(p,session);
-  return ensureFirebaseReads(session).then(function(auth){return firebaseJson('https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(PUSH.projectId)+'/databases/(default)/documents/mhAppViews/'+target.id,{headers:{Authorization:'Bearer '+auth.idToken}}).then(function(doc){
-    if(TK!==session||generation!==firebaseReadGeneration)throw new Error('이전 로그인 요청입니다.');
-    return decodeFirebaseRead(doc,target,p,auth.profile);
+  if(p.action==='all'&&p.fresh===1)invalidateFirebaseViews();
+  var target=!VIEW&&firebaseReadTarget(p),generation=firebaseReadGeneration,viewGeneration=firebaseViewGeneration;
+  if(!target||Date.now()<(firebaseReadPause[target.id]||0))return legacyRead(p,session);
+  return ensureFirebaseReads(session).then(function(auth){
+    if(TK!==session||generation!==firebaseReadGeneration||viewGeneration!==firebaseViewGeneration){var e=new Error('이전 조회입니다.');e.stale=true;throw e;}
+    return firebaseView(target,session,auth,p.fresh===1).then(function(hit){
+    if(TK!==session||generation!==firebaseReadGeneration||viewGeneration!==firebaseViewGeneration){var e=new Error('이전 조회입니다.');e.stale=true;throw e;}
+    var data=decodeFirebaseRead(hit.doc,target,p,auth.profile);
+    if(target.month){
+      var monthData=decodeFirebaseRead(hit.doc,{id:target.id,month:target.month},{},auth.profile),period=workPeriod(workMonday(target.month+'-01'),target.month);
+      if(period.dates.every(function(d){return monthData.dates.indexOf(d)>=0;}))rememberWorkPeriod(period,monthData,hit.at);
+    }
+    return data;
   });}).catch(function(e){
-    if(TK!==session||generation!==firebaseReadGeneration||e.auth)throw e;
+    if(TK!==session||generation!==firebaseReadGeneration||viewGeneration!==firebaseViewGeneration||e.auth||e.stale)throw e;
     // A denied, stale or unavailable view falls back to the same authenticated API.
-    if(e.status===401)firebaseReadSession=null;
-    firebaseReadPause=Date.now()+30000;return legacyRead(p,session);
+    delete firebaseViewCache[target.id];
+    if(e.status===401){firebaseReadSession=null;forgetFirebaseSession();}
+    firebaseReadPause[target.id]=Date.now()+30000;return legacyRead(p,session);
   });
 }
 
@@ -2536,14 +2586,14 @@ function showSpeedReport(){
 function apiPost(input){
   if(input.action==='book'&&SERVER_BUILD!==APP_BUILD)return Promise.reject(new Error(serverVersionMessage(SERVER_BUILD)));
   if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();
-  var body=Object.assign({},input),tracked=WRITE_ACTIONS.indexOf(body.action)>=0,signature=TK+'|'+JSON.stringify(input);
-  if(tracked){dataEpoch++;body.compact=1;}
+  var session=TK,body=Object.assign({},input),tracked=WRITE_ACTIONS.indexOf(body.action)>=0,signature=TK+'|'+JSON.stringify(input);
+  if(tracked){dataEpoch++;body.compact=1;invalidateFirebaseViews();}
   if(tracked){if(!pendingRequests[signature])pendingRequests[signature]=requestId();body.requestId=pendingRequests[signature];}
   return withAuth(function(){body.tk=TK;return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},tracked?1:0);}).then(function(r){
     observeServerReply(r,body.action);
-    if(r&&!r.error){delete pendingRequests[signature];if(r.tk){TK=r.tk;store('tk',TK);}}
+    if(r&&!r.error){delete pendingRequests[signature];if(r.tk){if(r.tk!==TK)resetFirebaseReads();TK=r.tk;store('tk',TK);}}
     if(r&&r.error&&tracked)r.error+=' (요청 '+body.requestId+')';return r;
-  });
+  }).finally(function(){if(tracked&&TK===session){invalidateFirebaseViews();if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();}});
 }
 /* 로그인은 열쇠 없이 보냅니다 */
 function apiLogin(name,pin){return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',name:name,pin:pin})},0);}
@@ -4388,6 +4438,8 @@ document.addEventListener("pointerdown",function once(){
 
 /* 인증된 현재 목록 → 사진과 이력 순서. 예전 계정의 기기 캐시는 읽지 않습니다. */
 if(TK&&navigator.onLine){call('getAll',pendingCommentLink?['fresh']:[]);setTimeout(pushSync,2500);setTimeout(askPush,3000);}
+// Cache public app files even when this device has not opted into notifications.
+if('serviceWorker' in navigator&&window.isSecureContext)setTimeout(function(){ensureAppWorker().catch(function(){});},1000);
 if(!TK) lockOpen(); else lockClose();
 var lastScroll=0; window.addEventListener("scroll",function(){ lastScroll=Date.now(); },{passive:true});
 /* 가만히 두면 점점 뜸하게 확인합니다 (1분 → 최대 8분). 만지면 다시 1분으로 */
@@ -4654,14 +4706,14 @@ function cachedWorkPeriod(period){
   if(data.sheetSync)data.sheetSync=Object.assign({},data.sheetSync,{days:(data.sheetSync.days||[]).filter(function(d){return period.dates.indexOf(d.date)>=0;})});
   return {session:TK,at:wider.at,dates:period.dates,data:data};
 }
-function rememberWorkPeriod(period,data){
-  var hit={session:TK,at:Date.now(),dates:period.dates,data:data};workReadCache[period.key]=hit;
+function rememberWorkPeriod(period,data,at){
+  var hit={session:TK,at:at===undefined?Date.now():at,dates:period.dates,data:data};workReadCache[period.key]=hit;
   Object.keys(workReadCache).sort(function(a,b){return workReadCache[b].at-workReadCache[a].at;}).slice(8).forEach(function(k){delete workReadCache[k];});return hit;
 }
 function requestWorkPeriod(period,force){
   var hit=cachedWorkPeriod(period);if(!force&&hit&&Date.now()-hit.at<30000)return Promise.resolve(hit);
   var session=TK,generation=workReadEpoch,pending=workReadPending[period.key];if(pending&&pending.session===session&&pending.generation===generation)return pending.task;
-  var task=apiGet(period.month?{action:'workmonth',month:period.month}:{action:'workweek',week:period.week}).then(function(r){
+  var task=apiGet(period.month?{action:'workmonth',month:period.month,fresh:force===true?1:0}:{action:'workweek',week:period.week,fresh:force===true?1:0}).then(function(r){
     if(TK!==session||workReadEpoch!==generation){var stale=new Error('이전 근무 조회입니다.');stale.stale=true;throw stale;}
     if(!r||r.error||!Array.isArray(r.rows)||(period.month?r.month!==period.month:r.week!==period.week))throw new Error(r&&r.error||'근무표를 받지 못했습니다.');
     return rememberWorkPeriod(period,r);
