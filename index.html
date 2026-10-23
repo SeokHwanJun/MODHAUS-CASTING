@@ -1639,7 +1639,7 @@ catch(e){ document.getElementById("lock").hidden=true; }</script>
 </div>
 
 <script>/* v62 — 세션/저장 상태: 서버 확인 전에는 성공 처리하지 않습니다. */
-var APP_BUILD='v80',UI_BUILD='v80-photo-zoom1',SERVER_BUILD='',SERVER_PATCH='';
+var APP_BUILD='v80',UI_BUILD='v80-storage1',SERVER_BUILD='',SERVER_PATCH='';
 var sessionPhone='',lockedControls=[],pendingRequests={},dataEpoch=0,readPending=null,acadErrors={},acadLoaded={},acadLimit=40,acadSort='name',acadVisitFilter='전체',acadFilterKey='',bookGeneration=0,thumbActive=0,fullPending={},acadKind='전체',acadCountry='전체';
 var requestTimes=[],viewTimes=[];
 function recordViewPaint(label,started){var session=TK;requestAnimationFrame(function(){requestAnimationFrame(function(){if(TK!==session)return;viewTimes.push({label:label,ms:Math.max(0,Date.now()-started)});if(viewTimes.length>8)viewTimes.shift();});});}
@@ -2676,7 +2676,7 @@ function apiPost(input){
   if(previewOnly)return Promise.reject(new Error('최신 목록을 확인하고 있습니다. 잠시 뒤 다시 눌러주세요.'));
   if(input.action==='book'&&SERVER_BUILD!==APP_BUILD)return Promise.reject(new Error(serverVersionMessage(SERVER_BUILD)));
   if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();
-  var started=Date.now(),serverTimings=null,success=false,isComment=['comment','editcomment','delcomment'].indexOf(input.action)>=0,isCandidate=nativeCandidates&&['add','edit','update','delete','toss'].indexOf(input.action)>=0,isMedia=nativeCandidates&&input.action==='stagephoto';
+  var started=Date.now(),serverTimings=null,mediaSource='Firebase Storage',success=false,isComment=['comment','editcomment','delcomment'].indexOf(input.action)>=0,isCandidate=nativeCandidates&&['add','edit','update','delete','toss'].indexOf(input.action)>=0,isMedia=nativeCandidates&&input.action==='stagephoto';
   var session=TK,body=Object.assign({},input),tracked=WRITE_ACTIONS.indexOf(body.action)>=0,signature=TK+'|'+JSON.stringify(input);
   if(isComment&&input.action!=='comment'){var existing=(S.cm||[]).find(function(c){return c.id===input.id;});body.revision=existing&&existing.revision||'';}
   if(isCandidate&&input.action!=='add'){var candidate=(S[input.k||'road']||[]).find(function(r){return r.id===input.id;});body.revision=candidate&&candidate.revision||'';}
@@ -2685,10 +2685,10 @@ function apiPost(input){
   if(tracked){dataEpoch++;body.compact=1;invalidateFirebaseViews();}
   if(tracked){if(!pendingRequests[signature])pendingRequests[signature]=requestId();body.requestId=pendingRequests[signature];}
   return withAuth(function(){if(isMedia){body.tk=TK;return commentApi(body,TK);}if(isComment||isCandidate)return commentApi(body,TK);body.tk=TK;return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},tracked?1:0);}).then(function(r){
-    observeServerReply(r,body.action);serverTimings=r&&r.timings||null;
+    observeServerReply(r,body.action);serverTimings=r&&r.timings||null;if(isMedia&&r&&r.readSource)mediaSource=r.readSource;
     if(r&&!r.error){if(isComment)commentSheetPending=Math.max(1,commentSheetPending);if(isCandidate)candidateSheetPending=Math.max(1,candidateSheetPending);success=true;delete pendingRequests[signature];if(r.tk){if(r.tk!==TK)resetFirebaseReads();TK=r.tk;store('tk',TK);}}
     if(r&&r.error&&tracked)r.error+=' (요청 '+body.requestId+')';return r;
-  }).finally(function(){if((tracked||input.action==='stagephoto')&&TK===session){recordRequestTime(input.action,started,success,isMedia?'Firebase / Drive':isComment||isCandidate?'Firebase':'Apps Script',serverTimings);if(tracked)invalidateFirebaseViews();if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();}});
+  }).finally(function(){if((tracked||input.action==='stagephoto')&&TK===session){recordRequestTime(input.action,started,success,isMedia?mediaSource:isComment||isCandidate?'Firebase':'Apps Script',serverTimings);if(tracked)invalidateFirebaseViews();if(input.action==='worksave'||input.action==='workholiday')invalidateWorkReads();}});
 }
 /* 로그인은 열쇠 없이 보냅니다 */
 function apiLogin(name,pin){return tryFetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',name:name,pin:pin})},0);}
